@@ -1,0 +1,7 @@
+.pixi/
+build/
+dist/
+*.o
+*.a
+*.so*
+__pycache__/

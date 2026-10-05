@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+# libbpf-mojo test runner.
+#
+# Usage: tools/test <suite> | tools/test --help
+#
+# Implemented suites: (none yet; the first suites arrive with native and
+# Mojo tests).
+#
+# Planned suites: native, mojo, live-tracepoint, cleanup, package.
+# A skipped privileged test is reported as skipped, never as success.
+# Exit 0 only when the suite passes; 1 on test failure; 2 on invalid usage.
+# One suite per invocation; extra arguments are rejected.
+
+set -u
+
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+
+usage() {
+    sed -n '2,/^$/p' "$0" | sed 's/^# //; s/^#//'
+}
+
+if [ $# -eq 0 ]; then
+    usage >&2
+    exit 2
+fi
+if [ $# -gt 1 ]; then
+    echo "test: too many arguments" >&2
+    usage >&2
+    exit 2
+fi
+case "$1" in
+    --help|-h)
+        usage
+        ;;
+    native|mojo|live-tracepoint|cleanup|package)
+        echo "test: suite '$1' is not implemented yet" >&2
+        exit 2
+        ;;
+    *)
+        echo "test: unknown suite: $1" >&2
+        usage >&2
+        exit 2
+        ;;
+esac
