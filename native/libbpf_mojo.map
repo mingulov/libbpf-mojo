@@ -1,0 +1,16 @@
+LIBBPF_MOJO_1 {
+    global:
+        lmb_open;
+        lmb_load;
+        lmb_attach;
+        lmb_poll;
+        lmb_map_info;
+        lmb_map_read;
+        lmb_map_write;
+        lmb_stats;
+        lmb_last_error;
+        lmb_detach;
+        lmb_close;
+    local:
+        *;
+};

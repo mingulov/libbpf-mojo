@@ -58,10 +58,24 @@ disposable development checks, not shipped tests.
 - `mojo build` offers `-O` levels (default 3), `-g` levels (default
   none), and `--sanitize address|thread`. There is no Mojo UBSan flag.
 
-## Planned library behavior
+## Library behavior
 
-Not yet implemented. Each item lands with its owning feature and tests;
-no `native/` or `src/` product code exists yet.
+Implemented: the native bridge (`native/`, frozen in `docs/abi-v1.md`)
+is built with CMake plus Ninja through `tools/build`, and proven by
+`tools/test native` (framing, synthetic staging, live poll/attach/map
+suites plus owned C fixtures). Tests needing collection privileges
+report SKIP without them and prove behavior in a privileged isolated
+environment. Sanitizer evidence: `tools/build --sanitize` configures a
+separate `build-san/` tree with AddressSanitizer and UBSan using the
+pinned gcc (this Ubuntu release ships no clang-21 compiler-rt);
+`LMB_BUILD_DIR=build-san tools/test native` runs the same suites
+there. CTest sets `ASAN_OPTIONS=allocator_may_return_null=1` for the
+framing suite (it intentionally passes a giant allocation size);
+repeat that variable when running the sanitizer binaries by hand.
+Keep native sanitizer evidence separate from Mojo sanitizer evidence.
+
+Planned: each item lands with its owning feature and tests; no `src/`
+product code exists yet.
 
 - One internal FFI module holding every foreign declaration, with
   layout/width/signedness assertions on both sides of the boundary.
@@ -70,9 +84,6 @@ no `native/` or `src/` product code exists yet.
 - Move-only Mojo session owners with deterministic destruction, lazy
   native loading so import never requires collection privileges, and
   explicit checked helpers wherever external arithmetic applies.
-- The native bridge built with CMake plus Ninja through `tools/build`,
-  with address/undefined-behavior sanitizer evidence kept separate from
-  Mojo sanitizer evidence.
 
 ## Compiler settings
 

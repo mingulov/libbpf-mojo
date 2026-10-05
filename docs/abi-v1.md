@@ -71,8 +71,10 @@ struct lmb_bytes_v1 {
 ```
 
 Inputs are pointer-plus-length, copied by the callee when retained; no input
-pointer is kept. Name fields hold at most 256 bytes of UTF-8/ASCII with no
-embedded NUL. A null `ptr` requires `len == 0` and means "empty".
+pointer is kept. Name fields hold at most 256 bytes of strict UTF-8
+(ASCII is the common case) with no embedded NUL; overlong encodings,
+surrogates, and code points above U+10FFFF are refused. A null `ptr`
+requires `len == 0` and means "empty".
 
 ## Options
 
@@ -152,18 +154,32 @@ Map type, key/value sizes, per-CPU stride and CPU count are queried and
 checked before every access. Unsupported map operations return a typed
 error. A sequence of map reads is not an atomic cross-CPU snapshot.
 
+Per-CPU maps are hash, array, LRU hash, and cgroup storage; every other
+map type uses ordinary single-value sizing. A null map name is refused
+with `-EINVAL` before any lookup.
+
 Exact map rules: `key_bytes` must equal the map's `key_size`, otherwise
 the call fails without access. For writes, `value_bytes` must equal
 `value_size` (ordinary maps) or `stride * num_cpus` (per-CPU maps).
 `stride` is `round_up(value_size, 8)`; the product
-`stride * num_cpus` is checked for `u32` overflow and the call fails when
-it cannot fit. Reads need capacity for one value (`value_size`) or one
-per-CPU spread (`stride * num_cpus`); a short destination returns
-`-ENOSPC` with `required` set and nothing written. `num_cpus` is the
+`stride * num_cpus` is checked for `u32` overflow and the call fails
+with a `BRIDGE` diagnostic when it cannot fit. A failed possible-CPU
+query fails with a `LIBBPF` diagnostic carrying the original code,
+never disguised as overflow. Reads need capacity for one value
+(`value_size`) or one per-CPU spread (`stride * num_cpus`); a short
+destination returns `-ENOSPC` with `required` set, nothing written,
+and the thread-local record replaced with the
+`MAP_READ`/`BRIDGE`/`-ENOSPC` diagnostic. `num_cpus` is the
 possible-CPU count observed when the map was queried.
 
 `lmb_map_read` reports `required` like `lmb_poll`: a short destination
-returns `-ENOSPC` with `required` set and nothing written.
+returns `-ENOSPC` with `required` set and nothing written. On any other
+failure `required` is 0 once arguments validate; the
+argument-validation path itself leaves outputs untouched. Output
+aliasing is forbidden:
+the `required` cell must lie outside `[key, key+key_bytes)` and
+`[dst, dst+capacity)`; aliased outputs are refused with `-EINVAL`
+before anything is written.
 
 ## Batch framing
 
@@ -181,27 +197,53 @@ requires a 24-byte frame.
 
 ## Poll semantics
 
+One staging slot means one frame per call: `lmb_poll` delivers at most
+one framed record, and the retained record is always the staged one. A
+caller drains pending records with repeated calls.
+
 - Timeout yields success with `written == 0` and `required == 0`.
 - When a staged next frame cannot fit and nothing has been copied, return
   `-ENOSPC` with `written == 0`, `required` equal to the whole-frame
-  length, and retain the record. A later retry delivers it exactly once.
-- When some frames fit, return success for that batch and retain the next
-  frame for a later call. Never advance a held record twice.
+  length, retain the record, and replace the thread-local record with
+  the `POLL`/`BRIDGE`/`-ENOSPC` diagnostic. A later retry delivers it
+  exactly once.
 - A negative libbpf ring-callback return consumes the borrowed record, so
-  retention requires a bridge-owned copy made before returning. Limit each
-  libbpf consumption step to the available staging capacity.
-- On success `required` is always 0, including batches that retain a next
-  frame; the caller learns the retained size from the next call.
+  retention requires a bridge-owned copy made before returning. Each
+  libbpf consumption step takes at most one record.
+- One call consumes records until one stages, the ring drains, or 64
+  records have been skipped, whichever comes first: malformed records
+  never surface as errors and never stall a call while a stageable
+  record is already queued. Returning `0/0` therefore means no
+  deliverable frame was found in this call, not that the ring stayed
+  empty; the caller retries. The skip bound keeps one call finite
+  under a malformed flood.
+- On success `required` is always 0; the caller learns a retained
+  record's size from the next call.
 - Malformed records are skipped and counted in `stats.malformed`; they
-  never fail a batch containing valid frames.
-- A fatal transport error after frames were copied returns success for
-  the copied frames (discarding them would lose consumed records) and
-  records the error in `stats.last_error` and the thread-local record;
-  the next `lmb_poll` returns that error.
+  never fail a call that also stages a valid record. Empty and
+  oversized records count as malformed: an empty record cannot be
+  staged because a zero stage length reads back as no record, so it
+  is declared malformed to keep the conservation identity exact. A
+  valid record lost because the single slot was already occupied
+  counts as `dropped` (unavoidable capacity loss), never as
+  malformed.
+- Transport errors return directly with nothing copied: fallible work
+  (waiting, consumption) always precedes the frame copy, so a
+  partial-copy-then-error outcome is impossible. Errors latch
+  `stats.last_error` and replace the thread-local record.
+- Output aliasing is forbidden: `written` and `required` must be
+  distinct cells, and both must lie outside `[dst, dst+capacity)`.
+  Aliased outputs are refused with `-EINVAL` before anything is
+  written. Argument-validation failures leave all outputs untouched;
+  later failures report `written == 0` with `required` as documented
+  per case.
 
 `timeout_ms` is 0 for non-blocking, positive for a bounded wait, and -1 for
 an unbounded wait subject to signal interruption. Interrupted waits report
-their interruption distinctly from timeout.
+`-EINTR` with `written == 0` and `required == 0`, distinctly from
+timeout. A bounded wait that wakes to malformed-only records returns
+`0/0` without re-waiting the remainder; the caller retries with a fresh
+timeout.
 
 ## Statistics
 
@@ -220,11 +262,18 @@ struct lmb_stats_v1 {
 ```
 
 Bridge counters stay separate from any application BPF counters.
-`malformed` and `dropped` are disjoint: oversized or unparseable records
-count as `malformed`, while valid records lost to transport overrun or
-unavoidable capacity count as `dropped`. Under a test source,
+`malformed` and `dropped` are disjoint: empty, oversized, or
+unparseable records count as `malformed`, while valid records lost to
+transport overrun or unavoidable capacity (including a valid record
+that arrives while the single slot is occupied) count as `dropped`.
+Under a test source,
 `received == delivered + staged + malformed + dropped`. Silent loss is
 never reported as timeout.
+
+`last_error` latches the most recent native failure code on the
+session, or 0 when no native operation has failed. Usage errors,
+interrupted waits, and successes never change it; per-call diagnosis
+always comes from the thread-local record instead.
 
 ## Errors
 
@@ -258,8 +307,17 @@ struct lmb_error_v1 {
 
 `lmb_last_error` copies a thread-local record, including failed-open
 diagnostics when no session exists. It does not clear the record; the next
-failing operation replaces it. The caller reads it immediately on the same
-calling thread. One calling thread owns a handle initially.
+failing operation replaces it. Every nonzero return replaces the record,
+including `-ENOSPC` capacity signals; only inspection calls with an
+invalid output header are exempt. The caller reads it immediately on the
+same calling thread. One calling thread owns a handle initially.
+
+Domains name the failing call layer: direct libc/syscall failures are
+`POSIX`, libbpf API failures (including syscalls libbpf makes
+internally) are `LIBBPF`, direct BPF syscalls through `<bpf/bpf.h>`
+are `KERNEL`, and bridge validation/capacity decisions are `BRIDGE`.
+The original signed code is always preserved; `-ENOSPC` from bridge
+capacity checks reports domain `BRIDGE`.
 
 An inspection call with an invalid output header fails without replacing
 the stored record; inspection failures have no operation discriminant of
@@ -270,14 +328,25 @@ to fit.
 
 ## Lifecycle
 
-- `lmb_detach` releases attachment links; success is resource evidence, not
-  proof of application-level measurement quiescence.
+- `lmb_detach` destroys every attachment link and reports the first
+  teardown error, if any, after releasing all of them; success is
+  resource evidence, not proof of application-level measurement
+  quiescence. A detached session may attach again.
 - `lmb_close` destroys owned objects, links, maps, ring consumers, and
   staged state, nulls the caller's handle, and tolerates an already-null
   pointee. Partial load/attach failures roll back only this handle's
-  resources.
-- The dynamic library outlives all owners and foreign callables. Signal
-  handlers set a flag; ordinary control flow performs teardown.
+  resources. Close releases everything even when a teardown step
+  fails, then reports the first teardown error.
+- `lmb_load` prepares every program in the object; no program executes
+  until an explicit `lmb_attach`. Map pin metadata in the object is
+  disabled before loading: the bridge never creates, reuses, or
+  leaves behind filesystem pins.
+- The dynamic library exports only the eleven `lmb_*` operations; the
+  bundled libbpf and all bridge internals stay local. It outlives all
+  owners and foreign callables. Signal handlers set a flag; ordinary
+  control flow performs teardown. The bridge silences its private
+  libbpf log channel; diagnostics flow only through the sanitized
+  thread-local record and `stats.last_error`.
 
 ## Compatibility and versioning
 

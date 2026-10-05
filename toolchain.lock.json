@@ -69,6 +69,12 @@
       "verify": "pkg-config --version",
       "expect": "2.5.1"
     },
+    "linux_headers": {
+      "debian": "linux-libc-dev",
+      "version": "7.0.0-38.38",
+      "role": "UAPI headers (<linux/bpf.h>) for the bridge and fixtures",
+      "note": "Backward-stable kernel UAPI; pinned for exact reproduction."
+    },
     "python": {
       "version": "3.14.4",
       "role": "development validation only; never runtime collection",

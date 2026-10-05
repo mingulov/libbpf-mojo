@@ -1,11 +1,14 @@
 #!/usr/bin/env bash
 # libbpf-mojo single supported build path.
 #
-# Usage: tools/build [--check-toolchain] [--help]
+# Usage: tools/build [--check-toolchain] [--sanitize] [--help]
 #
 # Verifies the pinned toolchain and builds every registered compile target.
 # When no compile targets are registered yet, exit 0 covers toolchain
 # verification plus an explicit notice naming the missing targets.
+# --sanitize builds into build-san/ with AddressSanitizer and UBSan
+# using the pinned gcc (this Ubuntu release ships no clang-21
+# compiler-rt); run it via LMB_BUILD_DIR=build-san tools/test native.
 # Prints each underlying command before running it. Exit 0 only when every
 # step passes; exit 1 on build failure; exit 2 on invalid usage.
 # One action per invocation; extra arguments are rejected.
@@ -94,16 +97,25 @@ main() {
             cd "$ROOT"
             check_pixi_lock && check_toolchain || return 1
             ;;
-        "")
+        ""|--sanitize)
             cd "$ROOT"
             check_pixi_lock && check_toolchain || return 1
+            BUILD_DIR=build
+            SANITIZE_FLAG="-DLMB_SANITIZE=OFF"
+            CC_NAME=clang
+            if [ "$1" = "--sanitize" ]; then
+                BUILD_DIR=build-san
+                SANITIZE_FLAG="-DLMB_SANITIZE=ON"
+                CC_NAME=gcc
+            fi
             if [ -f "$ROOT/native/CMakeLists.txt" ]; then
-                log cmake -S native -B build -G Ninja \
-                    -DCMAKE_C_COMPILER=clang
-                cmake -S native -B build -G Ninja \
-                    -DCMAKE_C_COMPILER=clang || return 1
-                log cmake --build build
-                cmake --build build || return 1
+                log cmake -S native -B "$BUILD_DIR" -G Ninja \
+                    -DCMAKE_C_COMPILER="$CC_NAME" "$SANITIZE_FLAG"
+                cmake -S native -B "$BUILD_DIR" -G Ninja \
+                    -DCMAKE_C_COMPILER="$CC_NAME" "$SANITIZE_FLAG" \
+                    || return 1
+                log cmake --build "$BUILD_DIR"
+                cmake --build "$BUILD_DIR" || return 1
             else
                 echo "build: no native targets registered yet" >&2
             fi

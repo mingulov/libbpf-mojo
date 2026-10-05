@@ -5,3 +5,4 @@ dist/
 *.a
 *.so*
 __pycache__/
+build-san/

@@ -3,10 +3,12 @@
 #
 # Usage: tools/test <suite> | tools/test --help
 #
-# Implemented suites: (none yet; the first suites arrive with native and
-# Mojo tests).
+# Implemented suites: native.
+# LMB_BUILD_DIR selects the CMake build tree (default: build); use
+# LMB_BUILD_DIR=build-san with a tools/build --sanitize tree for the
+# AddressSanitizer/UBSan run.
 #
-# Planned suites: native, mojo, live-tracepoint, cleanup, package.
+# Planned suites: mojo, live-tracepoint, cleanup, package.
 # A skipped privileged test is reported as skipped, never as success.
 # Exit 0 only when the suite passes; 1 on test failure; 2 on invalid usage.
 # One suite per invocation; extra arguments are rejected.
@@ -14,9 +16,20 @@
 set -u
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+BUILD_DIR="${LMB_BUILD_DIR:-build}"
 
 usage() {
     sed -n '2,/^$/p' "$0" | sed 's/^# //; s/^#//'
+}
+
+run_native() {
+    if [ ! -f "$ROOT/$BUILD_DIR/CTestTestfile.cmake" ]; then
+        echo "test: no native suite in $BUILD_DIR;" \
+            "run tools/build first" >&2
+        exit 2
+    fi
+    echo "+ ctest in $BUILD_DIR" >&2
+    (cd "$ROOT/$BUILD_DIR" && ctest --output-on-failure)
 }
 
 if [ $# -eq 0 ]; then
@@ -32,7 +45,10 @@ case "$1" in
     --help|-h)
         usage
         ;;
-    native|mojo|live-tracepoint|cleanup|package)
+    native)
+        run_native
+        ;;
+    mojo|live-tracepoint|cleanup|package)
         echo "test: suite '$1' is not implemented yet" >&2
         exit 2
         ;;
