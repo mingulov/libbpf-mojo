@@ -3,12 +3,15 @@
 #
 # Usage: tools/test <suite> | tools/test --help
 #
-# Implemented suites: native.
+# Implemented suites: native, mojo.
 # LMB_BUILD_DIR selects the CMake build tree (default: build); use
 # LMB_BUILD_DIR=build-san with a tools/build --sanitize tree for the
 # AddressSanitizer/UBSan run.
+# PIXI_BIN selects the pixi executable for the mojo suite (default:
+# pixi on PATH). When pixi is unavailable, the suite falls back to the
+# installed pixi environment directly and says so.
 #
-# Planned suites: mojo, live-tracepoint, cleanup, package.
+# Planned suites: live-tracepoint, cleanup, package.
 # A skipped privileged test is reported as skipped, never as success.
 # Exit 0 only when the suite passes; 1 on test failure; 2 on invalid usage.
 # One suite per invocation; extra arguments are rejected.
@@ -32,6 +35,87 @@ run_native() {
     (cd "$ROOT/$BUILD_DIR" && ctest --output-on-failure)
 }
 
+# Sets the MOJO array to the pinned-compiler invocation. Builds the
+# argument vector directly so paths with spaces survive.
+mojo_setup() {
+    if [ -n "${PIXI_BIN:-}" ]; then
+        MOJO=("$PIXI_BIN" run --frozen mojo)
+    elif command -v pixi >/dev/null 2>&1; then
+        MOJO=(pixi run --frozen mojo)
+    elif [ -x "$ROOT/.pixi/envs/default/bin/mojo" ]; then
+        echo "test: pixi not on PATH; using $ROOT/.pixi directly" >&2
+        MOJO=("$ROOT/.pixi/envs/default/bin/mojo")
+    else
+        echo "test: no pixi and no installed pixi environment;" \
+            "run pixi install first" >&2
+        exit 2
+    fi
+}
+
+run_mojo() {
+    native_lib="$ROOT/$BUILD_DIR/libbpf_mojo.so.1"
+    fake_lib="$ROOT/$BUILD_DIR/liblmb_testfake.so"
+    stub_lib="$ROOT/$BUILD_DIR/liblmb_stub.so"
+    fixture="$ROOT/$BUILD_DIR/fixtures/ring_test.bpf.o"
+    for need in "$native_lib" "$fake_lib" "$stub_lib" "$fixture"; do
+        if [ ! -f "$need" ]; then
+            echo "test: missing $need; run tools/build first" >&2
+            exit 2
+        fi
+    done
+    mojo_setup
+    export LMB_NATIVE_LIB="$native_lib"
+    export LMB_TESTFAKE_LIB="$fake_lib"
+    export LMB_STUB_LIB="$stub_lib"
+    export LMB_FIXTURE="$fixture"
+    failed=0
+    count=0
+    for t in "$ROOT"/tests/mojo/test_*.mojo; do
+        count=$((count + 1))
+        echo "+ mojo run $t" >&2
+        (cd "$ROOT" && "${MOJO[@]}" run -I src -I tests/mojo "$t") \
+            || failed=1
+    done
+    if [ "$count" -eq 0 ]; then
+        echo "test: no Mojo tests found" >&2
+        exit 2
+    fi
+    tmpdir="$(mktemp -d)"
+    trap 'rm -rf "$tmpdir"' EXIT
+    for f in "$ROOT"/tests/mojo/compile_fail/*.mojo; do
+        [ -e "$f" ] || continue
+        want="$(grep -m1 '# CHECK: ' "$f" | sed 's/.*# CHECK: //')"
+        if [ -z "$want" ]; then
+            echo "test: no CHECK line in $f" >&2
+            failed=1
+            continue
+        fi
+        echo "+ mojo build (must fail) $f" >&2
+        if out="$(cd "$ROOT" && "${MOJO[@]}" build -I src \
+                -I tests/mojo "$f" -o "$tmpdir/probe" 2>&1)"; then
+            echo "test: compile-fail fixture compiled: $f" >&2
+            failed=1
+        elif ! printf '%s\n' "$out" | grep -qF "$want"; then
+            echo "test: wrong rejection for $f (want: $want)" >&2
+            printf '%s\n' "$out" | head -5 >&2
+            failed=1
+        fi
+    done
+    for f in "$ROOT"/tests/mojo/compile_pass/*.mojo; do
+        [ -e "$f" ] || continue
+        echo "+ mojo run (must pass) $f" >&2
+        (cd "$ROOT" && "${MOJO[@]}" run -I src -I tests/mojo "$f") \
+            || failed=1
+    done
+    trap - EXIT
+    rm -rf "$tmpdir"
+    if [ "$failed" -ne 0 ]; then
+        echo "test: mojo suite FAILED" >&2
+        exit 1
+    fi
+    echo "test: mojo suite passed ($count files)" >&2
+}
+
 if [ $# -eq 0 ]; then
     usage >&2
     exit 2
@@ -48,7 +132,10 @@ case "$1" in
     native)
         run_native
         ;;
-    mojo|live-tracepoint|cleanup|package)
+    mojo)
+        run_mojo
+        ;;
+    live-tracepoint|cleanup|package)
         echo "test: suite '$1' is not implemented yet" >&2
         exit 2
         ;;

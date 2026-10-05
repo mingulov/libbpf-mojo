@@ -76,8 +76,11 @@ target_include_directories(lmb PRIVATE
 target_link_libraries(lmb PRIVATE libbpf_static elf z)
 add_dependencies(lmb libbpf_external)
 
-# Static archive of the same sources for the native test binaries.
+# Static archive of the same sources for the native test binaries
+# and the Mojo test-support library. Position-independent so it can
+# link into a shared object (also fixing the TLS model for that).
 add_library(lmb_static STATIC ${LMB_SOURCES})
+set_target_properties(lmb_static PROPERTIES POSITION_INDEPENDENT_CODE ON)
 target_include_directories(lmb_static PRIVATE
   include ${LIBBPF_ROOT}/include)
 target_link_libraries(lmb_static PUBLIC libbpf_static elf z)
@@ -134,3 +137,29 @@ add_test(NAME exports
     $<TARGET_FILE:lmb>)
 set_tests_properties(exports PROPERTIES
   WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
+
+# Test-support library for the Mojo boundary tests: synthetic input
+# through the real framing code. Test-only; never installed or
+# packaged. Only the lmb_test_* helpers are visible.
+add_library(lmb_testfake SHARED ${LMB_ROOT}/tests/support/fake_session.c)
+set_target_properties(lmb_testfake PROPERTIES
+  OUTPUT_NAME lmb_testfake
+  LINK_DEPENDS ${LMB_ROOT}/tests/support/lmb_testfake.map)
+target_link_options(lmb_testfake PRIVATE
+  "LINKER:--version-script,${LMB_ROOT}/tests/support/lmb_testfake.map")
+target_include_directories(lmb_testfake PRIVATE
+  ${CMAKE_CURRENT_SOURCE_DIR}/include
+  ${CMAKE_CURRENT_SOURCE_DIR}/src
+  ${LIBBPF_ROOT}/include)
+target_link_libraries(lmb_testfake PRIVATE lmb_static)
+add_dependencies(lmb_testfake libbpf_external)
+add_test(NAME testfake_exports
+  COMMAND sh ${LMB_ROOT}/tests/support/check_testfake_exports.sh
+    $<TARGET_FILE:lmb_testfake>)
+set_tests_properties(testfake_exports PROPERTIES
+  WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
+
+# Partial ABI stub for the incompatible-library test: every
+# operation except lmb_close. Test-only; never installed.
+add_library(lmb_stub SHARED ${LMB_ROOT}/tests/support/stub_partial.c)
+set_target_properties(lmb_stub PROPERTIES OUTPUT_NAME lmb_stub)

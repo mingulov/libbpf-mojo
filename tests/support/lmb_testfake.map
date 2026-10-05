@@ -1,0 +1,8 @@
+/* Test-support library: only the lmb_test_* helpers are visible.
+ * The statically linked bridge internals stay local. */
+{
+global:
+  lmb_test_*;
+local:
+  *;
+};
