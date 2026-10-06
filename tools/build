@@ -94,11 +94,11 @@ main() {
             usage
             ;;
         --check-toolchain)
-            cd "$ROOT"
+            cd "$ROOT" || return 1
             check_pixi_lock && check_toolchain || return 1
             ;;
         ""|--sanitize)
-            cd "$ROOT"
+            cd "$ROOT" || return 1
             check_pixi_lock && check_toolchain || return 1
             BUILD_DIR=build
             SANITIZE_FLAG="-DLMB_SANITIZE=OFF"
@@ -108,6 +108,10 @@ main() {
                 SANITIZE_FLAG="-DLMB_SANITIZE=ON"
                 CC_NAME=gcc
             fi
+            mkdir -p "$BUILD_DIR" || return 1
+            log python3 tools/provenance.py seal "$ROOT"
+            python3 tools/provenance.py seal "$ROOT" \
+                >"$BUILD_DIR/sources-pre.json" || return 1
             if [ -f "$ROOT/native/CMakeLists.txt" ]; then
                 log cmake -S native -B "$BUILD_DIR" -G Ninja \
                     -DCMAKE_C_COMPILER="$CC_NAME" "$SANITIZE_FLAG"
@@ -119,15 +123,33 @@ main() {
             else
                 echo "build: no native targets registered yet" >&2
             fi
-            if [ -f "$ROOT/src/libbpf_mojo/main.mojo" ]; then
-                log pixi run --frozen mojo build -o build/libbpf-mojo \
-                    src/libbpf_mojo/main.mojo
-                mkdir -p build
-                pixi run --frozen mojo build -o build/libbpf-mojo \
-                    src/libbpf_mojo/main.mojo || return 1
+            # Declared CPU baseline for shipped artifacts: the
+            # compiler otherwise tunes for the build host.
+            if [ -f "$ROOT/examples/tracepoint/main.mojo" ]; then
+                log pixi run --frozen mojo build -I src \
+                    --target-cpu x86-64-v2 \
+                    -o "$BUILD_DIR/examples/tracepoint_main" \
+                    examples/tracepoint/main.mojo
+                mkdir -p "$BUILD_DIR/examples"
+                pixi run --frozen mojo build -I src \
+                    --target-cpu x86-64-v2 \
+                    -o "$BUILD_DIR/examples/tracepoint_main" \
+                    examples/tracepoint/main.mojo || return 1
+                log pixi run --frozen mojo build -I src \
+                    --target-cpu x86-64-v2 \
+                    -o "$BUILD_DIR/examples/fault_driver" \
+                    tests/live/fault_driver.mojo
+                pixi run --frozen mojo build -I src \
+                    --target-cpu x86-64-v2 \
+                    -o "$BUILD_DIR/examples/fault_driver" \
+                    tests/live/fault_driver.mojo || return 1
             else
                 echo "build: no Mojo targets registered yet" >&2
             fi
+            log python3 tools/build_receipt.py "$BUILD_DIR" \
+                "$CC_NAME" "$SANITIZE_FLAG"
+            python3 tools/build_receipt.py "$BUILD_DIR" \
+                "$CC_NAME" "$SANITIZE_FLAG" || return 1
             ;;
         *)
             echo "build: unknown argument: $1" >&2

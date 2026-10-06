@@ -1,0 +1,12 @@
+# libbpf-mojo clean-runtime check image: system libraries only.
+#
+# No compiler, no Pixi, no Mojo, no Python. The tarball under test is
+# mounted at /pkg.tgz (read-only) and the check script at
+# /clean-check.sh (read-only); both are host files, not image layers.
+# The container still needs BPF privilege plus the host tracefs mount
+# to run the collection step (see tests/package/test_package.py).
+FROM ubuntu:26.04
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libelf1t64 zlib1g bpftool \
+    && rm -rf /var/lib/apt/lists/*

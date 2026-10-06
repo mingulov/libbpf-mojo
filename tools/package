@@ -1,44 +1,210 @@
 #!/usr/bin/env bash
-# libbpf-mojo standalone artifact builder.
+# libbpf-mojo standalone package builder.
 #
-# Usage: tools/package [--check] [--help]
+# Usage: tools/package [--out DIR] | tools/package --help
 #
-# No binary artifacts are registered yet; binary packaging arrives with the
-# first tested bridge and its clean-runtime gate. --check verifies the
-# packaging prerequisites (pinned toolchain and fresh pixi lock) today.
-# Exit 0 on success; 1 on failure; 2 on invalid usage.
-# One action per invocation; extra arguments are rejected.
+# Assembles dist/libbpf-mojo-<version>.tar.gz from a tools/build tree:
+# the versioned bridge library, the Mojo runtime libraries the
+# example binaries need, the tracepoint example (Mojo collector, C
+# reference consumer, trigger, BPF object), the public C header,
+# third-party redistribution notices, a package-rooted demo runner,
+# a README, and a MANIFEST.json with bridge/BPF/build identities
+# plus per-file hashes.
+#
+# Packaging requires the build receipt (build-receipt.json) and
+# re-hashes its artifacts, so a stale tree cannot be packaged under
+# a fresh revision. Every staging mutation is checked; any failure
+# aborts before the tarball is published.
+#
+# The tarball runs on a compatible clean runtime with neither
+# compiler nor Pixi: x86-64-v2 CPU, glibc >= 2.38, libelf, zlib,
+# and BPF privilege. See the packaged README and tools/test package
+# for the clean-room check. LMB_BUILD_DIR selects the CMake build
+# tree (default: build). Exit 0 on success; 1 on failure; 2 on
+# usage error.
 
 set -u
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+BUILD_DIR="${LMB_BUILD_DIR:-build}"
+OUT="$ROOT/dist"
+STAGE=""
 
 usage() {
     sed -n '2,/^$/p' "$0" | sed 's/^# //; s/^#//'
 }
 
-if [ $# -eq 0 ]; then
-    set -- ""
-fi
-if [ $# -gt 1 ]; then
-    echo "package: too many arguments" >&2
-    usage >&2
-    exit 2
-fi
-case "$1" in
-    --help|-h)
+log() {
+    echo "+ $*" >&2
+}
+
+cleanup_stage() {
+    if [ -n "$STAGE" ]; then
+        rm -rf "$STAGE"
+    fi
+}
+
+fail() {
+    echo "package: $1" >&2
+    return 1
+}
+
+main() {
+    if [ $# -eq 1 ] && { [ "$1" = "--help" ] || [ "$1" = "-h" ]; }; then
         usage
-        ;;
-    --check)
-        exec "$ROOT/tools/build" --check-toolchain
-        ;;
-    "")
-        echo "package: no binary artifacts registered yet" >&2
-        exit 2
-        ;;
-    *)
-        echo "package: unknown argument: $1" >&2
+        return 0
+    fi
+    if [ $# -eq 2 ] && [ "$1" = "--out" ]; then
+        OUT="$2"
+    elif [ $# -ne 0 ]; then
+        echo "package: invalid arguments" >&2
         usage >&2
-        exit 2
-        ;;
-esac
+        return 2
+    fi
+    case "$OUT" in
+        /*) ;;
+        *) OUT="$PWD/$OUT" ;;
+    esac
+    cd "$ROOT" || return 1
+    version="$(python3 -c '
+import sys, tomllib
+with open("pixi.toml", "rb") as handle:
+    data = tomllib.load(handle)
+for section in ("workspace", "project"):
+    if isinstance(data.get(section), dict) and "version" in data[section]:
+        print(data[section]["version"])
+        sys.exit(0)
+sys.exit("no version in pixi.toml")
+' 2>&1)" || {
+        echo "package: $version" >&2
+        return 1
+    }
+    name="libbpf-mojo-$version"
+    build="$ROOT/$BUILD_DIR"
+    receipt="$build/build-receipt.json"
+    if [ ! -f "$receipt" ]; then
+        fail "missing $receipt; run tools/build first" || return 1
+    fi
+    for need in \
+        "$build/libbpf_mojo.so.1" \
+        "$build/examples/tracepoint_main" \
+        "$build/examples/tracepoint_trigger" \
+        "$build/examples/probe.bpf.o" \
+        "$build/examples/reference_consumer" \
+        "$ROOT/native/include/libbpf_mojo.h" \
+        "$ROOT/examples/tracepoint/run-tracepoint.sh"; do
+        if [ ! -f "$need" ]; then
+            fail "missing $need; run tools/build first" || return 1
+        fi
+    done
+    if ! command -v readelf >/dev/null 2>&1; then
+        fail "readelf is required to collect runtime libraries" || return 1
+    fi
+    pixi_lib="$ROOT/.pixi/envs/default/lib"
+    if [ ! -d "$pixi_lib" ]; then
+        fail "no pixi environment at $pixi_lib; run pixi install first" \
+            || return 1
+    fi
+    mkdir -p "$OUT" || return 1
+    STAGE="$(mktemp -d "$OUT/stage.XXXXXX")" || return 1
+    trap cleanup_stage EXIT INT TERM
+    stage="$STAGE/$name"
+    log "stage $stage"
+    mkdir -p "$stage/lib" "$stage/examples" "$stage/include" \
+        "$stage/licenses" || return 1
+    cp "$build/libbpf_mojo.so.1" "$stage/lib/" || return 1
+    cp "$build/examples/tracepoint_main" \
+        "$build/examples/tracepoint_trigger" \
+        "$build/examples/probe.bpf.o" \
+        "$build/examples/reference_consumer" \
+        "$stage/examples/" || return 1
+    cp "$ROOT/native/include/libbpf_mojo.h" "$stage/include/" || return 1
+    cp "$ROOT/examples/tracepoint/run-tracepoint.sh" "$stage/" || return 1
+    chmod +x "$stage/run-tracepoint.sh" "$stage/examples/tracepoint_main" \
+        "$stage/examples/tracepoint_trigger" \
+        "$stage/examples/reference_consumer" || return 1
+    log "collect runtime libraries via readelf"
+    libs_out="$(python3 tools/package_libs.py "$pixi_lib" \
+        "$stage/lib/libbpf_mojo.so.1" \
+        "$stage/examples/tracepoint_main" \
+        "$stage/examples/tracepoint_trigger" \
+        "$stage/examples/reference_consumer")" || return 1
+    sysneeds="$STAGE/sysneeds.txt"
+    : >"$sysneeds" || return 1
+    bundled=0
+    while read -r kind soname lib; do
+        [ -n "$kind" ] || continue
+        if [ "$kind" = "B" ]; then
+            log "bundle $soname"
+            cp -L "$lib" "$stage/lib/$soname" || return 1
+            bundled=$((bundled + 1))
+        elif [ "$kind" = "S" ]; then
+            echo "$soname" >>"$sysneeds" || return 1
+        else
+            fail "bad package_libs line: $kind $soname $lib" || return 1
+        fi
+    done <<EOF
+$libs_out
+EOF
+    if [ "$bundled" -eq 0 ]; then
+        fail "no runtime libraries bundled" || return 1
+    fi
+    log "collect redistribution notices"
+    libbpf_src="$build/libbpf_external-prefix/src/libbpf_external"
+    libbpf_ver="$(grep -m1 -o 'refs/tags/v[0-9][0-9.]*' \
+        native/CMakeLists.txt \
+        | sed 's|refs/tags/v||; s|\.*$||')" || return 1
+    [ -n "$libbpf_ver" ] || {
+        fail "cannot determine libbpf version" || return 1
+    }
+    python3 tools/package_notices.py "$pixi_lib" "$stage" \
+        "$libbpf_src" "$libbpf_ver" "$version" || return 1
+    log "write README and MANIFEST.json"
+    cat >"$stage/README.md" <<EOF || return 1
+# libbpf-mojo $version
+
+Minimal eBPF collection bridge: Mojo session ownership over a small
+C/libbpf ABI, plus a tracepoint example that reconciles 128 real
+observations.
+
+## Run the example
+
+No compiler or Pixi is needed. On x86-64-v2 Linux with kernel >= 7.0,
+glibc >= 2.38, libelf, and zlib installed, bash >= 5.1 with
+coreutils, tracefs mounted at /sys/kernel/tracing, and BPF
+privilege (root or equivalent capabilities):
+
+    tar -xzf $name.tar.gz
+    cd $name
+    ./run-tracepoint.sh
+
+The runner resolves the bridge and runtime libraries from this
+directory. It exits 0 with a complete settlement record, 3 on a
+short window, 77 without privilege, 1 on failure.
+
+## Layout
+
+- \`lib/\`: \`libbpf_mojo.so.1\` (ABI v1) plus bundled Mojo runtime
+  libraries. Set \`LD_LIBRARY_PATH\` to this directory and
+  \`LMB_NATIVE_LIB\` to the bridge when embedding.
+- \`examples/\`: \`tracepoint_main\` (Mojo collector),
+  \`reference_consumer\` (C consumer of the identical object),
+  \`tracepoint_trigger\` (workload), \`probe.bpf.o\` (BPF object).
+- \`include/libbpf_mojo.h\`: the native ABI v1 header.
+- \`licenses/\`, \`THIRD-PARTY-NOTICES.md\`: redistribution notices.
+- \`MANIFEST.json\`: build identities and per-file hashes.
+
+\`MANIFEST.json\` records the exact bridge, BPF object, binary, and
+toolchain identities this package was built from. Verify hashes
+before trusting a redistributed copy.
+EOF
+    python3 tools/package_manifest.py \
+        "$version" "$stage" "$ROOT/toolchain.lock.json" \
+        "$receipt" "$build" "$sysneeds" "$pixi_lib" \
+        "$libbpf_src" || return 1
+    log "create $OUT/$name.tar.gz"
+    (cd "$STAGE" && tar -czf "$OUT/$name.tar.gz" "$name") || return 1
+    (cd "$OUT" && sha256sum "$name.tar.gz") || return 1
+}
+
+main "$@"

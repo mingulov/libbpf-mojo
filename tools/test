@@ -3,7 +3,10 @@
 #
 # Usage: tools/test <suite> | tools/test --help
 #
-# Implemented suites: native, mojo.
+# Implemented suites: native, mojo, live-tracepoint, cleanup, package,
+# runner, selftest. The runner suite drives the packaged demo
+# runner against fake doubles; selftest runs the unprivileged
+# stdlib-only Python probes. Neither needs privilege or docker.
 # LMB_BUILD_DIR selects the CMake build tree (default: build); use
 # LMB_BUILD_DIR=build-san with a tools/build --sanitize tree for the
 # AddressSanitizer/UBSan run.
@@ -11,9 +14,9 @@
 # pixi on PATH). When pixi is unavailable, the suite falls back to the
 # installed pixi environment directly and says so.
 #
-# Planned suites: live-tracepoint, cleanup, package.
 # A skipped privileged test is reported as skipped, never as success.
-# Exit 0 only when the suite passes; 1 on test failure; 2 on invalid usage.
+# Exit 0 only when the suite passes; 77 when a privileged suite
+# skips for lack of privilege; 1 on test failure; 2 on invalid usage.
 # One suite per invocation; extra arguments are rejected.
 
 set -u
@@ -116,6 +119,22 @@ run_mojo() {
     echo "test: mojo suite passed ($count files)" >&2
 }
 
+run_live() {
+    script="$ROOT/tests/live/$1"
+    if [ ! -f "$script" ]; then
+        echo "test: no live suite $1" >&2
+        exit 2
+    fi
+    echo "+ python3 tests/live/$1" >&2
+    (cd "$ROOT" && python3 "$script")
+    rc=$?
+    if [ "$rc" -eq 77 ]; then
+        echo "test: $1 skipped (no privilege or missing verifier)" >&2
+        exit 77
+    fi
+    exit "$rc"
+}
+
 if [ $# -eq 0 ]; then
     usage >&2
     exit 2
@@ -135,9 +154,40 @@ case "$1" in
     mojo)
         run_mojo
         ;;
-    live-tracepoint|cleanup|package)
-        echo "test: suite '$1' is not implemented yet" >&2
-        exit 2
+    live-tracepoint)
+        run_live test_tracepoint.py
+        ;;
+    cleanup)
+        run_live test_cleanup.py
+        ;;
+    package)
+        script="$ROOT/tests/package/test_package.py"
+        echo "+ python3 tests/package/test_package.py" >&2
+        (cd "$ROOT" && python3 "$script")
+        rc=$?
+        if [ "$rc" -eq 77 ]; then
+            echo "test: package skipped (no docker)" >&2
+            exit 77
+        fi
+        exit "$rc"
+        ;;
+    runner)
+        echo "+ bash tests/runner/test_runner.sh" >&2
+        (cd "$ROOT" && bash tests/runner/test_runner.sh)
+        exit "$?"
+        ;;
+    selftest)
+        echo "+ python3 tests/selftest" >&2
+        fails=0
+        for t in "$ROOT"/tests/selftest/test_*.py; do
+            echo "+ python3 ${t#$ROOT/}" >&2
+            (cd "$ROOT" && python3 "$t") || fails=1
+        done
+        if [ "$fails" -ne 0 ]; then
+            echo "test: selftest suite FAILED" >&2
+            exit 1
+        fi
+        echo "test: selftest suite passed" >&2
         ;;
     *)
         echo "test: unknown suite: $1" >&2

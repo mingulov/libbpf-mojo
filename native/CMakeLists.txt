@@ -103,6 +103,41 @@ add_custom_target(bpf_fixtures ALL
   DEPENDS ${CMAKE_BINARY_DIR}/fixtures/ring_test.bpf.o)
 add_dependencies(bpf_fixtures libbpf_external)
 
+# A04 tracepoint example: probe object, trigger, and C reference
+# consumer. Driven by tests/live/*.py, not by CTest.
+add_custom_command(
+  OUTPUT ${CMAKE_BINARY_DIR}/examples/probe.bpf.o
+  COMMAND ${CMAKE_COMMAND} -E make_directory
+    ${CMAKE_BINARY_DIR}/examples
+  COMMAND ${CLANG_EXE} --target=bpf -O2 -g -Wall
+    -I${LIBBPF_ROOT}/include
+    -I/usr/include/${CMAKE_SYSTEM_PROCESSOR}-linux-gnu
+    -I${LMB_ROOT}/examples/tracepoint
+    -c ${LMB_ROOT}/examples/tracepoint/probe.bpf.c
+    -o ${CMAKE_BINARY_DIR}/examples/probe.bpf.o
+  DEPENDS ${LMB_ROOT}/examples/tracepoint/probe.bpf.c
+    ${LMB_ROOT}/examples/tracepoint/event.h
+  VERBATIM)
+add_custom_target(example_probe ALL
+  DEPENDS ${CMAKE_BINARY_DIR}/examples/probe.bpf.o)
+add_dependencies(example_probe libbpf_external)
+
+add_executable(tracepoint_trigger
+  ${LMB_ROOT}/examples/tracepoint/trigger.c)
+set_target_properties(tracepoint_trigger PROPERTIES
+  RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/examples)
+
+add_executable(reference_consumer
+  ${LMB_ROOT}/tests/native/reference_consumer.c)
+target_include_directories(reference_consumer PRIVATE
+  ${CMAKE_CURRENT_SOURCE_DIR}/include
+  ${LMB_ROOT}/examples/tracepoint
+  ${LIBBPF_ROOT}/include)
+target_link_libraries(reference_consumer PRIVATE lmb_static)
+add_dependencies(reference_consumer libbpf_external)
+set_target_properties(reference_consumer PROPERTIES
+  RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/examples)
+
 enable_testing()
 function(lmb_test name)
   add_executable(test_${name} ${LMB_ROOT}/tests/native/${name}.c)
