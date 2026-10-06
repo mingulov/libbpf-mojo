@@ -259,6 +259,11 @@ def tamper_negatives(top, version):
         ("mojo-license", "licenses/LICENSE.mojo-compiler", "manifest"),
         ("libbpf-license", "licenses/LICENSE.BSD-2-Clause.libbpf",
          "manifest"),
+        ("first-party-license", "LICENSE", "manifest"),
+        ("first-party-license-2.0-only",
+         "LICENSES/GPL-2.0-only.txt", "manifest"),
+        ("first-party-license-2.0-or-later",
+         "LICENSES/GPL-2.0-or-later.txt", "manifest"),
     ]
     try:
         for label, rel, gate in probes:
@@ -427,16 +432,46 @@ def consumer_check(tarball, version):
     print("consumer: CONSUMER-OK against the packaged tree only")
 
 
+def assert_identical_tarballs(first, second):
+    """Two tarball paths must hash identically or Fail."""
+    digest_first = sha256_of(first)
+    digest_second = sha256_of(second)
+    if digest_first != digest_second:
+        raise Fail("tarball bytes differ across rebuilds: %s vs %s"
+                   % (digest_first, digest_second))
+
+
 def determinism_check(version, first):
     """A rebuild from the same tree must hash identically.
 
     Downstream projects pin the tarball sha256; nondeterministic
-    bytes silently break their locks.
+    bytes silently break their locks. The first build is copied
+    aside before rebuilding: both builds overwrite the same
+    path, so comparing the path with itself would read the new
+    bytes twice and prove nothing.
     """
-    second = build_package(version)
-    if sha256_of(first) != sha256_of(second):
-        raise Fail("tarball bytes differ across rebuilds: %s vs %s"
-                   % (sha256_of(first), sha256_of(second)))
+    snap = first + ".first-build"
+    probe = first + ".probe"
+    shutil.copyfile(first, snap)
+    try:
+        second = build_package(version)
+        assert_identical_tarballs(snap, second)
+        # Negative control: the comparison itself must catch a
+        # one-byte change, or the check above proves nothing.
+        shutil.copyfile(second, probe)
+        with open(probe, "ab") as handle:
+            handle.write(b"x")
+        try:
+            assert_identical_tarballs(second, probe)
+        except Fail:
+            pass
+        else:
+            raise Fail("determinism comparison accepted a "
+                       "tampered archive")
+    finally:
+        for path in (snap, probe):
+            if os.path.exists(path):
+                os.remove(path)
     print("determinism: identical sha256 across rebuilds")
 
 

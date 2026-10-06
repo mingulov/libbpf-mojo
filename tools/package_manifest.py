@@ -48,6 +48,9 @@ SEALED_COPIES = {
     "mojo/libbpf_mojo/error.mojo": "src/libbpf_mojo/error.mojo",
     "mojo/libbpf_mojo/session.mojo": "src/libbpf_mojo/session.mojo",
     "run-tracepoint.sh": "examples/tracepoint/run-tracepoint.sh",
+    "LICENSE": "LICENSE",
+    "LICENSES/GPL-2.0-only.txt": "LICENSES/GPL-2.0-only.txt",
+    "LICENSES/GPL-2.0-or-later.txt": "LICENSES/GPL-2.0-or-later.txt",
     "licenses/GPL-3.0.txt": "tools/notices/GPL-3.0.txt",
     "licenses/RUNTIME.LIBRARY.EXCEPTION":
         "tools/notices/GCC-RUNTIME-LIBRARY-EXCEPTION-3.1.txt",
