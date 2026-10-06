@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: GPL-3.0-or-later
 # libbpf-mojo test runner.
 #
 # Usage: tools/test <suite> | tools/test --help

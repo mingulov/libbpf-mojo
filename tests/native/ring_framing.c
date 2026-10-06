@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+
 /* Unprivileged contract tests: framing constants, open validation,
  * lifecycle, stats, and error records. No BPF syscalls are expected to
  * succeed here; privileged steps must fail closed without crashing. */

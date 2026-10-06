@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: GPL-2.0-only */
+
 /* Tracepoint example probe: one sequenced record per observed getpid
  * syscall from the configured trigger identity.
  *

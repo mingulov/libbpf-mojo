@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+
 /* C reference consumer for the tracepoint example.
  *
  * Collects the identical BPF object through the public lmb_* ABI

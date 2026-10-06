@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 """Poll results and frame decoding.
 
 A poll delivers at most one frame; the batch data stays in the

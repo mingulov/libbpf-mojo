@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+
 /* Attach transactionality: all sites attach or none do. Requires
  * collection privileges; reports SKIP when the kernel refuses.
  * Rollback is proven behaviorally (a failed transaction leaves the

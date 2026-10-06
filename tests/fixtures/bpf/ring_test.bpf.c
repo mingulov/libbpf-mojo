@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: GPL-2.0-only */
+
 /* Synthetic test program: emits a 16-byte record per observed getpid
  * syscall when the caller's PID matches the filter map. All other
  * activity is ignored in BPF, which keeps the native tests

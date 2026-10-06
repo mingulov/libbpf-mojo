@@ -1,3 +1,4 @@
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 # Native test fixtures
 
 These C sources are **synthetic test programs**, not product probes.

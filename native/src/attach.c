@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+
 /* Explicit attachment transactions: all sites attach or none do. */
 #include <errno.h>
 #include <stdlib.h>

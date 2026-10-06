@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 """Structured error contracts: constants match the C ABI and every
 failure carries operation/domain/code without string parsing."""
 from std.sys import exit

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Package proof: the exact tarball works in a clean room.
 
 Rebuilds the tarball with tools/package, verifies the manifest
@@ -113,6 +114,9 @@ def verify_manifest(tarball, version):
                 or manifest.get("version") != version:
             raise Fail("manifest identity mismatch: %r"
                        % manifest.get("version"))
+        first = manifest.get("first_party", {})
+        if first.get("license_default") != "GPL-3.0-or-later":
+            raise Fail("manifest first-party default missing")
         expect = {
             "lib/libbpf_mojo.so.1",
             "examples/tracepoint_main",
@@ -124,6 +128,9 @@ def verify_manifest(tarball, version):
             "README.md",
             "MANIFEST.json",
             "THIRD-PARTY-NOTICES.md",
+            "LICENSE",
+            "LICENSES/GPL-2.0-only.txt",
+            "LICENSES/GPL-2.0-or-later.txt",
             "licenses/LICENSE.BSD-2-Clause.libbpf",
             "licenses/GPL-3.0.txt",
             "licenses/RUNTIME.LIBRARY.EXCEPTION",
@@ -145,6 +152,10 @@ def verify_manifest(tarball, version):
         if not expect.issubset(on_disk):
             raise Fail("package missing files: %r"
                        % sorted(expect - on_disk))
+        for ident, rel in sorted(first.get("licenses", {}).items()):
+            if rel not in on_disk:
+                raise Fail("first-party %s points at missing %s"
+                           % (ident, rel))
         hashed = {row["path"]: row["sha256"]
                   for row in manifest.get("files", [])}
         for path in sorted(hashed):

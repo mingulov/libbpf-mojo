@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 """Shared helpers for the live (privileged) suites. Standard library only."""
 
 import ctypes

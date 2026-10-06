@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 """Byte-exact mirrors of the native ``lmb_*_v1`` ABI structs.
 
 Each mirror matches the C layout (offsets, sizes, alignment) so Mojo can

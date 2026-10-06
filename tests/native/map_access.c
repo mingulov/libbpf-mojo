@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+
 /* Map introspection and access against fixture maps. Requires a
  * loaded object; reports SKIP when the kernel refuses the load. */
 #include <linux/bpf.h>

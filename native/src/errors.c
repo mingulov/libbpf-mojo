@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+
 /* Thread-local error records and strict input validation. */
 #include <errno.h>
 #include <stdlib.h>

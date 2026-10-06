@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+
 /* Session ownership: open/load/close/detach/stats plus map access.
  * Map operations live here because maps are owned by the session's
  * loaded object. */

@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+
 /* Partial ABI stub: every lmb_* operation except lmb_close.
  *
  * Test-only fixture proving that NativeLib validation rejects an

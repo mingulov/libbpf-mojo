@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 """Move-only session owner for the native bridge.
 
 A ``Session`` owns its native handle and its native library: the

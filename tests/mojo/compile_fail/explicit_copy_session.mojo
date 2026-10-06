@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 """Compile-fail fixture: a Session has no copy method.
 
 # CHECK: no attribute 'copy'

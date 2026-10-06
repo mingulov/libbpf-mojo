@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Write the build receipt. Invoked by tools/build on success.
 
 Usage: build_receipt.py <build-dir> <c-compiler> <sanitize-flag>

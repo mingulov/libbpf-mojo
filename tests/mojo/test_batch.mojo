@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 """Batch decoding: frame parsing, short-buffer retention with guard
 bytes, unaligned delivery, and the 100k synthetic bulk run with
 markers above 2^53. All native input is synthetic through the

@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: GPL-3.0-or-later
 # libbpf-mojo standalone package builder.
 #
 # Usage: tools/package [--out DIR] | tools/package --help
@@ -127,6 +128,11 @@ sys.exit("no version in pixi.toml")
         "$stage/examples/" || return 1
     cp "$ROOT/native/include/libbpf_mojo.h" "$stage/include/" || return 1
     cp "$ROOT/examples/tracepoint/run-tracepoint.sh" "$stage/" || return 1
+    cp "$ROOT/LICENSE" "$stage/" || return 1
+    mkdir -p "$stage/LICENSES" || return 1
+    cp "$ROOT/LICENSES/GPL-2.0-only.txt" \
+        "$ROOT/LICENSES/GPL-2.0-or-later.txt" \
+        "$stage/LICENSES/" || return 1
     chmod +x "$stage/run-tracepoint.sh" "$stage/examples/tracepoint_main" \
         "$stage/examples/tracepoint_trigger" \
         "$stage/examples/reference_consumer" || return 1
@@ -203,6 +209,9 @@ short window, 77 without privilege, 1 on failure.
   with \`LD_LIBRARY_PATH=<package>/lib\` and \`LMB_NATIVE_LIB\`
   pointing at the bridge.
 - \`licenses/\`, \`THIRD-PARTY-NOTICES.md\`: redistribution notices.
+- \`LICENSE\`, \`LICENSES/\`: first-party license texts (GPL-3.0-or-later
+  default; eBPF objects GPL-2.0-only; shared wire headers
+  GPL-2.0-or-later; see \`MANIFEST.json\` \`first_party\`).
 - \`MANIFEST.json\`: build identities and per-file hashes.
 
 \`MANIFEST.json\` records the exact bridge, BPF object, binary, and

@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+
 /* Shared helpers for libbpf-mojo native tests. */
 #ifndef LMB_TESTUTIL_H
 #define LMB_TESTUTIL_H

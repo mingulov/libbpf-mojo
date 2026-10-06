@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Write the package MANIFEST.json. Invoked by tools/package.
 
 Usage: package_manifest.py <version> <stage> <lock> <receipt>
@@ -244,10 +245,29 @@ def main(argv):
                 sys.exit("manifest: %s lacks staged notice %s"
                          % (soname, notice))
         coverage[path] = sorted(notices)
+    first_party_files = (
+        "LICENSE",
+        "LICENSES/GPL-2.0-only.txt",
+        "LICENSES/GPL-2.0-or-later.txt",
+    )
+    for path in first_party_files:
+        if path not in by_path:
+            sys.exit("manifest: first-party %s not staged" % path)
     manifest = {
         "package": "libbpf-mojo",
         "version": version,
         "abi": "lmb-v1",
+        "first_party": {
+            "license_default": "GPL-3.0-or-later",
+            "licenses": {
+                "GPL-3.0-or-later": "LICENSE",
+                "GPL-2.0-only": "LICENSES/GPL-2.0-only.txt",
+                "GPL-2.0-or-later": "LICENSES/GPL-2.0-or-later.txt",
+            },
+            "paths": {
+                "examples/probe.bpf.o": "GPL-2.0-only",
+            },
+        },
         "build": {
             "arch": os.uname().machine,
             "cpu_baseline": receipt.get("mojo_target_cpu", "unknown"),

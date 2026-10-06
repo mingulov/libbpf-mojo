@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 """Compile-fail fixture: poll needs a mutable destination.
 
 # CHECK: mutable

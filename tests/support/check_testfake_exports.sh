@@ -1,4 +1,5 @@
 #!/bin/sh
+# SPDX-License-Identifier: GPL-3.0-or-later
 # check_testfake_exports.sh <lib.so>: the test-support library must
 # export exactly the four lmb_test_* helpers as global text symbols
 # and nothing else. Fails closed when nm is missing.

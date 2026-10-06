@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Shared provenance sealing for build receipts and packaging.
 
 `source_manifest` seals every build input file — mode plus

@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 """Mojo ownership wrappers for the libbpf-mojo native bridge.
 
 The native library owns loading, attaching, and event transport; this

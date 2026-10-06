@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 """Layout, width, and signedness assertions for the native ABI mirrors.
 
 Every struct mirror must match the C ABI byte for byte; sizes come

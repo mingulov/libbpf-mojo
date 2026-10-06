@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+
 /* libbpf-mojo native ABI v1.
  *
  * Authoritative contract: docs/abi-v1.md. This header must match it

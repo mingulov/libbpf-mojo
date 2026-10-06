@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Unprivileged probes for tools/provenance.py inventories.
 
 Git checkouts and sourceless archives must seal the same file

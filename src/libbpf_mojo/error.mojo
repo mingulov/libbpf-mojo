@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 """Structured bridge errors.
 
 Every native failure surfaces as an ``LmbError`` carrying the

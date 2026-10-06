@@ -1,3 +1,4 @@
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 # Tracepoint example
 
 Small real collection through the whole stack: a C eBPF probe on the

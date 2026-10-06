@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+
 /* Poll and framing behavior against a live ring buffer. Requires
  * collection privileges; reports SKIP when the kernel refuses with
  * EPERM/EACCES. Uses real syscalls (not vDSO) to trigger events. */

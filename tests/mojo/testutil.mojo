@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 """Shared helpers for the Mojo boundary tests (test-only).
 
 `TestFake` drives the synthetic input switch in the test-support

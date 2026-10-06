@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: GPL-2.0-or-later */
+
 /* Tracepoint example wire payload.
  *
  * Both the BPF probe (probe.bpf.c) and the C reference consumer

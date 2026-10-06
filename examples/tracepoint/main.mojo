@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 """Tracepoint example collector: real load/attach/event flow in Mojo.
 
 Usage: tracepoint_main <elf> <tgid> <ns-dev> <ns-ino> <ready-path>

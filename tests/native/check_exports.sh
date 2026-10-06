@@ -1,4 +1,5 @@
 #!/bin/sh
+# SPDX-License-Identifier: GPL-3.0-or-later
 # check_exports.sh <lib.so>: the shared library must export exactly the
 # eleven public lmb_* operations as global text symbols. The only other
 # global symbol allowed is the linker's own version node. Uses only

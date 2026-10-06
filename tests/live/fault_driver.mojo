@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 """Cleanup-suite fault driver: inject failures through the Mojo owner.
 
 Usage: fault_driver <mode> <elf> <status> <go> <bye>

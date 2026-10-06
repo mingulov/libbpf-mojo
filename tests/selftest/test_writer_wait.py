@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Unprivileged probes for test_cleanup.wait_writer_closed.
 
 The writer-close wait must key on file identity, not pathname

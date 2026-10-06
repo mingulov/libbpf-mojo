@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 """Compile-pass fixture: transferring a Session works.
 
 Ownership moves with `^`; the new owner uses and closes the

@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+
 /* Synthetic record source through the real poll boundary. Drives
  * lmb_ring_sample and lmb_poll with staged records without loading a
  * kernel object, so it needs no privileges and runs deterministically

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Unprivileged probes for tools/package_runtime.py.
 
 Builds a fake conda environment plus a fake package cache and

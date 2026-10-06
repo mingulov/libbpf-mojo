@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+
 /* Ring consumption with one owned staging slot. Each poll delivers at
  * most one framed event: bounded waits use the ring's epoll fd, and
  * consumption is capped at one record so retention never overflows. */

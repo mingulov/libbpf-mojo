@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 """Packaged-consumer proof for libbpf-mojo.
 
 Build ONLY with `-I <package>/mojo`: it must import

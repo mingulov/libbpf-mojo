@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+
 /* Internal bridge state shared by the native sources. Not installed. */
 #ifndef LMB_INTERNAL_H
 #define LMB_INTERNAL_H

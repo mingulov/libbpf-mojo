@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+
 /* Tracepoint example trigger: fire the observed syscall on demand.
  *
  * Usage: trigger <ready-path> <ledger-path> <count> <timeout-s>

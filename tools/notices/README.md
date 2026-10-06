@@ -1,3 +1,4 @@
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 # Vendored third-party license texts
 
 These files are the canonical license texts that `tools/package`

@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 """Session ownership, lifecycle, and operation contracts.
 
 Every test runs without privileges except the valid-load branch,

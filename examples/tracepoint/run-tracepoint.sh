@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: GPL-3.0-or-later
 # Packaged tracepoint demo runner.
 #
 # Usage: run-tracepoint.sh [want-count] [timeout-s]

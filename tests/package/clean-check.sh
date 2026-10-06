@@ -1,4 +1,5 @@
 #!/bin/sh
+# SPDX-License-Identifier: GPL-3.0-or-later
 # Clean-room package check: no compiler, no Pixi, no Mojo, no Python.
 #
 # Usage: clean-check.sh <expected-root>

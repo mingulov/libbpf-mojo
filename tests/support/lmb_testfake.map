@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+
 /* Test-support library: only the lmb_test_* helpers are visible.
  * The statically linked bridge internals stay local. */
 {

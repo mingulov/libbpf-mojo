@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Resolve runtime libraries for packaging. Invoked by tools/package.
 
 Usage: package_libs.py <pixi-lib-dir> <elf> [<elf> ...]

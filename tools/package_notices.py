@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Stage redistribution notices and render THIRD-PARTY-NOTICES.md.
 
 Usage: package_notices.py <pixi-lib> <stage> <libbpf-src>

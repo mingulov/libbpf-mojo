@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 # libbpf-mojo clean-runtime check image: system libraries only.
 #
 # No compiler, no Pixi, no Mojo, no Python. The tarball under test is
