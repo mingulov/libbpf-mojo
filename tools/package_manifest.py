@@ -41,6 +41,11 @@ STAGED = {
 # shipping under the original seal.
 SEALED_COPIES = {
     "include/libbpf_mojo.h": "native/include/libbpf_mojo.h",
+    "mojo/libbpf_mojo/__init__.mojo": "src/libbpf_mojo/__init__.mojo",
+    "mojo/libbpf_mojo/_ffi.mojo": "src/libbpf_mojo/_ffi.mojo",
+    "mojo/libbpf_mojo/batch.mojo": "src/libbpf_mojo/batch.mojo",
+    "mojo/libbpf_mojo/error.mojo": "src/libbpf_mojo/error.mojo",
+    "mojo/libbpf_mojo/session.mojo": "src/libbpf_mojo/session.mojo",
     "run-tracepoint.sh": "examples/tracepoint/run-tracepoint.sh",
     "licenses/GPL-3.0.txt": "tools/notices/GPL-3.0.txt",
     "licenses/RUNTIME.LIBRARY.EXCEPTION":

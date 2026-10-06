@@ -7,9 +7,10 @@
 # the versioned bridge library, the Mojo runtime libraries the
 # example binaries need, the tracepoint example (Mojo collector, C
 # reference consumer, trigger, BPF object), the public C header,
-# third-party redistribution notices, a package-rooted demo runner,
-# a README, and a MANIFEST.json with bridge/BPF/build identities
-# plus per-file hashes.
+# the importable Mojo wrapper sources, third-party redistribution
+# notices, a package-rooted demo runner, a README, and a
+# MANIFEST.json with bridge/BPF/build identities plus per-file
+# hashes.
 #
 # Packaging requires the build receipt (build-receipt.json) and
 # re-hashes its artifacts, so a stale tree cannot be packaged under
@@ -111,8 +112,14 @@ sys.exit("no version in pixi.toml")
     stage="$STAGE/$name"
     log "stage $stage"
     mkdir -p "$stage/lib" "$stage/examples" "$stage/include" \
-        "$stage/licenses" || return 1
+        "$stage/mojo/libbpf_mojo" "$stage/licenses" || return 1
     cp "$build/libbpf_mojo.so.1" "$stage/lib/" || return 1
+    cp "$ROOT/src/libbpf_mojo/__init__.mojo" \
+        "$ROOT/src/libbpf_mojo/_ffi.mojo" \
+        "$ROOT/src/libbpf_mojo/batch.mojo" \
+        "$ROOT/src/libbpf_mojo/error.mojo" \
+        "$ROOT/src/libbpf_mojo/session.mojo" \
+        "$stage/mojo/libbpf_mojo/" || return 1
     cp "$build/examples/tracepoint_main" \
         "$build/examples/tracepoint_trigger" \
         "$build/examples/probe.bpf.o" \
@@ -191,6 +198,10 @@ short window, 77 without privilege, 1 on failure.
   \`reference_consumer\` (C consumer of the identical object),
   \`tracepoint_trigger\` (workload), \`probe.bpf.o\` (BPF object).
 - \`include/libbpf_mojo.h\`: the native ABI v1 header.
+- \`mojo/libbpf_mojo/\`: importable Mojo wrapper sources. Build
+  a consumer with \`mojo build -I <package>/mojo\`, then run it
+  with \`LD_LIBRARY_PATH=<package>/lib\` and \`LMB_NATIVE_LIB\`
+  pointing at the bridge.
 - \`licenses/\`, \`THIRD-PARTY-NOTICES.md\`: redistribution notices.
 - \`MANIFEST.json\`: build identities and per-file hashes.
 

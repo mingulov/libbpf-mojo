@@ -72,8 +72,14 @@ def sha256_of(path):
     return digest.hexdigest()
 
 
-def verify_manifest(tarball, version):
-    tmp = tempfile.mkdtemp(prefix="pkg-verify-")
+def extract_top(tarball, version, prefix):
+    """Extract the tarball under exactly one expected root.
+
+    Shared by verification and the consumer check so both
+    select the same root. Returns (tmp, top); the caller
+    removes tmp.
+    """
+    tmp = tempfile.mkdtemp(prefix=prefix)
     try:
         root = "libbpf-mojo-%s" % version
         with tarfile.open(tarball, "r:gz") as tar:
@@ -89,7 +95,15 @@ def verify_manifest(tarball, version):
                     raise Fail("member outside expected root: %r"
                                % member.name)
             tar.extractall(tmp, filter="data")
-        top = os.path.join(tmp, "libbpf-mojo-%s" % version)
+    except Exception:
+        shutil.rmtree(tmp, ignore_errors=True)
+        raise
+    return tmp, os.path.join(tmp, root)
+
+
+def verify_manifest(tarball, version):
+    tmp, top = extract_top(tarball, version, "pkg-verify-")
+    try:
         manifest_path = os.path.join(top, "MANIFEST.json")
         if not os.path.isfile(manifest_path):
             raise Fail("MANIFEST.json missing from package")
@@ -117,6 +131,11 @@ def verify_manifest(tarball, version):
             "licenses/NOTICE.mojo-runtime.md",
             "licenses/LICENSE.mojo-compiler",
             "licenses/Third-Party-Notices.mojo-compiler",
+            "mojo/libbpf_mojo/__init__.mojo",
+            "mojo/libbpf_mojo/_ffi.mojo",
+            "mojo/libbpf_mojo/batch.mojo",
+            "mojo/libbpf_mojo/error.mojo",
+            "mojo/libbpf_mojo/session.mojo",
         }
         on_disk = set()
         for dirpath, _dirnames, filenames in os.walk(top):
@@ -223,6 +242,7 @@ def tamper_negatives(top, version):
     probes = [
         ("header", "include/libbpf_mojo.h", "manifest"),
         ("runner", "run-tracepoint.sh", "manifest"),
+        ("mojo-source", "mojo/libbpf_mojo/session.mojo", "manifest"),
         ("runtime-lib", "lib/libz.so.1", "manifest"),
         ("runtime-lib", "lib/libz.so.1", "notices"),
         ("mojo-license", "licenses/LICENSE.mojo-compiler", "manifest"),
@@ -329,10 +349,78 @@ def clean_room(tarball, version):
     print("clean room: CLEAN-PASS")
 
 
+def consumer_check(tarball, version):
+    """A third party can build against the package alone.
+
+    Compiles tests/package/consumer_main.mojo with `-I` on the
+    extracted `mojo/` tree only (no sibling source path), runs it
+    against the packaged bridge and example object, and requires
+    CONSUMER-OK. A control build against an empty import root must
+    fail with the missing-module diagnostic, proving the package
+    tree is the resolution source.
+    Unprivileged-safe: open and stats need no BPF privilege.
+    """
+    if shutil.which("pixi") is None:
+        raise Skip("no pixi; cannot run the consumer check")
+    tmp, top = extract_top(tarball, version, "pkg-consumer-")
+    try:
+        fixture = os.path.join(HERE, "consumer_main.mojo")
+        if not os.path.isfile(fixture):
+            raise Fail("consumer_main.mojo missing from tests")
+        # Build from an isolated copy so the fixture directory
+        # cannot contribute an import source either.
+        isolated = os.path.join(tmp, "isolated")
+        os.mkdir(isolated)
+        consumer = os.path.join(isolated, "consumer_main.mojo")
+        shutil.copyfile(fixture, consumer)
+        binary = os.path.join(tmp, "consumer_main")
+        build = ["pixi", "run", "--frozen", "mojo"]
+        proc = run(build + [
+            "build", "-I", os.path.join(top, "mojo"),
+            "--target-cpu", "x86-64-v2",
+            "-o", binary, consumer,
+        ], cwd=ROOT, timeout=600)
+        if proc.returncode != 0:
+            raise Fail("consumer build failed:\n%s" % proc.stdout[-3000:])
+        empty = os.path.join(tmp, "empty-import-root")
+        os.mkdir(empty)
+        control = run(build + [
+            "build", "-I", empty,
+            "--target-cpu", "x86-64-v2",
+            "-o", os.path.join(tmp, "consumer_control"), consumer,
+        ], cwd=ROOT, timeout=600)
+        if control.returncode == 0:
+            raise Fail("control build without the package tree "
+                       "succeeded; import source is ambiguous")
+        if control.returncode < 0:
+            raise Fail("control build died to signal %d, not a "
+                       "missing import:\n%s" % (
+                           -control.returncode,
+                           control.stdout[-2000:]))
+        if "unable to locate module 'libbpf_mojo'" \
+                not in control.stdout:
+            raise Fail("control build failed without the "
+                       "missing-module diagnostic:\n%s"
+                       % control.stdout[-2000:])
+        env = dict(os.environ)
+        env["LD_LIBRARY_PATH"] = os.path.join(top, "lib")
+        env["LMB_NATIVE_LIB"] = os.path.join(
+            top, "lib", "libbpf_mojo.so.1")
+        proc = run([binary, os.path.join(
+            top, "examples", "probe.bpf.o")], env=env, timeout=120)
+        if proc.returncode != 0 or "CONSUMER-OK" not in proc.stdout:
+            raise Fail("consumer run failed (exit %d):\n%s" % (
+                proc.returncode, proc.stdout[-2000:]))
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+    print("consumer: CONSUMER-OK against the packaged tree only")
+
+
 def main():
     version = package_version()
     tarball = build_package(version)
     verify_manifest(tarball, version)
+    consumer_check(tarball, version)
     clean_room(tarball, version)
 
 
