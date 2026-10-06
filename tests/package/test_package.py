@@ -427,9 +427,23 @@ def consumer_check(tarball, version):
     print("consumer: CONSUMER-OK against the packaged tree only")
 
 
+def determinism_check(version, first):
+    """A rebuild from the same tree must hash identically.
+
+    Downstream projects pin the tarball sha256; nondeterministic
+    bytes silently break their locks.
+    """
+    second = build_package(version)
+    if sha256_of(first) != sha256_of(second):
+        raise Fail("tarball bytes differ across rebuilds: %s vs %s"
+                   % (sha256_of(first), sha256_of(second)))
+    print("determinism: identical sha256 across rebuilds")
+
+
 def main():
     version = package_version()
     tarball = build_package(version)
+    determinism_check(version, tarball)
     verify_manifest(tarball, version)
     consumer_check(tarball, version)
     clean_room(tarball, version)

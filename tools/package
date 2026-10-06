@@ -223,7 +223,41 @@ EOF
         "$receipt" "$build" "$sysneeds" "$pixi_lib" \
         "$libbpf_src" || return 1
     log "create $OUT/$name.tar.gz"
-    (cd "$STAGE" && tar -czf "$OUT/$name.tar.gz" "$name") || return 1
+    # Deterministic bytes via tarfile (system tar lacks
+    # --sort-name here, and its spelling varies by
+    # implementation): sorted members, HEAD-time mtimes,
+    # zeroed ownership, and a zero-mtime gzip header, so one
+    # source revision yields one tarball hash for downstream
+    # pins and the determinism check.
+    mtime=$(git -C "$ROOT" log -1 --format=%ct) || return 1
+    python3 - "$STAGE" "$name" "$OUT/$name.tar.gz" "$mtime" \
+        <<'EOF' || return 1
+import gzip
+import os
+import sys
+import tarfile
+stage, name, out, mtime = sys.argv[1], sys.argv[2], sys.argv[3], int(sys.argv[4])
+top = os.path.join(stage, name)
+if os.path.exists(out):
+    os.remove(out)
+with open(out, "wb") as raw:
+    gz = gzip.GzipFile(filename="", mode="wb", fileobj=raw,
+                      compresslevel=9, mtime=0)
+    try:
+        with tarfile.open(fileobj=gz, mode="w") as tar:
+            for base, dirs, files in os.walk(top):
+                dirs.sort()
+                for entry in sorted(files):
+                    full = os.path.join(base, entry)
+                    info = tar.gettarinfo(full, os.path.relpath(full, stage))
+                    info.mtime = mtime
+                    info.uid = info.gid = 0
+                    info.uname = info.gname = ""
+                    with open(full, "rb") as handle:
+                        tar.addfile(info, handle)
+    finally:
+        gz.close()
+EOF
     (cd "$OUT" && sha256sum "$name.tar.gz") || return 1
 }
 
