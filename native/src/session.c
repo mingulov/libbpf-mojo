@@ -362,7 +362,6 @@ int32_t lmb_map_read(struct lmb_session *session,
                    "lmb_map_read: output aliases input");
         return -EINVAL;
     }
-    *required = 0;
     if (!need_loaded(session, LMB_OP_MAP_READ, "lmb_map_read"))
         return -EINVAL;
     map = find_map(session, name, LMB_OP_MAP_READ, &spread_rc);
@@ -373,6 +372,8 @@ int32_t lmb_map_read(struct lmb_session *session,
                    "lmb_map_read: key size mismatch");
         return -EINVAL;
     }
+    /* Arguments validated: other failures report required as 0. */
+    *required = 0;
     spread_rc = spread_need(map, &need);
     if (spread_rc)
         return spread_fail(session, LMB_OP_MAP_READ, spread_rc,

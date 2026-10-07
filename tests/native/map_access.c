@@ -34,6 +34,21 @@ int main(int argc, char **argv) {
         free(elf);
         return 1;
     }
+    /* Argument validation leaves outputs untouched (abi-v1). These
+     * need no privileges, so they run before the load gate. */
+    lmb_make_name(&name, "stat");
+    required = 123;
+    LMB_CHECK(lmb_map_read(NULL, &name, (const uint8_t *)&key, 4,
+                           small, sizeof(small), &required) == -EINVAL &&
+                  required == 123,
+              "null-session-untouched",
+              "null session must fail closed without touching required");
+    required = 123;
+    LMB_CHECK(lmb_map_read(s, NULL, (const uint8_t *)&key, 4,
+                           small, sizeof(small), &required) == -EINVAL &&
+                  required == 123,
+              "null-name-untouched",
+              "null name must fail closed without touching required");
     if (lmb_load(s) != 0) {
         int eligible = lmb_has_collection_privilege();
         lmb_close(&s);
