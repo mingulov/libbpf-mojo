@@ -37,17 +37,9 @@ jobs:
       - name: Install system toolchain
         run: |
           sudo apt-get update
-          # The image preinstalls a newer cmake; the locked
-          # toolchain needs exactly the archive version.
           sudo apt-get install -y --no-install-recommends \
-            --allow-downgrades \
-            clang bpftool cmake=4.2.3-2ubuntu2 ninja-build \
-            make pkg-config libelf-dev zlib1g-dev
-          # The image also ships a Kitware cmake in /usr/local
-          # that shadows the archive binary; remove it so the
-          # locked cmake resolves (verified by tools/build).
-          sudo rm -f /usr/local/bin/cmake /usr/local/bin/ctest \
-            /usr/local/bin/cpack /usr/local/bin/ccmake
+            clang bpftool cmake ninja-build make pkg-config \
+            libelf-dev zlib1g-dev
       - name: Build
         run: ./tools/build
       - name: Clean-room package lane

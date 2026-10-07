@@ -2,15 +2,16 @@
 # Build and toolchain guide
 
 This repository builds with a pinned Mojo toolchain managed by pixi, plus
-system C tooling for the native bridge. Exact versions live in
-`toolchain.lock.json`; the `pixi.lock` file carries authoritative conda
-package hashes.
+system C tooling for the native bridge. Pinned versions live in
+`toolchain.lock.json` (cmake carries a minimum floor, the rest are
+exact); the `pixi.lock` file carries authoritative conda package hashes.
 
 ## Prerequisites
 
 - `pixi` 0.81.0 exactly, to create the Mojo environment.
-- System `clang`, `cmake`, `ninja`, `make`, and `bpftool` at the locked
-  versions, for the native bridge and test fixtures.
+- System `clang`, `ninja`, `make`, and `bpftool` at the locked
+  versions, plus `cmake` at or above the locked floor, for the
+  native bridge and test fixtures.
 - `libelf` headers (`libelf-dev 0.194-4`), `zlib` headers, and
   `pkg-config` at the locked versions, for the libbpf source build. The
   native build verifies them with `pkg-config` and fails closed when
