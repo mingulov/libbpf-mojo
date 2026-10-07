@@ -1,0 +1,64 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Tier 3: privileged live-kernel suites (real tracepoint load,
+# attach, event flow, and fault cleanup). Push to main and
+# manual dispatch only: BPF collection privilege must never
+# run untrusted pull-request code.
+#
+# Exit 77 from a suite means the runner kernel lacks BPF
+# support; it is recorded as a visible SKIP in the step
+# summary, never as silent success. Any other nonzero exit
+# fails the run.
+name: privileged
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  privileged:
+    runs-on: ubuntu-26.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install pixi
+        run: |
+          curl -fsSL https://pixi.sh/install.sh | \
+            PIXI_VERSION=0.81.0 bash
+          echo "$HOME/.pixi/bin" >> "$GITHUB_PATH"
+      - name: Install system toolchain
+        run: |
+          sudo apt-get update
+          # The image preinstalls a newer cmake; the locked
+          # toolchain needs exactly the archive version.
+          sudo apt-get install -y --no-install-recommends \
+            --allow-downgrades \
+            clang bpftool cmake=4.2.3-2ubuntu2 ninja-build \
+            make pkg-config libelf-dev zlib1g-dev
+          # The image also ships a Kitware cmake in /usr/local
+          # that shadows the archive binary; remove it so the
+          # locked cmake resolves (verified by tools/build).
+          sudo rm -f /usr/local/bin/cmake /usr/local/bin/ctest \
+            /usr/local/bin/cpack /usr/local/bin/ccmake
+      - name: Build
+        run: ./tools/build
+      - name: Live suites
+        run: |
+          fail=0
+          for suite in live-tracepoint cleanup; do
+            rc=0
+            sudo -n ./tools/test "$suite" || rc=$?
+            if [ "$rc" -eq 77 ]; then
+              echo "SKIP $suite (runner lacks BPF support)" \
+                >> "$GITHUB_STEP_SUMMARY"
+            elif [ "$rc" -ne 0 ]; then
+              echo "FAIL $suite (exit $rc)" >> "$GITHUB_STEP_SUMMARY"
+              fail=1
+            else
+              echo "PASS $suite" >> "$GITHUB_STEP_SUMMARY"
+            fi
+          done
+          exit "$fail"
