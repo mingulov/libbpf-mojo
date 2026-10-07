@@ -7,6 +7,24 @@ The initial scope is object loading, explicit attachment, bounded event batches,
 
 Status: 0.2.x supports ABI v1 (object loading, explicit attachment, bounded event batches, map access, errors, owned cleanup) with importable Mojo wrappers. MemVeil is the first consumer. This is not an upstream libbpf project or a Mojo-to-eBPF compiler.
 
+## Build, test, and package
+
+Pinned Mojo 1.1.0 toolchain via pixi plus system C tooling;
+see `docs/build.md` and `toolchain.lock.json`.
+
+    ./tools/build                                    # everything
+    ./tools/test --help                              # list suites
+    ./tools/test native                              # C contracts
+    ./tools/test mojo                                # Mojo ownership
+    ./tools/test package-consumer                    # tarball serves a consumer
+    ./tools/package                                  # release tarball + MANIFEST
+
+`docs/abi-v1.md` is the normative C boundary contract;
+`docs/ownership.md` states lifetimes, errors, and transport in
+prose; `docs/support.md` states the tested envelope;
+`examples/tracepoint/` is a small real collection through the
+whole stack.
+
 ## Licensing
 
 First-party sources are GPL-3.0-or-later by default (`LICENSE`;

@@ -5,7 +5,8 @@
 # Usage: tools/test <suite> | tools/test --help
 #
 # Implemented suites: native, mojo, live-tracepoint, cleanup, package,
-# runner, selftest. The runner suite drives the packaged demo
+# package-consumer, runner, selftest, provenance. The runner suite
+# drives the packaged demo
 # runner against fake doubles; selftest runs the unprivileged
 # stdlib-only Python probes. Neither needs privilege or docker.
 # LMB_BUILD_DIR selects the CMake build tree (default: build); use
@@ -176,6 +177,21 @@ case "$1" in
         echo "+ bash tests/runner/test_runner.sh" >&2
         (cd "$ROOT" && bash tests/runner/test_runner.sh)
         exit "$?"
+        ;;
+    provenance)
+        echo "+ python3 tests/provenance/test_provenance.py" >&2
+        (cd "$ROOT" && python3 tests/provenance/test_provenance.py)
+        exit "$?"
+        ;;
+    package-consumer)
+        echo "+ python3 tests/package/test_consumer_lane.py" >&2
+        (cd "$ROOT" && python3 tests/package/test_consumer_lane.py)
+        rc=$?
+        if [ "$rc" -eq 77 ]; then
+            echo "test: package-consumer skipped" >&2
+            exit 77
+        fi
+        exit "$rc"
         ;;
     selftest)
         echo "+ python3 tests/selftest" >&2
