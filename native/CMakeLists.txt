@@ -105,7 +105,7 @@ add_custom_target(bpf_fixtures ALL
   DEPENDS ${CMAKE_BINARY_DIR}/fixtures/ring_test.bpf.o)
 add_dependencies(bpf_fixtures libbpf_external)
 
-# A04 tracepoint example: probe object, trigger, and C reference
+# Tracepoint example: probe object, trigger, and C reference
 # consumer. Driven by tests/live/*.py, not by CTest.
 add_custom_command(
   OUTPUT ${CMAKE_BINARY_DIR}/examples/probe.bpf.o

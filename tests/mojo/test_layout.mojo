@@ -3,7 +3,7 @@
 """Layout, width, and signedness assertions for the native ABI mirrors.
 
 Every struct mirror must match the C ABI byte for byte; sizes come
-from the C compiler (see A01 abi_check.c) and offsets are verified by
+from the C compiler (see abi_check.c) and offsets are verified by
 reading raw bytes back through the FFI readers.
 """
 from std.sys import align_of, exit, size_of
