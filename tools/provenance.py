@@ -15,6 +15,7 @@ only.
 import hashlib
 import json
 import os
+import re
 import subprocess
 import sys
 
@@ -27,7 +28,43 @@ ARCHIVE_SKIP_DIRS = frozenset({
     ".git", ".pixi", "build", "build-san", "dist",
     "__pycache__", ".pytest_cache", ".mypy_cache",
 })
-ARCHIVE_SKIP_FILES = frozenset({".DS_Store"})
+ARCHIVE_SKIP_FILES = frozenset({".DS_Store", ".git"})
+
+
+def owns_git_root(root):
+    """Canonical source root must be Git's actual top-level.
+
+    Git searches parents when metadata is absent. A successful Git
+    command alone therefore says nothing about source ownership.
+    This also supports linked worktrees and submodules (.git files).
+    """
+    try:
+        out = subprocess.run(
+            ["git", "rev-parse", "--show-toplevel"], cwd=root,
+            stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True)
+    except OSError:
+        return False
+    return (out.returncode == 0 and bool(out.stdout.strip())
+            and os.path.realpath(out.stdout.strip()) == os.path.realpath(root))
+
+
+def archive_mtime(root, source_date_epoch=None):
+    """Validated override, owning HEAD time, or stable epoch-zero fallback."""
+    if source_date_epoch is not None:
+        value = source_date_epoch
+    elif owns_git_root(root):
+        out = subprocess.run(
+            ["git", "log", "-1", "--format=%ct"], cwd=root,
+            stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True)
+        if out.returncode != 0:
+            sys.exit("provenance: cannot read owning HEAD timestamp")
+        value = out.stdout.strip()
+    else:
+        value = "0"
+    if not re.fullmatch(r"[0-9]{1,10}", value) or int(value) > 4294967295:
+        sys.exit("provenance: archive timestamp must be decimal seconds "
+                 "in 0..4294967295 (SOURCE_DATE_EPOCH)")
+    return int(value)
 
 
 def sha256_of(path):
@@ -56,6 +93,8 @@ def archive_skip(rel):
 
 def git_files(root):
     """Tracked plus untracked paths via git, or None without git."""
+    if not owns_git_root(root):
+        return None
     try:
         out = subprocess.run(
             ["git", "ls-files", "-c", "-o", "--exclude-standard", "-z"],
@@ -153,6 +192,9 @@ def check_manifest(root, sealed, where):
 
 
 def main(argv):
+    if len(argv) == 3 and argv[1] == "mtime":
+        print(archive_mtime(argv[2], os.environ.get("SOURCE_DATE_EPOCH")))
+        return
     if len(argv) not in (3, 4) or argv[1] != "seal":
         sys.exit("usage: provenance.py seal <root> [git|archive]")
     mode = argv[3] if len(argv) == 4 else "auto"

@@ -22,6 +22,36 @@ exact); the `pixi.lock` file carries authoritative conda package hashes.
 Run `pixi install` once after cloning. Every Mojo command below runs inside
 that environment; the `tools/` wrappers do this for you.
 
+## Standalone source archives
+
+A complete source archive contains `native/`, `src/`, `examples/`,
+`tests/`, `tools/`, documentation, licenses, and both toolchain locks.
+For example, create one from a clean revision with
+`git archive --prefix=libbpf-mojo-source/ HEAD | gzip -n > source.tar.gz`.
+Extract it into a new directory and run `./tools/build`, then
+`./tools/test native`, `./tools/test package-consumer`, and
+`./tools/package` there, using the
+prerequisites above. No Git metadata is required to build or package.
+From a checkout, `./tools/test source-export` builds fresh HEAD exports,
+including under an unrelated Git parent, and checks consumption, source
+seals, timestamp refusal and repeated package determinism.
+
+Source exports seal the declared archive inventory and record the revision
+as `unknown`; they never borrow the identity or ignore rules of an enclosing
+repository. Bind the complete source archive's hash to the generated runtime
+archive's hash when distributing a candidate. The runtime/development bundle
+contains the bridge, examples, public header and Mojo wrappers; it is not
+the full corresponding native source archive.
+
+Archive members use `SOURCE_DATE_EPOCH` when supplied: only ASCII decimal
+seconds in `0..4294967295` (at most ten digits) are accepted. Malformed or
+out-of-range values fail before staging. Without an override, an owning Git
+checkout uses its HEAD commit time; a Git-free source tree uses the stable
+Unix epoch zero. The gzip header time is always zero. This makes repeated
+packaging of the same sealed build deterministic without inventing a source
+revision or using the current clock. Real Git worktrees and submodules keep
+their own identities even when `.git` is a file.
+
 ## Layout and wrappers
 
 | Path | Purpose |

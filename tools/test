@@ -5,7 +5,7 @@
 # Usage: tools/test <suite> | tools/test --help
 #
 # Implemented suites: native, mojo, live-tracepoint, cleanup, package,
-# package-consumer, runner, selftest, provenance. The runner suite
+# package-consumer, source-export, runner, selftest, provenance. The runner suite
 # drives the packaged demo
 # runner against fake doubles; selftest runs the unprivileged
 # stdlib-only Python probes. Neither needs privilege or docker.
@@ -181,6 +181,10 @@ case "$1" in
     provenance)
         echo "+ python3 tests/provenance/test_provenance.py" >&2
         (cd "$ROOT" && python3 tests/provenance/test_provenance.py)
+        exit "$?"
+        ;;
+    source-export)
+        (cd "$ROOT" && python3 tests/package/test_source_export.py)
         exit "$?"
         ;;
     package-consumer)

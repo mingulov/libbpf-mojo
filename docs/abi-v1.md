@@ -358,8 +358,10 @@ runtime ABI compatibility are documented separately when v2 is proposed.
 
 ## Native build driver
 
-The native library and tests must build with CMake plus Ninja, invoked
+The native library and tests build with CMake plus Ninja, invoked
 only through `tools/build` (single supported path). Pinned versions live
-in `toolchain.lock.json`. The implementation must build libbpf from the
-pinned source tarball recorded there and verify the hash before use. No
-native targets exist yet.
+in `toolchain.lock.json`. The implementation builds libbpf from the
+pinned source tarball recorded there and verifies the hash before use.
+`tools/test native` runs the compiled C contracts; privileged cases report
+their own availability and results. See `build.md` for source-archive
+builds and the separate runtime/development bundle.

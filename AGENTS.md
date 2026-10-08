@@ -3,9 +3,9 @@
 
 ## Purpose and status
 
-Build a small, reusable Mojo interface to libbpf through one C compatibility layer. The repository is `libbpf-mojo`, the Mojo package is `libbpf_mojo`, the proposed native library is `libbpf_mojo.so.1`, and C entry points use `lmb_`. This is an independent project, not an upstream libbpf component or a Mojo-to-eBPF compiler.
+Build a small, reusable Mojo interface to libbpf through one C compatibility layer. The repository is `libbpf-mojo`, the Mojo package is `libbpf_mojo`, the native library is `libbpf_mojo.so.1`, and C entry points use `lmb_`. This is an independent project, not an upstream libbpf component or a Mojo-to-eBPF compiler.
 
-As of 2026-10-05, this repository contains a README and contributor instructions only. There is no implementation, supported ABI, build wrapper, or passing runtime gate yet. The contracts below guide the first feasibility experiment; freeze exact declarations and toolchain pins before implementing them, and update this status as work lands.
+As of 2026-10-08, the native ABI v1 bridge, Mojo ownership wrappers, examples, and standalone build/test/package wrappers are implemented. Public ABI declarations live in `docs/abi-v1.md`; toolchain inputs are locked. Local contract tests, privileged live tests, and exact-artifact runtime qualification are separate gates; an implementation or successful build does not establish every supported environment.
 
 MemVeil is the first intended consumer. This library owns native resources, typed errors, bounded transport, and Mojo ownership wrappers. Applications own probes, event meanings, filtering, correlation, accounting, capture formats, privacy policy, and reporting. Do not add MemVeil device/mapping types, DMA semantics, or product schemas to the library.
 
@@ -13,7 +13,7 @@ MemVeil is the first intended consumer. This library owns native resources, type
 
 Read the README and relevant public ABI/build documentation, check repository status and HEAD, and preserve unrelated edits, stashes, and worktrees. Keep changes and any authorized commits in this repository. Builds/tests/packages must work from a standalone clone or source archive using declared dependencies. All documentation, comments, generated text, and release material must be self-contained. References to other public projects, their published APIs, and documented dependencies are allowed when relevant. Describe contributor requirements and contracts directly in this repository.
 
-Target ownership, to create as required:
+Target ownership:
 
 | Path | Responsibility |
 |---|---|
@@ -32,7 +32,7 @@ Support object open/load, explicit tracepoint/tracing attachment, one ring per s
 
 Initial live qualification uses x86-64 Linux ≥ 7.0. Functional capability checks and actual load/attach evidence still decide availability. Keep an application's semantic kernel profiles outside this library. `uprobe_multi` testing must prove target/thread/process scope, not merely that an attach call returned success.
 
-Proposed operations are `lmb_open`, `lmb_load`, `lmb_attach`, `lmb_poll`, `lmb_map_info`, `lmb_map_read`, `lmb_map_write`, `lmb_stats`, `lmb_last_error`, `lmb_detach`, and `lmb_close`. Freeze exact signatures, discriminants, field offsets, and error rules in public ABI documentation before implementation. Keep bridge ABI, batch framing, BPF payload, and consumer schema versions distinct.
+ABI v1 operations are `lmb_open`, `lmb_load`, `lmb_attach`, `lmb_poll`, `lmb_map_info`, `lmb_map_read`, `lmb_map_write`, `lmb_stats`, `lmb_last_error`, `lmb_detach`, and `lmb_close`. Preserve the signatures, discriminants, field offsets, and error rules in public ABI documentation. Keep bridge ABI, batch framing, BPF payload, and consumer schema versions distinct.
 
 ## ABI and ownership invariants
 
@@ -68,7 +68,7 @@ Package from pinned sources and declare runtime shared-library dependencies, sea
 
 ## Test gates
 
-No build/test commands exist yet. Bootstrap must create documented wrappers such as `tools/build`, `tools/test`, and `tools/package`, plus the selected compiler's actual test runner. Verify wrapper help and compiler versions before use; do not invent `mojo test` or mark an unrun command successful.
+Use the documented `tools/build`, `tools/test`, and `tools/package` wrappers. Verify wrapper help and compiler versions before use; do not invent `mojo test` or mark an unrun command successful. `docs/build.md` describes standalone clone and source-archive routes.
 
 Required evidence for the first implementation:
 

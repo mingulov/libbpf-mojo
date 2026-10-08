@@ -56,6 +56,8 @@ def sha256_of(path):
 
 
 def git_sha(root):
+    if not provenance.owns_git_root(root):
+        return "unknown"
     out = subprocess.run(
         ["git", "rev-parse", "HEAD"], cwd=root,
         stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True)
@@ -65,7 +67,9 @@ def git_sha(root):
     dirty = subprocess.run(
         ["git", "status", "--porcelain"], cwd=root,
         stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True)
-    if dirty.returncode == 0 and dirty.stdout.strip():
+    if dirty.returncode != 0:
+        sys.exit("receipt: cannot inspect owning Git tree")
+    if dirty.stdout.strip():
         return sha + "-dirty"
     return sha
 

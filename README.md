@@ -1,7 +1,7 @@
 <!-- SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception -->
 # libbpf-mojo
 
-Proposed small Mojo interface to libbpf, using one C compatibility layer and clang-built C eBPF objects.
+Small Mojo interface to libbpf, using one C compatibility layer and clang-built C eBPF objects.
 
 The initial scope is object loading, explicit attachment, bounded event batches, map access, errors, and owned cleanup. MemVeil is the first intended consumer. Application-specific probes, event meanings, correlation, and reporting belong to the application.
 

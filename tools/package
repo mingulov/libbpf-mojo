@@ -24,6 +24,8 @@
 # for the clean-room check. LMB_BUILD_DIR selects the CMake build
 # tree (default: build). Exit 0 on success; 1 on failure; 2 on
 # usage error.
+# SOURCE_DATE_EPOCH overrides archive time (decimal 0..4294967295).
+# Otherwise use owning HEAD time, or zero for Git-free sources.
 
 set -u
 
@@ -68,6 +70,7 @@ main() {
         *) OUT="$PWD/$OUT" ;;
     esac
     cd "$ROOT" || return 1
+    mtime=$(python3 tools/provenance.py mtime "$ROOT") || return 1
     version="$(python3 -c '
 import sys, tomllib
 with open("pixi.toml", "rb") as handle:
@@ -225,11 +228,10 @@ EOF
     log "create $OUT/$name.tar.gz"
     # Deterministic bytes via tarfile (system tar lacks
     # --sort-name here, and its spelling varies by
-    # implementation): sorted members, HEAD-time mtimes,
+    # implementation): sorted members, validated source-time mtimes,
     # zeroed ownership, and a zero-mtime gzip header, so one
-    # source revision yields one tarball hash for downstream
+    # sealed build and timestamp yield one tarball hash for downstream
     # pins and the determinism check.
-    mtime=$(git -C "$ROOT" log -1 --format=%ct) || return 1
     python3 - "$STAGE" "$name" "$OUT/$name.tar.gz" "$mtime" \
         <<'EOF' || return 1
 import gzip
