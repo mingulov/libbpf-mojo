@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 """Cleanup proof: failed or interrupted BPF usage releases everything.
 
 Drives the Mojo fault driver (bad_attach, bad_elf, rollback) and

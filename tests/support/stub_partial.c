@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception */
 
 /* Partial ABI stub: every lmb_* operation except lmb_close.
  *

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 """Unprivileged probes for tools/package_runtime.py.
 
 Builds a fake conda environment plus a fake package cache and

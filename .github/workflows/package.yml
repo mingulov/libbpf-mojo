@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 # Tier 2: docker clean-room package proof. Unprivileged from
 # the runner's view (plain docker build/run on a hosted
 # runner); the privilege stays inside the disposable

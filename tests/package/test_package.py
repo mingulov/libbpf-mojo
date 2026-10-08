@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 """Package proof: the exact tarball works in a clean room.
 
 Rebuilds the tarball with tools/package, verifies the manifest
@@ -115,7 +115,7 @@ def verify_manifest(tarball, version):
             raise Fail("manifest identity mismatch: %r"
                        % manifest.get("version"))
         first = manifest.get("first_party", {})
-        if first.get("license_default") != "GPL-3.0-or-later":
+        if first.get("license_default") != "Apache-2.0 WITH LLVM-exception":
             raise Fail("manifest first-party default missing")
         expect = {
             "lib/libbpf_mojo.so.1",
@@ -130,7 +130,7 @@ def verify_manifest(tarball, version):
             "THIRD-PARTY-NOTICES.md",
             "LICENSE",
             "LICENSES/GPL-2.0-only.txt",
-            "LICENSES/GPL-2.0-or-later.txt",
+            "LICENSES/LLVM-exception.txt",
             "licenses/LICENSE.BSD-2-Clause.libbpf",
             "licenses/GPL-3.0.txt",
             "licenses/RUNTIME.LIBRARY.EXCEPTION",
@@ -152,10 +152,16 @@ def verify_manifest(tarball, version):
         if not expect.issubset(on_disk):
             raise Fail("package missing files: %r"
                        % sorted(expect - on_disk))
-        for ident, rel in sorted(first.get("licenses", {}).items()):
-            if rel not in on_disk:
-                raise Fail("first-party %s points at missing %s"
-                           % (ident, rel))
+        for ident, rels in sorted(first.get("licenses", {}).items()):
+            if not isinstance(rels, list) or not rels:
+                raise Fail("first-party %s has no staged text list"
+                           % ident)
+            for rel in rels:
+                if rel not in on_disk:
+                    raise Fail("first-party %s points at missing %s"
+                               % (ident, rel))
+        if first.get("license_default") not in first.get("licenses", {}):
+            raise Fail("manifest default has no staged texts")
         hashed = {row["path"]: row["sha256"]
                   for row in manifest.get("files", [])}
         for path in sorted(hashed):
@@ -262,8 +268,8 @@ def tamper_negatives(top, version):
         ("first-party-license", "LICENSE", "manifest"),
         ("first-party-license-2.0-only",
          "LICENSES/GPL-2.0-only.txt", "manifest"),
-        ("first-party-license-2.0-or-later",
-         "LICENSES/GPL-2.0-or-later.txt", "manifest"),
+        ("first-party-license-exception",
+         "LICENSES/LLVM-exception.txt", "manifest"),
     ]
     try:
         for label, rel, gate in probes:

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 # Runner teardown tests: the packaged run-tracepoint.sh against fake
 # doubles. No privilege, no BPF, no Mojo: the sandbox copies the
 # current script plus fake binaries satisfying its file checks, so

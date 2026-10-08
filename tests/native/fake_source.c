@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception */
 
 /* Synthetic record source through the real poll boundary. Drives
  * lmb_ring_sample and lmb_poll with staged records without loading a

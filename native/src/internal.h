@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception */
 
 /* Internal bridge state shared by the native sources. Not installed. */
 #ifndef LMB_INTERNAL_H

@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
 """Byte-exact mirrors of the native ``lmb_*_v1`` ABI structs.
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 """Provenance gate: licenses, pins, versions, and packager inputs.
 
 Every first-party source file carries an SPDX identifier from a
@@ -24,9 +24,11 @@ sys.path.insert(0, os.path.join(ROOT, "tools"))
 import provenance  # noqa: E402
 
 KNOWN_IDS = {
-    "GPL-3.0-or-later": "LICENSE",
-    "GPL-2.0-only": "LICENSES/GPL-2.0-only.txt",
-    "GPL-2.0-or-later": "LICENSES/GPL-2.0-or-later.txt",
+    "Apache-2.0 WITH LLVM-exception": (
+        "LICENSE",
+        "LICENSES/LLVM-exception.txt",
+    ),
+    "GPL-2.0-only": ("LICENSES/GPL-2.0-only.txt",),
 }
 
 CODE_SUFFIXES = (
@@ -74,8 +76,17 @@ def is_code(rel):
 def spdx_of(path):
     with open(path, "rb") as handle:
         head = handle.read(4096).decode("utf-8", "replace")
-    match = re.search(r"SPDX-License-Identifier:\s*(\S+)", head)
-    return match.group(1) if match else None
+    # The identifier is a full SPDX expression, which may
+    # contain spaces ("Apache-2.0 WITH LLVM-exception"), so
+    # capture to end of line and strip the comment closer.
+    match = re.search(r"SPDX-License-Identifier:\s*(.+)", head)
+    if not match:
+        return None
+    found = match.group(1).strip()
+    for closer in ("*/", "-->"):
+        if found.endswith(closer):
+            found = found[:-len(closer)].strip()
+    return found
 
 
 def main():
@@ -98,8 +109,10 @@ def main():
     check("spdx-coverage", not offenders, "; ".join(offenders[:5]))
 
     for ident in sorted(seen_ids):
-        staged = os.path.join(ROOT, KNOWN_IDS[ident])
-        check("license-text-%s" % ident, os.path.isfile(staged), staged)
+        for staged_rel in KNOWN_IDS[ident]:
+            staged = os.path.join(ROOT, staged_rel)
+            check("license-text-%s" % ident,
+                  os.path.isfile(staged), staged)
     check("license-default", os.path.isfile(os.path.join(ROOT, "LICENSE")))
 
     for name in ("GPL-3.0.txt", "ZLIB.txt",
@@ -140,7 +153,8 @@ def main():
     check("pixi-manifest", bool(mver) and bool(mmojo))
     check("lock-mojo-agrees-pixi",
           lock["toolchain"]["mojo"]["version"] == mmojo.group(1))
-    check("pixi-license-declared", 'license = "GPL-3.0-or-later"' in pixi)
+    check("pixi-license-declared",
+          'license = "Apache-2.0 WITH LLVM-exception"' in pixi)
 
     abi_doc = os.path.join(ROOT, "docs", "abi-v1.md")
     check("abi-doc-present", os.path.isfile(abi_doc))
@@ -167,7 +181,7 @@ def main():
 
     static_inputs = [
         "LICENSE",
-        "LICENSES/GPL-2.0-only.txt", "LICENSES/GPL-2.0-or-later.txt",
+        "LICENSES/GPL-2.0-only.txt", "LICENSES/LLVM-exception.txt",
         "tools/package", "tools/package_notices.py",
         "tools/package_manifest.py",
         "examples/tracepoint/main.mojo",

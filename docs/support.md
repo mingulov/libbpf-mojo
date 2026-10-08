@@ -1,4 +1,4 @@
-<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+<!-- SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception -->
 # Support envelope (0.2.x, ABI v1)
 
 ## Tested configuration

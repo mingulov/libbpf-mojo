@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception */
 
 /* Unprivileged contract tests: framing constants, open validation,
  * lifecycle, stats, and error records. No BPF syscalls are expected to

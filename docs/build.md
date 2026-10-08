@@ -1,4 +1,4 @@
-<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+<!-- SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception -->
 # Build and toolchain guide
 
 This repository builds with a pinned Mojo toolchain managed by pixi, plus

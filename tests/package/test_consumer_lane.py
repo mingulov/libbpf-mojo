@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 """Docker-free consumer gate: the exact tarball serves a consumer.
 
 Rebuilds the tarball with tools/package, verifies the manifest

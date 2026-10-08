@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 """Write the build receipt. Invoked by tools/build on success.
 
 Usage: build_receipt.py <build-dir> <c-compiler> <sanitize-flag>

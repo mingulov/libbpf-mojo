@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 # Tier 3: privileged live-kernel suites (real tracepoint load,
 # attach, event flow, and fault cleanup). Push to main and
 # manual dispatch only: BPF collection privilege must never

@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception */
 
 /* Attach transactionality: all sites attach or none do. Requires
  * collection privileges; reports SKIP when the kernel refuses.

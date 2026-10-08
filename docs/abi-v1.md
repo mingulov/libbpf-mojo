@@ -1,4 +1,4 @@
-<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+<!-- SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception -->
 # libbpf-mojo native ABI v1
 
 Version: ABI major 1. Status: frozen for implementation. This document is

@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
 """Structured error contracts: constants match the C ABI and every
 failure carries operation/domain/code without string parsing."""

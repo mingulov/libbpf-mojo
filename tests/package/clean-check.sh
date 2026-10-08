@@ -1,5 +1,5 @@
 #!/bin/sh
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 # Clean-room package check: no compiler, no Pixi, no Mojo, no Python.
 #
 # Usage: clean-check.sh <expected-root>

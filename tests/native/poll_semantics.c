@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception */
 
 /* Poll and framing behavior against a live ring buffer. Requires
  * collection privileges; reports SKIP when the kernel refuses with

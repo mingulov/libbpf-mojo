@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 # Tier 1: unprivileged suites. Safe for pull requests from any
 # source: no privileges, no docker, no secrets. Every lane must
 # pass; a skip here means broken provisioning and fails the run.

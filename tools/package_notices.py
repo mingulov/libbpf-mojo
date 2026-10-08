@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 """Stage redistribution notices and render THIRD-PARTY-NOTICES.md.
 
 Usage: package_notices.py <pixi-lib> <stage> <libbpf-src>

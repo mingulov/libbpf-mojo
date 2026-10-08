@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception */
 
 /* Test-support library: only the lmb_test_* helpers are visible.
  * The statically linked bridge internals stay local. */

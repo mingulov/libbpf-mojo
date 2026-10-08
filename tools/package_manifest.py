@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 """Write the package MANIFEST.json. Invoked by tools/package.
 
 Usage: package_manifest.py <version> <stage> <lock> <receipt>
@@ -50,7 +50,7 @@ SEALED_COPIES = {
     "run-tracepoint.sh": "examples/tracepoint/run-tracepoint.sh",
     "LICENSE": "LICENSE",
     "LICENSES/GPL-2.0-only.txt": "LICENSES/GPL-2.0-only.txt",
-    "LICENSES/GPL-2.0-or-later.txt": "LICENSES/GPL-2.0-or-later.txt",
+    "LICENSES/LLVM-exception.txt": "LICENSES/LLVM-exception.txt",
     "licenses/GPL-3.0.txt": "tools/notices/GPL-3.0.txt",
     "licenses/RUNTIME.LIBRARY.EXCEPTION":
         "tools/notices/GCC-RUNTIME-LIBRARY-EXCEPTION-3.1.txt",
@@ -251,7 +251,7 @@ def main(argv):
     first_party_files = (
         "LICENSE",
         "LICENSES/GPL-2.0-only.txt",
-        "LICENSES/GPL-2.0-or-later.txt",
+        "LICENSES/LLVM-exception.txt",
     )
     for path in first_party_files:
         if path not in by_path:
@@ -261,11 +261,15 @@ def main(argv):
         "version": version,
         "abi": "lmb-v1",
         "first_party": {
-            "license_default": "GPL-3.0-or-later",
+            "license_default": "Apache-2.0 WITH LLVM-exception",
             "licenses": {
-                "GPL-3.0-or-later": "LICENSE",
-                "GPL-2.0-only": "LICENSES/GPL-2.0-only.txt",
-                "GPL-2.0-or-later": "LICENSES/GPL-2.0-or-later.txt",
+                "Apache-2.0 WITH LLVM-exception": [
+                    "LICENSE",
+                    "LICENSES/LLVM-exception.txt",
+                ],
+                "GPL-2.0-only": [
+                    "LICENSES/GPL-2.0-only.txt",
+                ],
             },
             "paths": {
                 "examples/probe.bpf.o": "GPL-2.0-only",

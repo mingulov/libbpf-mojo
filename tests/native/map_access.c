@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception */
 
 /* Map introspection and access against fixture maps. Requires a
  * loaded object; reports SKIP when the kernel refuses the load. */
