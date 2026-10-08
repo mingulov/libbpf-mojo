@@ -117,4 +117,32 @@ class TermHandler(unittest.TestCase):
             self.assertEqual(receipt['lanes'][1]['status'],'BLOCKED')
             self.assertFalse(later.exists())
 
+    def test_only_or_last_successful_lane_with_uncertainty_cannot_pass(self):
+        from unittest.mock import patch
+        loader=SourceFileLoader('results_last',str(Path(__file__).resolve().parents[2]/'tools/qualification-results'))
+        spec=importlib.util.spec_from_loader(loader.name,loader)
+        module=importlib.util.module_from_spec(spec);loader.exec_module(module)
+        for suites in (['only'], ['first','only']):
+            with self.subTest(suites=suites), tempfile.TemporaryDirectory() as tmp:
+                root=Path(tmp);(root/'tools').mkdir()
+                tool=root/'tools/test'
+                # The leader leaves an already dead child for subreaper cleanup.
+                tool.write_text('#!'+sys.executable+'\nimport os,sys,time\n'
+                    'if sys.argv[1] == "first": sys.exit(0)\n'
+                    'if os.fork() == 0: os._exit(0)\n'
+                    'time.sleep(.1)\n')
+                tool.chmod(0o755)
+                terminate=module._terminate_owned
+                def uncertain(proc, prior):
+                    result=terminate(proc, prior)
+                    result['signal_errors']=1
+                    return result
+                with patch.object(module,'_terminate_owned',uncertain):
+                    self.assertEqual(module.run_suites(root,root/'out',suites),1)
+                receipt=json.loads((root/'out/results.json').read_text())
+                self.assertEqual(receipt['status'],'BLOCKED')
+                self.assertEqual(receipt['lanes'][-1]['status'],'BLOCKED')
+                self.assertEqual(receipt['lanes'][-1]['native_exit'],0)
+                self.assertEqual(receipt['lanes'][-1]['cleanup']['remaining_owned'],0)
+
 if __name__=='__main__':unittest.main()
