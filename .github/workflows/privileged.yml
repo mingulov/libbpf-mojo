@@ -6,8 +6,9 @@
 #
 # Exit 77 from a suite means the runner kernel lacks BPF
 # support; it is recorded as a visible SKIP in the step
-# summary, never as silent success. Any other nonzero exit
-# fails the run.
+# summary, never as qualification success. Every required lane must pass; a skip
+# blocks this qualification job. Raw native logs stay local, and uploaded
+# status receipts retain native exits and raw-log hashes.
 name: privileged
 
 on:
@@ -37,20 +38,14 @@ jobs:
             libelf-dev zlib1g-dev
       - name: Build
         run: ./tools/build
-      - name: Live suites
-        run: |
-          fail=0
-          for suite in live-tracepoint cleanup; do
-            rc=0
-            sudo -n ./tools/test "$suite" || rc=$?
-            if [ "$rc" -eq 77 ]; then
-              echo "SKIP $suite (runner lacks BPF support)" \
-                >> "$GITHUB_STEP_SUMMARY"
-            elif [ "$rc" -ne 0 ]; then
-              echo "FAIL $suite (exit $rc)" >> "$GITHUB_STEP_SUMMARY"
-              fail=1
-            else
-              echo "PASS $suite" >> "$GITHUB_STEP_SUMMARY"
-            fi
-          done
-          exit "$fail"
+      - name: Required live-suite results
+        run: sudo -n python3 ./tools/qualification-results evidence live-tracepoint cleanup
+      - name: Upload allowlisted native status receipts on every outcome
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: privileged-status
+          path: |
+            evidence/results.json
+            evidence/*.log
+          if-no-files-found: warn
