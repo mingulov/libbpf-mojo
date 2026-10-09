@@ -682,7 +682,11 @@ static void part_b2(struct gen_api *g, const uint8_t *elf,
  * named validation below still passes. The loaded owner plus
  * the per-operation controls (unknown names reach lookup with
  * ENOENT; a valid test-run reaches the kernel) proves the named
- * check rejected. Without the fixture, or without the privilege
+ * check rejected. Every -EINVAL row additionally verifies the
+ * rejecting domain immediately (operation + BRIDGE + signed
+ * -EINVAL): a backend that skips validation and falls through
+ * to a KERNEL/-EINVAL decline keeps the rc but fails the paired
+ * record check. Without the fixture, or without the privilege
  * to load one, the validation rows SKIP; a differential stub
  * whose load needs no privilege still exercises them. */
 static void part_b3a(struct gen_api *g, const uint8_t *elf,
@@ -706,6 +710,7 @@ static void part_b3a(struct gen_api *g, const uint8_t *elf,
     uint8_t out[64];
     uint64_t needed = 123;
     static uint8_t big[16];
+    int32_t dcode = 0;
 
     /* Isolated null-object rows: valid arguments, null owner only. */
     make_v1name(&name, "test_hash");
@@ -713,22 +718,47 @@ static void part_b3a(struct gen_api *g, const uint8_t *elf,
     CHECK(g->lookup(NULL, &name, key, sizeof(key), dst, sizeof(dst),
                     &needed) == -EINVAL,
           "b3a-lookup-null-object", "null object must fail");
+    CHECK(gen_is(g, LMB_GENERIC_OP_MAP_LOOKUP,
+                 LMB_GENERIC_DOMAIN_BRIDGE, &dcode) &&
+              dcode == -EINVAL,
+          "b3a-lookup-null-object-record",
+          "null object reports lookup BRIDGE/-EINVAL");
     CHECK(g->update(NULL, &name, key, sizeof(key), val, sizeof(val),
                     LMB_MAP_UPDATE_ANY) == -EINVAL,
           "b3a-update-null-object", "null object must fail");
+    CHECK(gen_is(g, LMB_GENERIC_OP_MAP_UPDATE,
+                 LMB_GENERIC_DOMAIN_BRIDGE, &dcode) &&
+              dcode == -EINVAL,
+          "b3a-update-null-object-record",
+          "null object reports update BRIDGE/-EINVAL");
     make_topts(&to);
     make_tresult(&tr);
     CHECK(g->testrun(NULL, &prog, &to, &tr) == -EINVAL,
           "b3a-testrun-null-object", "null object must fail");
+    CHECK(gen_is(g, LMB_GENERIC_OP_TEST_RUN,
+                 LMB_GENERIC_DOMAIN_BRIDGE, &dcode) &&
+              dcode == -EINVAL,
+          "b3a-testrun-null-object-record",
+          "null object reports test-run BRIDGE/-EINVAL");
     make_aopts(&ao, "on_getpid");
     set_trace_targets(&ao);
     link = lsentinel;
     CHECK(g->attach(NULL, &ao, &link) == -EINVAL && link == NULL,
           "b3a-attach-null-object", "null object must fail cleared");
+    CHECK(gen_is(g, LMB_GENERIC_OP_ATTACH,
+                 LMB_GENERIC_DOMAIN_BRIDGE, &dcode) &&
+              dcode == -EINVAL,
+          "b3a-attach-null-object-record",
+          "null object reports attach BRIDGE/-EINVAL");
     make_bopts(&bo, "events");
     buf = bsentinel;
     CHECK(g->bufopen(NULL, &bo, &buf) == -EINVAL && buf == NULL,
           "b3a-bufopen-null-object", "null object must fail cleared");
+    CHECK(gen_is(g, LMB_GENERIC_OP_BUFFER_OPEN,
+                 LMB_GENERIC_DOMAIN_BRIDGE, &dcode) &&
+              dcode == -EINVAL,
+          "b3a-bufopen-null-object-record",
+          "null object reports buffer-open BRIDGE/-EINVAL");
 
     /* Record-validation rows need a loaded owner: an unloaded one
      * fails closed for its own sake and proves nothing about the
@@ -757,29 +787,65 @@ static void part_b3a(struct gen_api *g, const uint8_t *elf,
                     NULL) == -EINVAL,
           "b3a-lookup-null-needed", "null needed cell must fail");
     CHECK(gen_is(g, LMB_GENERIC_OP_MAP_LOOKUP,
-                 LMB_GENERIC_DOMAIN_BRIDGE, NULL),
+                 LMB_GENERIC_DOMAIN_BRIDGE, &dcode) &&
+              dcode == -EINVAL,
           "b3a-lookup-null-needed-record",
-          "cell rejection reports the lookup op");
+          "cell rejection reports lookup BRIDGE/-EINVAL");
     needed = 123;
     CHECK(g->lookup(valid, &name, key, sizeof(key), NULL, 8,
                     &needed) == -EINVAL &&
               needed == 123,
           "b3a-lookup-null-dst", "null dst with capacity must fail");
-    needed = 123;
-    CHECK(g->lookup(valid, &name, key, sizeof(key), dst, sizeof(dst),
-                    (uint64_t *)key) == -EINVAL &&
-              needed == 123,
-          "b3a-lookup-needed-in-key", "needed inside key must fail");
-    needed = 123;
-    CHECK(g->lookup(valid, &name, key, sizeof(key), dst, sizeof(dst),
-                    (uint64_t *)(dst + 8)) == -EINVAL &&
-              needed == 123,
-          "b3a-lookup-needed-in-dst", "needed inside dst must fail");
+    CHECK(gen_is(g, LMB_GENERIC_OP_MAP_LOOKUP,
+                 LMB_GENERIC_DOMAIN_BRIDGE, &dcode) &&
+              dcode == -EINVAL,
+          "b3a-lookup-null-dst-record",
+          "null dst reports lookup BRIDGE/-EINVAL");
+    /* Alias rejection must leave the ACTUAL passed storage
+     * untouched: the size cell is the 8 bytes at the passed
+     * address, not a separate local. A backend that overwrites
+     * the aliased bytes before rejecting violates the
+     * leave-unchanged rule and must FAIL here. */
+    {
+        uint8_t keycell[8] = {7, 0, 0, 0, 0xA5, 0xA5, 0xA5, 0xA5};
+        uint8_t keycell_before[8];
+        memcpy(keycell_before, keycell, sizeof(keycell));
+        CHECK(g->lookup(valid, &name, keycell, 4, dst, sizeof(dst),
+                        (uint64_t *)keycell) == -EINVAL &&
+                  memcmp(keycell, keycell_before, sizeof(keycell)) == 0,
+              "b3a-lookup-needed-in-key",
+              "needed inside key must fail storage-intact");
+    }
+    CHECK(gen_is(g, LMB_GENERIC_OP_MAP_LOOKUP,
+                 LMB_GENERIC_DOMAIN_BRIDGE, &dcode) &&
+              dcode == -EINVAL,
+          "b3a-lookup-needed-in-key-record",
+          "key alias reports lookup BRIDGE/-EINVAL");
+    memset(dst, 0x5A, sizeof(dst));
+    {
+        uint8_t dst_before[16];
+        memcpy(dst_before, dst, sizeof(dst));
+        CHECK(g->lookup(valid, &name, key, sizeof(key), dst, sizeof(dst),
+                        (uint64_t *)(dst + 8)) == -EINVAL &&
+                  memcmp(dst, dst_before, sizeof(dst)) == 0,
+              "b3a-lookup-needed-in-dst",
+              "needed inside dst must fail storage-intact");
+    }
+    CHECK(gen_is(g, LMB_GENERIC_OP_MAP_LOOKUP,
+                 LMB_GENERIC_DOMAIN_BRIDGE, &dcode) &&
+              dcode == -EINVAL,
+          "b3a-lookup-needed-in-dst-record",
+          "dst alias reports lookup BRIDGE/-EINVAL");
     needed = 123;
     CHECK(g->lookup(valid, NULL, key, sizeof(key), dst, sizeof(dst),
                     &needed) == -EINVAL &&
               needed == 123,
           "b3a-lookup-null-name", "null name must fail");
+    CHECK(gen_is(g, LMB_GENERIC_OP_MAP_LOOKUP,
+                 LMB_GENERIC_DOMAIN_BRIDGE, &dcode) &&
+              dcode == -EINVAL,
+          "b3a-lookup-null-name-record",
+          "null name reports lookup BRIDGE/-EINVAL");
     /* Validation precedes lookup: a defective record against an
      * unknown map still reports EINVAL, while the fixed record
      * reaches lookup and reports ENOENT. */
@@ -787,6 +853,11 @@ static void part_b3a(struct gen_api *g, const uint8_t *elf,
     CHECK(g->lookup(valid, &name, key, sizeof(key), dst, sizeof(dst),
                     NULL) == -EINVAL,
           "b3a-lookup-order", "span errors precede map lookup");
+    CHECK(gen_is(g, LMB_GENERIC_OP_MAP_LOOKUP,
+                 LMB_GENERIC_DOMAIN_BRIDGE, &dcode) &&
+              dcode == -EINVAL,
+          "b3a-lookup-order-record",
+          "order proof reports lookup BRIDGE/-EINVAL");
     needed = 123;
     CHECK(g->lookup(valid, &name, key, sizeof(key), dst, sizeof(dst),
                     &needed) == -ENOENT &&
@@ -799,22 +870,43 @@ static void part_b3a(struct gen_api *g, const uint8_t *elf,
     CHECK(g->update(valid, NULL, key, sizeof(key), val, sizeof(val),
                     LMB_MAP_UPDATE_ANY) == -EINVAL,
           "b3a-update-null-name", "null name must fail");
+    CHECK(gen_is(g, LMB_GENERIC_OP_MAP_UPDATE,
+                 LMB_GENERIC_DOMAIN_BRIDGE, &dcode) &&
+              dcode == -EINVAL,
+          "b3a-update-null-name-record",
+          "null name reports update BRIDGE/-EINVAL");
     CHECK(g->update(valid, &name, NULL, sizeof(key), val, sizeof(val),
                     LMB_MAP_UPDATE_ANY) == -EINVAL,
           "b3a-update-null-key", "null key with size must fail");
+    CHECK(gen_is(g, LMB_GENERIC_OP_MAP_UPDATE,
+                 LMB_GENERIC_DOMAIN_BRIDGE, &dcode) &&
+              dcode == -EINVAL,
+          "b3a-update-null-key-record",
+          "null key reports update BRIDGE/-EINVAL");
     CHECK(g->update(valid, &name, key, sizeof(key), NULL, sizeof(val),
                     LMB_MAP_UPDATE_ANY) == -EINVAL,
           "b3a-update-null-value", "null value with size must fail");
+    CHECK(gen_is(g, LMB_GENERIC_OP_MAP_UPDATE,
+                 LMB_GENERIC_DOMAIN_BRIDGE, &dcode) &&
+              dcode == -EINVAL,
+          "b3a-update-null-value-record",
+          "null value reports update BRIDGE/-EINVAL");
     CHECK(g->update(valid, &name, key, sizeof(key), val, sizeof(val),
                     3) == -EINVAL,
           "b3a-update-flags-combo", "NOEXIST|EXIST must fail");
     CHECK(gen_is(g, LMB_GENERIC_OP_MAP_UPDATE,
-                 LMB_GENERIC_DOMAIN_BRIDGE, NULL),
+                 LMB_GENERIC_DOMAIN_BRIDGE, &dcode) &&
+              dcode == -EINVAL,
           "b3a-update-flags-record",
-          "flag rejection reports the update op");
+          "flag rejection reports update BRIDGE/-EINVAL");
     CHECK(g->update(valid, &name, key, sizeof(key), val, sizeof(val),
                     8) == -EINVAL,
           "b3a-update-flags-high", "high flag bits must fail");
+    CHECK(gen_is(g, LMB_GENERIC_OP_MAP_UPDATE,
+                 LMB_GENERIC_DOMAIN_BRIDGE, &dcode) &&
+              dcode == -EINVAL,
+          "b3a-update-flags-high-record",
+          "high flags report update BRIDGE/-EINVAL");
     make_v1name(&name, "no_such_map");
     CHECK(g->update(valid, &name, key, sizeof(key), val, sizeof(val),
                     LMB_MAP_UPDATE_ANY) == -ENOENT,
@@ -832,6 +924,11 @@ static void part_b3a(struct gen_api *g, const uint8_t *elf,
     CHECK(g->testrun(valid, &prog, &to, &tr) == -EINVAL &&
               memcmp(&tr, &tr_before, sizeof(tr)) == 0,
           "b3a-testrun-big-data", "oversized packet input must fail");
+    CHECK(gen_is(g, LMB_GENERIC_OP_TEST_RUN,
+                 LMB_GENERIC_DOMAIN_BRIDGE, &dcode) &&
+              dcode == -EINVAL,
+          "b3a-testrun-big-data-record",
+          "big packet reports test-run BRIDGE/-EINVAL");
     make_topts(&to);
     to.ctx_in.ptr = big;
     to.ctx_in.len = (uint64_t)LMB_GENERIC_MAX_TEST_BYTES + 1;
@@ -839,6 +936,11 @@ static void part_b3a(struct gen_api *g, const uint8_t *elf,
     CHECK(g->testrun(valid, &prog, &to, &tr) == -EINVAL &&
               memcmp(&tr, &tr_before, sizeof(tr)) == 0,
           "b3a-testrun-big-ctx", "oversized context input must fail");
+    CHECK(gen_is(g, LMB_GENERIC_OP_TEST_RUN,
+                 LMB_GENERIC_DOMAIN_BRIDGE, &dcode) &&
+              dcode == -EINVAL,
+          "b3a-testrun-big-ctx-record",
+          "big context reports test-run BRIDGE/-EINVAL");
     make_topts(&to);
     to.data_out.ptr = out;
     to.data_out.len = (uint64_t)LMB_GENERIC_MAX_TEST_BYTES + 1;
@@ -846,18 +948,33 @@ static void part_b3a(struct gen_api *g, const uint8_t *elf,
     CHECK(g->testrun(valid, &prog, &to, &tr) == -EINVAL &&
               memcmp(&tr, &tr_before, sizeof(tr)) == 0,
           "b3a-testrun-big-out", "oversized packet output must fail");
+    CHECK(gen_is(g, LMB_GENERIC_OP_TEST_RUN,
+                 LMB_GENERIC_DOMAIN_BRIDGE, &dcode) &&
+              dcode == -EINVAL,
+          "b3a-testrun-big-out-record",
+          "big output reports test-run BRIDGE/-EINVAL");
     make_topts(&to);
     to.repeat = 0;
     tr = tr_before;
     CHECK(g->testrun(valid, &prog, &to, &tr) == -EINVAL &&
               memcmp(&tr, &tr_before, sizeof(tr)) == 0,
           "b3a-testrun-repeat-zero", "repeat 0 must fail");
+    CHECK(gen_is(g, LMB_GENERIC_OP_TEST_RUN,
+                 LMB_GENERIC_DOMAIN_BRIDGE, &dcode) &&
+              dcode == -EINVAL,
+          "b3a-testrun-repeat-zero-record",
+          "zero repeat reports test-run BRIDGE/-EINVAL");
     make_topts(&to);
     to.repeat = (uint64_t)0xFFFFFFFF + 1;
     tr = tr_before;
     CHECK(g->testrun(valid, &prog, &to, &tr) == -EINVAL &&
               memcmp(&tr, &tr_before, sizeof(tr)) == 0,
           "b3a-testrun-repeat-huge", "huge repeat must fail");
+    CHECK(gen_is(g, LMB_GENERIC_OP_TEST_RUN,
+                 LMB_GENERIC_DOMAIN_BRIDGE, &dcode) &&
+              dcode == -EINVAL,
+          "b3a-testrun-repeat-huge-record",
+          "huge repeat reports test-run BRIDGE/-EINVAL");
     make_topts(&to);
     to.flags = 1;
     tr = tr_before;
@@ -865,9 +982,10 @@ static void part_b3a(struct gen_api *g, const uint8_t *elf,
               memcmp(&tr, &tr_before, sizeof(tr)) == 0,
           "b3a-testrun-flags", "nonzero flags must fail");
     CHECK(gen_is(g, LMB_GENERIC_OP_TEST_RUN,
-                 LMB_GENERIC_DOMAIN_BRIDGE, NULL),
+                 LMB_GENERIC_DOMAIN_BRIDGE, &dcode) &&
+              dcode == -EINVAL,
           "b3a-testrun-flags-record",
-          "flag rejection reports the test-run op");
+          "flag rejection reports test-run BRIDGE/-EINVAL");
     make_topts(&to);
     to.data_out.ptr = out;
     to.data_out.len = sizeof(out);
@@ -878,6 +996,11 @@ static void part_b3a(struct gen_api *g, const uint8_t *elf,
               memcmp(&tr, &tr_before, sizeof(tr)) == 0,
           "b3a-testrun-out-alias",
           "overlapping outputs must fail");
+    CHECK(gen_is(g, LMB_GENERIC_OP_TEST_RUN,
+                 LMB_GENERIC_DOMAIN_BRIDGE, &dcode) &&
+              dcode == -EINVAL,
+          "b3a-testrun-out-alias-record",
+          "output alias reports test-run BRIDGE/-EINVAL");
     make_topts(&to);
     to.abi_version = 99;
     tr = tr_before;
@@ -885,6 +1008,11 @@ static void part_b3a(struct gen_api *g, const uint8_t *elf,
               memcmp(&tr, &tr_before, sizeof(tr)) == 0,
           "b3a-testrun-untouched",
           "failed test-run must not touch result");
+    CHECK(gen_is(g, LMB_GENERIC_OP_TEST_RUN,
+                 LMB_GENERIC_DOMAIN_BRIDGE, &dcode) &&
+              dcode == -EINVAL,
+          "b3a-testrun-untouched-record",
+          "bad version reports test-run BRIDGE/-EINVAL");
     /* Control: a fully valid record reaches past validation.
      * Success checks the output shape; a kernel decline keeps
      * its signed code with the result untouched. BRIDGE/-EINVAL
@@ -923,6 +1051,11 @@ static void part_b3a(struct gen_api *g, const uint8_t *elf,
     link = lsentinel;
     CHECK(g->attach(valid, &ao, &link) == -EINVAL && link == NULL,
           "b3a-attach-cleared", "failed attach must clear handle");
+    CHECK(gen_is(g, LMB_GENERIC_OP_ATTACH,
+                 LMB_GENERIC_DOMAIN_BRIDGE, &dcode) &&
+              dcode == -EINVAL,
+          "b3a-attach-cleared-record",
+          "bad version reports attach BRIDGE/-EINVAL");
     make_aopts(&ao, "on_getpid");
     set_trace_targets(&ao);
     ao.family = 0;
@@ -930,21 +1063,32 @@ static void part_b3a(struct gen_api *g, const uint8_t *elf,
     CHECK(g->attach(valid, &ao, &link) == -EINVAL && link == NULL,
           "b3a-attach-family", "unknown family must fail cleared");
     CHECK(gen_is(g, LMB_GENERIC_OP_ATTACH,
-                 LMB_GENERIC_DOMAIN_BRIDGE, NULL),
+                 LMB_GENERIC_DOMAIN_BRIDGE, &dcode) &&
+              dcode == -EINVAL,
           "b3a-attach-family-record",
-          "family rejection reports the attach op");
+          "family rejection reports attach BRIDGE/-EINVAL");
     make_aopts(&ao, "on_getpid");
     set_trace_targets(&ao);
     ao.flags = 1;
     link = lsentinel;
     CHECK(g->attach(valid, &ao, &link) == -EINVAL && link == NULL,
           "b3a-attach-flags", "nonzero flags must fail cleared");
+    CHECK(gen_is(g, LMB_GENERIC_OP_ATTACH,
+                 LMB_GENERIC_DOMAIN_BRIDGE, &dcode) &&
+              dcode == -EINVAL,
+          "b3a-attach-flags-record",
+          "flags rejection reports attach BRIDGE/-EINVAL");
     make_aopts(&ao, "on_getpid");
     set_trace_targets(&ao);
     ao._reserved = 1;
     link = lsentinel;
     CHECK(g->attach(valid, &ao, &link) == -EINVAL && link == NULL,
           "b3a-attach-reserved", "nonzero reserved must fail cleared");
+    CHECK(gen_is(g, LMB_GENERIC_OP_ATTACH,
+                 LMB_GENERIC_DOMAIN_BRIDGE, &dcode) &&
+              dcode == -EINVAL,
+          "b3a-attach-reserved-record",
+          "reserved rejection reports attach BRIDGE/-EINVAL");
     make_aopts(&ao, "on_getpid");
     set_trace_targets(&ao);
     ao.program.ptr = NULL;
@@ -952,10 +1096,20 @@ static void part_b3a(struct gen_api *g, const uint8_t *elf,
     link = lsentinel;
     CHECK(g->attach(valid, &ao, &link) == -EINVAL && link == NULL,
           "b3a-attach-empty-program", "empty program must fail");
+    CHECK(gen_is(g, LMB_GENERIC_OP_ATTACH,
+                 LMB_GENERIC_DOMAIN_BRIDGE, &dcode) &&
+              dcode == -EINVAL,
+          "b3a-attach-empty-program-record",
+          "empty program reports attach BRIDGE/-EINVAL");
     make_aopts(&ao, "on_getpid");
     link = lsentinel;
     CHECK(g->attach(valid, &ao, &link) == -EINVAL && link == NULL,
           "b3a-attach-empty-targets", "empty targets must fail");
+    CHECK(gen_is(g, LMB_GENERIC_OP_ATTACH,
+                 LMB_GENERIC_DOMAIN_BRIDGE, &dcode) &&
+              dcode == -EINVAL,
+          "b3a-attach-empty-targets-record",
+          "empty targets report attach BRIDGE/-EINVAL");
     /* Order proof: family validation precedes program lookup, and
      * the fully valid record reaches lookup with ENOENT. */
     make_aopts(&ao, "no_such_program");
@@ -965,6 +1119,11 @@ static void part_b3a(struct gen_api *g, const uint8_t *elf,
     CHECK(g->attach(valid, &ao, &link) == -EINVAL && link == NULL,
           "b3a-attach-order",
           "family errors precede program lookup");
+    CHECK(gen_is(g, LMB_GENERIC_OP_ATTACH,
+                 LMB_GENERIC_DOMAIN_BRIDGE, &dcode) &&
+              dcode == -EINVAL,
+          "b3a-attach-order-record",
+          "order proof reports attach BRIDGE/-EINVAL");
     make_aopts(&ao, "no_such_program");
     set_trace_targets(&ao);
     link = lsentinel;
@@ -978,36 +1137,62 @@ static void part_b3a(struct gen_api *g, const uint8_t *elf,
     buf = bsentinel;
     CHECK(g->bufopen(valid, &bo, &buf) == -EINVAL && buf == NULL,
           "b3a-bufopen-cleared", "failed buffer open must clear");
+    CHECK(gen_is(g, LMB_GENERIC_OP_BUFFER_OPEN,
+                 LMB_GENERIC_DOMAIN_BRIDGE, &dcode) &&
+              dcode == -EINVAL,
+          "b3a-bufopen-cleared-record",
+          "bad version reports buffer-open BRIDGE/-EINVAL");
     make_bopts(&bo, "events");
     bo.ring.ptr = NULL;
     bo.ring.len = 0;
     buf = bsentinel;
     CHECK(g->bufopen(valid, &bo, &buf) == -EINVAL && buf == NULL,
           "b3a-bufopen-empty-ring", "empty ring name must fail");
+    CHECK(gen_is(g, LMB_GENERIC_OP_BUFFER_OPEN,
+                 LMB_GENERIC_DOMAIN_BRIDGE, &dcode) &&
+              dcode == -EINVAL,
+          "b3a-bufopen-empty-ring-record",
+          "empty ring reports buffer-open BRIDGE/-EINVAL");
     make_bopts(&bo, "events");
     bo.max_raw_bytes = 0;
     buf = bsentinel;
     CHECK(g->bufopen(valid, &bo, &buf) == -EINVAL && buf == NULL,
           "b3a-bufopen-raw-zero", "zero raw cap must fail");
+    CHECK(gen_is(g, LMB_GENERIC_OP_BUFFER_OPEN,
+                 LMB_GENERIC_DOMAIN_BRIDGE, &dcode) &&
+              dcode == -EINVAL,
+          "b3a-bufopen-raw-zero-record",
+          "zero cap reports buffer-open BRIDGE/-EINVAL");
     make_bopts(&bo, "events");
     bo.max_raw_bytes = LMB_GENERIC_MAX_RAW_BYTES + 1;
     buf = bsentinel;
     CHECK(g->bufopen(valid, &bo, &buf) == -EINVAL && buf == NULL,
           "b3a-bufopen-raw-huge", "huge raw cap must fail");
+    CHECK(gen_is(g, LMB_GENERIC_OP_BUFFER_OPEN,
+                 LMB_GENERIC_DOMAIN_BRIDGE, &dcode) &&
+              dcode == -EINVAL,
+          "b3a-bufopen-raw-huge-record",
+          "huge cap reports buffer-open BRIDGE/-EINVAL");
     make_bopts(&bo, "events");
     bo.stage_slots = 0;
     buf = bsentinel;
     CHECK(g->bufopen(valid, &bo, &buf) == -EINVAL && buf == NULL,
           "b3a-bufopen-slots", "zero stage slots must fail");
+    CHECK(gen_is(g, LMB_GENERIC_OP_BUFFER_OPEN,
+                 LMB_GENERIC_DOMAIN_BRIDGE, &dcode) &&
+              dcode == -EINVAL,
+          "b3a-bufopen-slots-record",
+          "zero slots report buffer-open BRIDGE/-EINVAL");
     make_bopts(&bo, "events");
     bo.flags = 1;
     buf = bsentinel;
     CHECK(g->bufopen(valid, &bo, &buf) == -EINVAL && buf == NULL,
           "b3a-bufopen-flags", "nonzero flags must fail");
     CHECK(gen_is(g, LMB_GENERIC_OP_BUFFER_OPEN,
-                 LMB_GENERIC_DOMAIN_BRIDGE, NULL),
+                 LMB_GENERIC_DOMAIN_BRIDGE, &dcode) &&
+              dcode == -EINVAL,
           "b3a-bufopen-flags-record",
-          "flag rejection reports the buffer-open op");
+          "flag rejection reports buffer-open BRIDGE/-EINVAL");
     make_bopts(&bo, "no_such_ring");
     buf = bsentinel;
     CHECK(g->bufopen(valid, &bo, &buf) == -ENOENT && buf == NULL,
