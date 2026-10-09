@@ -13,7 +13,9 @@
  * LMB_GENERIC_LIB overrides the Part B dlopen path (differential
  * exercise against another build); LMB_TEST_RUN_PROGRAM overrides
  * the test-run program name (default on_getpid, the only program
- * with a pinned expected retval).
+ * with a pinned expected retval). LMB_ASSUME_PRIVILEGE=1 bypasses
+ * the privilege gate for differential stub exercise with
+ * LMB_GENERIC_LIB only; standard runs must not set it.
  */
 #include <dirent.h>
 #include <dlfcn.h>
@@ -242,6 +244,13 @@ static void make_bopts(struct lmb_buffer_options_v1 *o,
     o->ring.len = (uint64_t)strlen(ring);
     o->max_raw_bytes = 4096;
     o->stage_slots = 1;
+}
+
+static void set_trace_targets(struct lmb_attach_options_v1 *o) {
+    o->target_a.ptr = (const uint8_t *)"syscalls";
+    o->target_a.len = sizeof("syscalls") - 1;
+    o->target_b.ptr = (const uint8_t *)"sys_enter_getpid";
+    o->target_b.len = sizeof("sys_enter_getpid") - 1;
 }
 
 static int gen_is(struct gen_api *g, uint32_t op, uint32_t domain,
@@ -530,6 +539,12 @@ static struct lmb_object *open_valid(struct gen_api *g,
     return obj;
 }
 
+/* Forward declaration: B3a validation isolation loads its owner;
+ * the definition lives with the other load-gated helpers. */
+static int open_loaded(struct gen_api *g, const uint8_t *elf,
+                       uint64_t elf_len, uint32_t log_level,
+                       uint64_t log_capacity, struct lmb_object **obj);
+
 /* B2: configure/info/inspection validation. Null-object rows use
  * otherwise-valid records; every other validation row uses a
  * valid unloaded owner, so only the input under test is
@@ -657,15 +672,23 @@ static void part_b2(struct gen_api *g, const uint8_t *elf,
           "close must release the validation owner");
 }
 
-/* B3a: map/test/attach/buffer validation. Null-object rows
- * use otherwise-valid arguments; every bounds, flag, and alias
- * row uses a valid unloaded owner with initialized records, so
- * only the input under test is defective. Contract validation
- * order puts these checks before state checks, so an unloaded
- * owner is otherwise-valid here. */
+/* B3a: map/test/attach/buffer validation on a loaded owner.
+ * Null-object rows use otherwise-valid arguments and run
+ * unprivileged. Every bounds, flag, and alias row uses a loaded
+ * owner with valid names and attach targets, so only the input
+ * under test is defective. Load-gating reports the same
+ * BRIDGE/-EINVAL as validation, so an unloaded owner cannot
+ * distinguish the rejecting check: with one, omitting every
+ * named validation below still passes. The loaded owner plus
+ * the per-operation controls (unknown names reach lookup with
+ * ENOENT; a valid test-run reaches the kernel) proves the named
+ * check rejected. Without the fixture, or without the privilege
+ * to load one, the validation rows SKIP; a differential stub
+ * whose load needs no privilege still exercises them. */
 static void part_b3a(struct gen_api *g, const uint8_t *elf,
                      uint64_t elf_len) {
     struct lmb_name_v1 name;
+    struct lmb_name_v1 prog;
     struct lmb_program_test_options_v1 to;
     struct lmb_program_test_result_v1 tr, tr_before;
     struct lmb_attach_options_v1 ao;
@@ -678,6 +701,7 @@ static void part_b3a(struct gen_api *g, const uint8_t *elf,
     struct lmb_buffer *bsentinel =
         (struct lmb_buffer *)(uintptr_t)0xDEAD;
     uint8_t key[4] = {7, 0, 0, 0};
+    uint8_t val[8] = {1, 2, 3, 4, 5, 6, 7, 8};
     uint8_t dst[16];
     uint8_t out[64];
     uint64_t needed = 123;
@@ -685,21 +709,19 @@ static void part_b3a(struct gen_api *g, const uint8_t *elf,
 
     /* Isolated null-object rows: valid arguments, null owner only. */
     make_v1name(&name, "test_hash");
+    make_v1name(&prog, "on_getpid");
     CHECK(g->lookup(NULL, &name, key, sizeof(key), dst, sizeof(dst),
                     &needed) == -EINVAL,
           "b3a-lookup-null-object", "null object must fail");
-    CHECK(g->update(NULL, &name, key, sizeof(key), dst, sizeof(dst),
+    CHECK(g->update(NULL, &name, key, sizeof(key), val, sizeof(val),
                     LMB_MAP_UPDATE_ANY) == -EINVAL,
           "b3a-update-null-object", "null object must fail");
     make_topts(&to);
     make_tresult(&tr);
-    CHECK(g->testrun(NULL, &name, &to, &tr) == -EINVAL,
+    CHECK(g->testrun(NULL, &prog, &to, &tr) == -EINVAL,
           "b3a-testrun-null-object", "null object must fail");
     make_aopts(&ao, "on_getpid");
-    ao.target_a.ptr = (const uint8_t *)"syscalls";
-    ao.target_a.len = sizeof("syscalls") - 1;
-    ao.target_b.ptr = (const uint8_t *)"sys_enter_getpid";
-    ao.target_b.len = sizeof("sys_enter_getpid") - 1;
+    set_trace_targets(&ao);
     link = lsentinel;
     CHECK(g->attach(NULL, &ao, &link) == -EINVAL && link == NULL,
           "b3a-attach-null-object", "null object must fail cleared");
@@ -708,13 +730,25 @@ static void part_b3a(struct gen_api *g, const uint8_t *elf,
     CHECK(g->bufopen(NULL, &bo, &buf) == -EINVAL && buf == NULL,
           "b3a-bufopen-null-object", "null object must fail cleared");
 
-    /* Record-validation rows need a valid owner: without the
-     * fixture they SKIP rather than confound the named defect
-     * with a null owner. */
-    valid = open_valid(g, elf, elf_len);
-    if (valid == NULL) {
+    /* Record-validation rows need a loaded owner: an unloaded one
+     * fails closed for its own sake and proves nothing about the
+     * named check. Try the load first so a privileged lane FAILs
+     * honestly while an unprivileged lane SKIP-reports. */
+    if (elf == NULL) {
         SKIP("b3a-validation",
-             "needs the fixture ELF for a valid owner");
+             "needs the fixture ELF for a loaded owner");
+        return;
+    }
+    if (open_loaded(g, elf, elf_len, LMB_LOG_DISCARD, 0, &valid) !=
+            0 ||
+        valid == NULL) {
+        if (!has_privilege()) {
+            SKIP("b3a-validation",
+                 "needs privilege to load a validation owner");
+        } else {
+            FAIL("b3a-load",
+                 "fixture must load for validation isolation");
+        }
         return;
     }
 
@@ -722,6 +756,10 @@ static void part_b3a(struct gen_api *g, const uint8_t *elf,
     CHECK(g->lookup(valid, &name, key, sizeof(key), dst, sizeof(dst),
                     NULL) == -EINVAL,
           "b3a-lookup-null-needed", "null needed cell must fail");
+    CHECK(gen_is(g, LMB_GENERIC_OP_MAP_LOOKUP,
+                 LMB_GENERIC_DOMAIN_BRIDGE, NULL),
+          "b3a-lookup-null-needed-record",
+          "cell rejection reports the lookup op");
     needed = 123;
     CHECK(g->lookup(valid, &name, key, sizeof(key), NULL, 8,
                     &needed) == -EINVAL &&
@@ -742,6 +780,45 @@ static void part_b3a(struct gen_api *g, const uint8_t *elf,
                     &needed) == -EINVAL &&
               needed == 123,
           "b3a-lookup-null-name", "null name must fail");
+    /* Validation precedes lookup: a defective record against an
+     * unknown map still reports EINVAL, while the fixed record
+     * reaches lookup and reports ENOENT. */
+    make_v1name(&name, "no_such_map");
+    CHECK(g->lookup(valid, &name, key, sizeof(key), dst, sizeof(dst),
+                    NULL) == -EINVAL,
+          "b3a-lookup-order", "span errors precede map lookup");
+    needed = 123;
+    CHECK(g->lookup(valid, &name, key, sizeof(key), dst, sizeof(dst),
+                    &needed) == -ENOENT &&
+              needed == 0,
+          "b3a-lookup-control", "unknown map must report ENOENT");
+
+    /* Update validation: spans, then flags, then the lookup
+     * control with an otherwise-valid record. */
+    make_v1name(&name, "test_hash");
+    CHECK(g->update(valid, NULL, key, sizeof(key), val, sizeof(val),
+                    LMB_MAP_UPDATE_ANY) == -EINVAL,
+          "b3a-update-null-name", "null name must fail");
+    CHECK(g->update(valid, &name, NULL, sizeof(key), val, sizeof(val),
+                    LMB_MAP_UPDATE_ANY) == -EINVAL,
+          "b3a-update-null-key", "null key with size must fail");
+    CHECK(g->update(valid, &name, key, sizeof(key), NULL, sizeof(val),
+                    LMB_MAP_UPDATE_ANY) == -EINVAL,
+          "b3a-update-null-value", "null value with size must fail");
+    CHECK(g->update(valid, &name, key, sizeof(key), val, sizeof(val),
+                    3) == -EINVAL,
+          "b3a-update-flags-combo", "NOEXIST|EXIST must fail");
+    CHECK(gen_is(g, LMB_GENERIC_OP_MAP_UPDATE,
+                 LMB_GENERIC_DOMAIN_BRIDGE, NULL),
+          "b3a-update-flags-record",
+          "flag rejection reports the update op");
+    CHECK(g->update(valid, &name, key, sizeof(key), val, sizeof(val),
+                    8) == -EINVAL,
+          "b3a-update-flags-high", "high flag bits must fail");
+    make_v1name(&name, "no_such_map");
+    CHECK(g->update(valid, &name, key, sizeof(key), val, sizeof(val),
+                    LMB_MAP_UPDATE_ANY) == -ENOENT,
+          "b3a-update-control", "unknown map must report ENOENT");
 
     /* Test-run validation: bounds, repeat, flags, out/out alias.
      * Failed validation leaves the result struct untouched. */
@@ -752,85 +829,150 @@ static void part_b3a(struct gen_api *g, const uint8_t *elf,
     to.data_in.ptr = big;
     to.data_in.len = (uint64_t)LMB_GENERIC_MAX_TEST_BYTES + 1;
     tr = tr_before;
-    CHECK(g->testrun(valid, &name, &to, &tr) == -EINVAL &&
+    CHECK(g->testrun(valid, &prog, &to, &tr) == -EINVAL &&
               memcmp(&tr, &tr_before, sizeof(tr)) == 0,
           "b3a-testrun-big-data", "oversized packet input must fail");
     make_topts(&to);
     to.ctx_in.ptr = big;
     to.ctx_in.len = (uint64_t)LMB_GENERIC_MAX_TEST_BYTES + 1;
     tr = tr_before;
-    CHECK(g->testrun(valid, &name, &to, &tr) == -EINVAL &&
+    CHECK(g->testrun(valid, &prog, &to, &tr) == -EINVAL &&
               memcmp(&tr, &tr_before, sizeof(tr)) == 0,
           "b3a-testrun-big-ctx", "oversized context input must fail");
     make_topts(&to);
     to.data_out.ptr = out;
     to.data_out.len = (uint64_t)LMB_GENERIC_MAX_TEST_BYTES + 1;
     tr = tr_before;
-    CHECK(g->testrun(valid, &name, &to, &tr) == -EINVAL &&
+    CHECK(g->testrun(valid, &prog, &to, &tr) == -EINVAL &&
               memcmp(&tr, &tr_before, sizeof(tr)) == 0,
           "b3a-testrun-big-out", "oversized packet output must fail");
     make_topts(&to);
     to.repeat = 0;
     tr = tr_before;
-    CHECK(g->testrun(valid, &name, &to, &tr) == -EINVAL &&
+    CHECK(g->testrun(valid, &prog, &to, &tr) == -EINVAL &&
               memcmp(&tr, &tr_before, sizeof(tr)) == 0,
           "b3a-testrun-repeat-zero", "repeat 0 must fail");
     make_topts(&to);
     to.repeat = (uint64_t)0xFFFFFFFF + 1;
     tr = tr_before;
-    CHECK(g->testrun(valid, &name, &to, &tr) == -EINVAL &&
+    CHECK(g->testrun(valid, &prog, &to, &tr) == -EINVAL &&
               memcmp(&tr, &tr_before, sizeof(tr)) == 0,
           "b3a-testrun-repeat-huge", "huge repeat must fail");
     make_topts(&to);
     to.flags = 1;
     tr = tr_before;
-    CHECK(g->testrun(valid, &name, &to, &tr) == -EINVAL &&
+    CHECK(g->testrun(valid, &prog, &to, &tr) == -EINVAL &&
               memcmp(&tr, &tr_before, sizeof(tr)) == 0,
           "b3a-testrun-flags", "nonzero flags must fail");
+    CHECK(gen_is(g, LMB_GENERIC_OP_TEST_RUN,
+                 LMB_GENERIC_DOMAIN_BRIDGE, NULL),
+          "b3a-testrun-flags-record",
+          "flag rejection reports the test-run op");
     make_topts(&to);
     to.data_out.ptr = out;
     to.data_out.len = sizeof(out);
     to.ctx_out.ptr = out + 32;
     to.ctx_out.len = 32;
     tr = tr_before;
-    CHECK(g->testrun(valid, &name, &to, &tr) == -EINVAL &&
+    CHECK(g->testrun(valid, &prog, &to, &tr) == -EINVAL &&
               memcmp(&tr, &tr_before, sizeof(tr)) == 0,
           "b3a-testrun-out-alias",
           "overlapping outputs must fail");
     make_topts(&to);
     to.abi_version = 99;
     tr = tr_before;
-    CHECK(g->testrun(valid, &name, &to, &tr) == -EINVAL &&
+    CHECK(g->testrun(valid, &prog, &to, &tr) == -EINVAL &&
               memcmp(&tr, &tr_before, sizeof(tr)) == 0,
           "b3a-testrun-untouched",
           "failed test-run must not touch result");
+    /* Control: a fully valid record reaches past validation.
+     * Success checks the output shape; a kernel decline keeps
+     * its signed code with the result untouched. BRIDGE/-EINVAL
+     * here would mean the valid record was rejected. */
+    make_topts(&to);
+    to.data_in.ptr = big;
+    to.data_in.len = sizeof(big);
+    to.data_out.ptr = out;
+    to.data_out.len = sizeof(out);
+    tr = tr_before;
+    {
+        int32_t rc = g->testrun(valid, &prog, &to, &tr);
+        if (rc == 0) {
+            CHECK(tr.data_actual <= sizeof(out) &&
+                      tr.ctx_actual == 0 && tr._pad == 0,
+                  "b3a-testrun-control",
+                  "valid test-run outputs must be bounded");
+        } else {
+            int32_t code = 0;
+            CHECK(gen_is(g, LMB_GENERIC_OP_TEST_RUN,
+                         LMB_GENERIC_DOMAIN_KERNEL, &code) &&
+                      code < 0 &&
+                      memcmp(&tr, &tr_before, sizeof(tr)) == 0,
+                  "b3a-testrun-control",
+                  "kernel decline keeps signed code, result intact");
+        }
+    }
 
-    /* Attach/buffer validation clears output handles first. */
+    /* Attach validation clears output handles first. Every row
+     * carries valid names and targets except the input under
+     * test; span checks precede the enum checks, so empty
+     * targets here would mask the family/flag rows. */
     make_aopts(&ao, "on_getpid");
+    set_trace_targets(&ao);
     ao.abi_version = 99;
     link = lsentinel;
     CHECK(g->attach(valid, &ao, &link) == -EINVAL && link == NULL,
           "b3a-attach-cleared", "failed attach must clear handle");
     make_aopts(&ao, "on_getpid");
+    set_trace_targets(&ao);
     ao.family = 0;
-    CHECK(g->attach(valid, &ao, &link) == -EINVAL,
-          "b3a-attach-family", "unknown family must fail");
+    link = lsentinel;
+    CHECK(g->attach(valid, &ao, &link) == -EINVAL && link == NULL,
+          "b3a-attach-family", "unknown family must fail cleared");
+    CHECK(gen_is(g, LMB_GENERIC_OP_ATTACH,
+                 LMB_GENERIC_DOMAIN_BRIDGE, NULL),
+          "b3a-attach-family-record",
+          "family rejection reports the attach op");
     make_aopts(&ao, "on_getpid");
+    set_trace_targets(&ao);
     ao.flags = 1;
-    CHECK(g->attach(valid, &ao, &link) == -EINVAL,
-          "b3a-attach-flags", "nonzero flags must fail");
+    link = lsentinel;
+    CHECK(g->attach(valid, &ao, &link) == -EINVAL && link == NULL,
+          "b3a-attach-flags", "nonzero flags must fail cleared");
     make_aopts(&ao, "on_getpid");
+    set_trace_targets(&ao);
     ao._reserved = 1;
-    CHECK(g->attach(valid, &ao, &link) == -EINVAL,
-          "b3a-attach-reserved", "nonzero reserved must fail");
+    link = lsentinel;
+    CHECK(g->attach(valid, &ao, &link) == -EINVAL && link == NULL,
+          "b3a-attach-reserved", "nonzero reserved must fail cleared");
     make_aopts(&ao, "on_getpid");
+    set_trace_targets(&ao);
     ao.program.ptr = NULL;
     ao.program.len = 0;
-    CHECK(g->attach(valid, &ao, &link) == -EINVAL,
+    link = lsentinel;
+    CHECK(g->attach(valid, &ao, &link) == -EINVAL && link == NULL,
           "b3a-attach-empty-program", "empty program must fail");
     make_aopts(&ao, "on_getpid");
-    CHECK(g->attach(valid, &ao, &link) == -EINVAL,
+    link = lsentinel;
+    CHECK(g->attach(valid, &ao, &link) == -EINVAL && link == NULL,
           "b3a-attach-empty-targets", "empty targets must fail");
+    /* Order proof: family validation precedes program lookup, and
+     * the fully valid record reaches lookup with ENOENT. */
+    make_aopts(&ao, "no_such_program");
+    set_trace_targets(&ao);
+    ao.family = 0;
+    link = lsentinel;
+    CHECK(g->attach(valid, &ao, &link) == -EINVAL && link == NULL,
+          "b3a-attach-order",
+          "family errors precede program lookup");
+    make_aopts(&ao, "no_such_program");
+    set_trace_targets(&ao);
+    link = lsentinel;
+    CHECK(g->attach(valid, &ao, &link) == -ENOENT && link == NULL,
+          "b3a-attach-control",
+          "unknown program must report ENOENT cleared");
+
+    /* Buffer validation clears output handles first. */
     make_bopts(&bo, "events");
     bo.abi_version = 99;
     buf = bsentinel;
@@ -839,24 +981,38 @@ static void part_b3a(struct gen_api *g, const uint8_t *elf,
     make_bopts(&bo, "events");
     bo.ring.ptr = NULL;
     bo.ring.len = 0;
-    CHECK(g->bufopen(valid, &bo, &buf) == -EINVAL,
+    buf = bsentinel;
+    CHECK(g->bufopen(valid, &bo, &buf) == -EINVAL && buf == NULL,
           "b3a-bufopen-empty-ring", "empty ring name must fail");
     make_bopts(&bo, "events");
     bo.max_raw_bytes = 0;
-    CHECK(g->bufopen(valid, &bo, &buf) == -EINVAL,
+    buf = bsentinel;
+    CHECK(g->bufopen(valid, &bo, &buf) == -EINVAL && buf == NULL,
           "b3a-bufopen-raw-zero", "zero raw cap must fail");
     make_bopts(&bo, "events");
     bo.max_raw_bytes = LMB_GENERIC_MAX_RAW_BYTES + 1;
-    CHECK(g->bufopen(valid, &bo, &buf) == -EINVAL,
+    buf = bsentinel;
+    CHECK(g->bufopen(valid, &bo, &buf) == -EINVAL && buf == NULL,
           "b3a-bufopen-raw-huge", "huge raw cap must fail");
     make_bopts(&bo, "events");
     bo.stage_slots = 0;
-    CHECK(g->bufopen(valid, &bo, &buf) == -EINVAL,
+    buf = bsentinel;
+    CHECK(g->bufopen(valid, &bo, &buf) == -EINVAL && buf == NULL,
           "b3a-bufopen-slots", "zero stage slots must fail");
     make_bopts(&bo, "events");
     bo.flags = 1;
-    CHECK(g->bufopen(valid, &bo, &buf) == -EINVAL,
+    buf = bsentinel;
+    CHECK(g->bufopen(valid, &bo, &buf) == -EINVAL && buf == NULL,
           "b3a-bufopen-flags", "nonzero flags must fail");
+    CHECK(gen_is(g, LMB_GENERIC_OP_BUFFER_OPEN,
+                 LMB_GENERIC_DOMAIN_BRIDGE, NULL),
+          "b3a-bufopen-flags-record",
+          "flag rejection reports the buffer-open op");
+    make_bopts(&bo, "no_such_ring");
+    buf = bsentinel;
+    CHECK(g->bufopen(valid, &bo, &buf) == -ENOENT && buf == NULL,
+          "b3a-bufopen-control",
+          "unknown ring must report ENOENT cleared");
 
     CHECK(g->close(&valid) == 0 && valid == NULL, "b3a-close",
           "close must release the validation owner");
@@ -1338,15 +1494,22 @@ static void part_b6a(struct gen_api *g, const uint8_t *elf,
     } else {
         printf("note b6a-log-tail: log fills the 8-byte window\n");
     }
-    /* Forced truncation: with a nonempty log, a short window must
-     * deliver the exact prefix with the flag set and the guard
-     * bytes intact. An empty log cannot force truncation and
-     * SKIP-reports instead of passing vacuously. */
-    if (actual == 0) {
-        SKIP("b6a-truncated", "empty log cannot force truncation");
-    } else {
-        uint64_t small = actual > 16 ? 16 : actual - 1;
-        uint8_t *full = malloc((size_t)actual);
+    /* Forced truncation: ALWAYS with capacity over a fixture
+     * that verifies verbosely is the controlled nonempty seed:
+     * the kernel log for on_getpid is deterministically
+     * nonempty, so empty retention is a bridge defect and FAILs
+     * here (the DISCARD check below is the contrast control,
+     * proving empty means discarded, never silently truncated).
+     * A short window must then deliver the exact prefix with
+     * the flag set and the guard bytes intact. */
+    CHECK(actual > 0, "b6a-log-nonempty",
+          "ALWAYS load must retain a nonempty log");
+    printf("note b6a-log-seed: %llu retained bytes\n",
+           (unsigned long long)actual);
+    {
+        uint64_t small =
+            actual > 16 ? 16 : (actual > 1 ? actual - 1 : 0);
+        uint8_t *full = malloc(actual ? (size_t)actual : 1);
         uint8_t *part = malloc((size_t)small + 16);
         if (full == NULL || part == NULL) {
             FAIL("b6a-truncated-alloc", "out of memory");
@@ -1995,8 +2158,13 @@ static void part_b6(struct gen_api *g, const uint8_t *elf,
         return;
     }
     if (!has_privilege()) {
-        SKIP("b6", "missing collection privileges");
-        return;
+        const char *force = getenv("LMB_ASSUME_PRIVILEGE");
+        if (force == NULL || strcmp(force, "1") != 0) {
+            SKIP("b6", "missing collection privileges");
+            return;
+        }
+        printf("note b6-assumed-privilege: load-gated sections run "
+               "without host privilege (differential stub only)\n");
     }
     part_b6a(g, elf, elf_len);
     part_b6b(g, elf, elf_len);
