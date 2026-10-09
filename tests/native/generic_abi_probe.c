@@ -7,7 +7,7 @@
  * Usage: probe <lib.so> [fixture.bpf.o]
  * Part A always runs: C layout smoke, v1 presence, hidden upstream
  * symbols, generic presence report. Part B (behavior battery)
- * runs only when all sixteen generic symbols resolve; otherwise it
+ * runs only when all twenty generic symbols resolve; otherwise it
  * reports SKIP, never PASS. Live sections additionally need the
  * fixture and collection privilege; without them they SKIP.
  * LMB_GENERIC_LIB overrides the Part B dlopen path (differential
@@ -29,6 +29,10 @@
 
 #include "libbpf_mojo.h"
 #include "libbpf_mojo_generic.h"
+
+/* The frozen contract names -ESTALE for stale views; the value is
+ * part of the contract on this platform. */
+_Static_assert(ESTALE == 116, "stale views must report ESTALE 116");
 
 static int oks = 0;
 static int skips = 0;
@@ -96,6 +100,10 @@ typedef int32_t (*fn_bufopen)(struct lmb_object *,
 typedef int32_t (*fn_bufpoll)(struct lmb_buffer *, uint8_t *, uint64_t,
                               int32_t, uint64_t *, uint64_t *);
 typedef int32_t (*fn_bufclose)(struct lmb_buffer **);
+typedef int32_t (*fn_ref)(struct lmb_object *);
+typedef void (*fn_unref)(struct lmb_object *);
+typedef int32_t (*fn_gen)(const struct lmb_object *, uint64_t *);
+typedef int32_t (*fn_gencheck)(const struct lmb_object *, uint64_t);
 
 typedef int32_t (*fn_v1open)(const uint8_t *, uint64_t,
                             const struct lmb_options_v1 *,
@@ -124,9 +132,13 @@ struct gen_api {
     fn_bufopen bufopen;
     fn_bufpoll bufpoll;
     fn_bufclose bufclose;
+    fn_ref ref;
+    fn_unref unref;
+    fn_gen gen;
+    fn_gencheck gencheck;
 };
 
-static const char *gen_names[16] = {
+static const char *gen_names[20] = {
     "lmb_object_open_v1",           "lmb_object_configure_program_v1",
     "lmb_object_load_v1",           "lmb_object_program_info_v1",
     "lmb_object_map_info_v1",       "lmb_object_close_v1",
@@ -135,6 +147,8 @@ static const char *gen_names[16] = {
     "lmb_program_test_run_v1",      "lmb_object_attach_v1",
     "lmb_link_close_v1",            "lmb_buffer_open_v1",
     "lmb_buffer_poll_v1",           "lmb_buffer_close_v1",
+    "lmb_object_ref_v1",            "lmb_object_unref_v1",
+    "lmb_object_gen_v1",            "lmb_object_gen_check_v1",
 };
 
 static const char *v1_names[11] = {
@@ -373,9 +387,9 @@ static int part_a(const char *libpath) {
         snprintf(name, sizeof(name), "a-hidden-%s", hidden_names[i]);
         CHECK(hidden, name, "bundled upstream symbol must stay hidden");
     }
-    for (i = 0; i < 16; i++)
+    for (i = 0; i < 20; i++)
         present += dlsym(hdl, gen_names[i]) != NULL;
-    printf("note a-generic-present: %d of 16 generic symbols resolve\n",
+    printf("note a-generic-present: %d of 20 generic symbols resolve\n",
            present);
     dlclose(hdl);
     return 0;
@@ -499,8 +513,30 @@ static void part_b1(struct gen_api *g) {
           "b1-garbage-record", "parse failure keeps signed libbpf code");
 }
 
-/* B2: configure/info/inspection validation without an object. */
-static void part_b2(struct gen_api *g) {
+/* One valid unloaded object for validation isolation, or NULL
+ * when the fixture is unavailable. Parsing needs no privilege. */
+static struct lmb_object *open_valid(struct gen_api *g,
+                                     const uint8_t *elf,
+                                     uint64_t elf_len) {
+    struct lmb_object_options_v1 o;
+    struct lmb_object *obj = NULL;
+    if (elf == NULL)
+        return NULL;
+    make_oopts(&o);
+    o.log_level = LMB_LOG_DISCARD;
+    o.log_capacity = 0;
+    if (g->open(elf, elf_len, &o, &obj) != 0 || obj == NULL)
+        return NULL;
+    return obj;
+}
+
+/* B2: configure/info/inspection validation. Null-object rows use
+ * otherwise-valid records; every other validation row uses a
+ * valid unloaded owner, so only the input under test is
+ * defective. A null owner would fail closed for its own sake
+ * and prove nothing about the named check. */
+static void part_b2(struct gen_api *g, const uint8_t *elf,
+                    uint64_t elf_len) {
     struct lmb_program_options_v1 po;
     struct lmb_program_info_v1 pi, pi_before;
     struct lmb_map_info_v1 mi, mi_before;
@@ -508,66 +544,23 @@ static void part_b2(struct gen_api *g) {
     struct lmb_name_v1 name;
     struct lmb_object_options_v1 o;
     struct lmb_object *obj = NULL;
+    struct lmb_object *valid = NULL;
     static const uint8_t bad8[1] = {0xFF};
 
+    /* Isolated null-object rows: valid records, null owner only. */
     make_popts(&po, "on_getpid");
     CHECK(g->config(NULL, &po) == -EINVAL, "b2-config-null",
           "null object must fail closed");
-    po.abi_version = 99;
-    CHECK(g->config(NULL, &po) == -EINVAL, "b2-config-bad-version",
-          "bad version must fail");
-    make_popts(&po, "on_getpid");
-    po.struct_size = sizeof(po) - 1;
-    CHECK(g->config(NULL, &po) == -EINVAL, "b2-config-short",
-          "short struct must fail");
-    make_popts(&po, "on_getpid");
-    po.flags = 1;
-    CHECK(g->config(NULL, &po) == -EINVAL, "b2-config-flags",
-          "nonzero flags must fail");
-    make_popts(&po, "on_getpid");
-    po.autoload = 3;
-    CHECK(g->config(NULL, &po) == -EINVAL, "b2-config-autoload",
-          "unknown autoload value must fail");
-    make_popts(&po, "on_getpid");
-    po.program.ptr = NULL;
-    po.program.len = 0;
-    CHECK(g->config(NULL, &po) == -EINVAL, "b2-config-empty-program",
-          "empty program name must fail");
-    make_popts(&po, "on_getpid");
-    po.program.ptr = bad8;
-    po.program.len = sizeof(bad8);
-    CHECK(g->config(NULL, &po) == -EINVAL, "b2-config-program-utf8",
-          "invalid UTF-8 program must fail");
-    make_popts(&po, "on_getpid");
-    po.attach_target.ptr = bad8;
-    po.attach_target.len = sizeof(bad8);
-    CHECK(g->config(NULL, &po) == -EINVAL, "b2-config-target-utf8",
-          "invalid UTF-8 target must fail");
-
-    /* Info validation leaves the output struct untouched. */
     make_v1name(&name, "on_getpid");
-    memset(&pi, 0xAA, sizeof(pi));
-    pi.abi_version = 99;
-    pi.struct_size = sizeof(pi);
-    pi_before = pi;
-    CHECK(g->pinfo(NULL, &name, &pi) == -EINVAL &&
-              memcmp(&pi, &pi_before, sizeof(pi)) == 0,
-          "b2-pinfo-untouched", "failed info must not touch output");
     make_pinfo(&pi);
     CHECK(g->pinfo(NULL, &name, &pi) == -EINVAL, "b2-pinfo-null",
           "null object must fail closed");
-    make_pinfo(&pi);
-    CHECK(g->pinfo(NULL, NULL, &pi) == -EINVAL, "b2-pinfo-null-name",
-          "null name must fail closed");
-    CHECK(g->pinfo(NULL, &name, NULL) == -EINVAL, "b2-pinfo-null-out",
-          "null out struct must fail closed");
-    memset(&mi, 0xAA, sizeof(mi));
+    memset(&mi, 0, sizeof(mi));
     mi.abi_version = LMB_ABI_VERSION;
-    mi.struct_size = 1;
-    mi_before = mi;
-    CHECK(g->minfo(NULL, &name, &mi) == -EINVAL &&
-              memcmp(&mi, &mi_before, sizeof(mi)) == 0,
-          "b2-minfo-untouched", "failed info must not touch output");
+    mi.struct_size = sizeof(mi);
+    make_v1name(&name, "test_hash");
+    CHECK(g->minfo(NULL, &name, &mi) == -EINVAL, "b2-minfo-null",
+          "null object must fail closed");
 
     /* Inspection failures preserve the stored record. */
     make_oopts(&o);
@@ -594,12 +587,84 @@ static void part_b2(struct gen_api *g) {
     CHECK(g->lasterr(&e2) == 0 && memcmp(&e1, &e2, sizeof(e1)) == 0,
           "b2-lasterr-preserved",
           "retrieval preserves; failure preserves too");
+
+    /* Record-validation rows need a valid owner: without the
+     * fixture they SKIP rather than confound the named defect
+     * with a null owner. */
+    valid = open_valid(g, elf, elf_len);
+    if (valid == NULL) {
+        SKIP("b2-validation",
+             "needs the fixture ELF for a valid owner");
+        return;
+    }
+
+    make_popts(&po, "on_getpid");
+    po.abi_version = 99;
+    CHECK(g->config(valid, &po) == -EINVAL, "b2-config-bad-version",
+          "bad version must fail");
+    make_popts(&po, "on_getpid");
+    po.struct_size = sizeof(po) - 1;
+    CHECK(g->config(valid, &po) == -EINVAL, "b2-config-short",
+          "short struct must fail");
+    make_popts(&po, "on_getpid");
+    po.flags = 1;
+    CHECK(g->config(valid, &po) == -EINVAL, "b2-config-flags",
+          "nonzero flags must fail");
+    make_popts(&po, "on_getpid");
+    po.autoload = 3;
+    CHECK(g->config(valid, &po) == -EINVAL, "b2-config-autoload",
+          "unknown autoload value must fail");
+    make_popts(&po, "on_getpid");
+    po.program.ptr = NULL;
+    po.program.len = 0;
+    CHECK(g->config(valid, &po) == -EINVAL, "b2-config-empty-program",
+          "empty program name must fail");
+    make_popts(&po, "on_getpid");
+    po.program.ptr = bad8;
+    po.program.len = sizeof(bad8);
+    CHECK(g->config(valid, &po) == -EINVAL, "b2-config-program-utf8",
+          "invalid UTF-8 program must fail");
+    make_popts(&po, "on_getpid");
+    po.attach_target.ptr = bad8;
+    po.attach_target.len = sizeof(bad8);
+    CHECK(g->config(valid, &po) == -EINVAL, "b2-config-target-utf8",
+          "invalid UTF-8 target must fail");
+
+    /* Info validation leaves the output struct untouched. */
+    make_v1name(&name, "on_getpid");
+    memset(&pi, 0xAA, sizeof(pi));
+    pi.abi_version = 99;
+    pi.struct_size = sizeof(pi);
+    pi_before = pi;
+    CHECK(g->pinfo(valid, &name, &pi) == -EINVAL &&
+              memcmp(&pi, &pi_before, sizeof(pi)) == 0,
+          "b2-pinfo-untouched", "failed info must not touch output");
+    make_pinfo(&pi);
+    CHECK(g->pinfo(valid, NULL, &pi) == -EINVAL, "b2-pinfo-null-name",
+          "null name must fail closed");
+    CHECK(g->pinfo(valid, &name, NULL) == -EINVAL, "b2-pinfo-null-out",
+          "null out struct must fail closed");
+    memset(&mi, 0xAA, sizeof(mi));
+    mi.abi_version = LMB_ABI_VERSION;
+    mi.struct_size = 1;
+    mi_before = mi;
+    make_v1name(&name, "test_hash");
+    CHECK(g->minfo(valid, &name, &mi) == -EINVAL &&
+              memcmp(&mi, &mi_before, sizeof(mi)) == 0,
+          "b2-minfo-untouched", "failed info must not touch output");
+
+    CHECK(g->close(&valid) == 0 && valid == NULL, "b2-close",
+          "close must release the validation owner");
 }
 
-/* B3a: map/test/attach/buffer validation without an object.
- * Output-cell, span, and alias checks precede state checks, so
- * every row runs with a null object. */
-static void part_b3a(struct gen_api *g) {
+/* B3a: map/test/attach/buffer validation. Null-object rows
+ * use otherwise-valid arguments; every bounds, flag, and alias
+ * row uses a valid unloaded owner with initialized records, so
+ * only the input under test is defective. Contract validation
+ * order puts these checks before state checks, so an unloaded
+ * owner is otherwise-valid here. */
+static void part_b3a(struct gen_api *g, const uint8_t *elf,
+                     uint64_t elf_len) {
     struct lmb_name_v1 name;
     struct lmb_program_test_options_v1 to;
     struct lmb_program_test_result_v1 tr, tr_before;
@@ -607,6 +672,7 @@ static void part_b3a(struct gen_api *g) {
     struct lmb_buffer_options_v1 bo;
     struct lmb_link *link;
     struct lmb_buffer *buf;
+    struct lmb_object *valid = NULL;
     struct lmb_link *lsentinel =
         (struct lmb_link *)(uintptr_t)0xDEAD;
     struct lmb_buffer *bsentinel =
@@ -617,71 +683,124 @@ static void part_b3a(struct gen_api *g) {
     uint64_t needed = 123;
     static uint8_t big[16];
 
+    /* Isolated null-object rows: valid arguments, null owner only. */
     make_v1name(&name, "test_hash");
-    CHECK(g->lookup(NULL, &name, key, sizeof(key), dst, sizeof(dst),
-                    NULL) == -EINVAL,
-          "b3a-lookup-null-needed", "null needed cell must fail");
-    CHECK(g->lookup(NULL, &name, key, sizeof(key), NULL, 8,
-                    &needed) == -EINVAL,
-          "b3a-lookup-null-dst", "null dst with capacity must fail");
-    CHECK(g->lookup(NULL, &name, key, sizeof(key), dst, sizeof(dst),
-                    (uint64_t *)key) == -EINVAL,
-          "b3a-lookup-needed-in-key", "needed inside key must fail");
-    CHECK(g->lookup(NULL, &name, key, sizeof(key), dst, sizeof(dst),
-                    (uint64_t *)(dst + 8)) == -EINVAL,
-          "b3a-lookup-needed-in-dst", "needed inside dst must fail");
-    CHECK(g->lookup(NULL, NULL, key, sizeof(key), dst, sizeof(dst),
-                    &needed) == -EINVAL,
-          "b3a-lookup-null-name", "null name must fail");
     CHECK(g->lookup(NULL, &name, key, sizeof(key), dst, sizeof(dst),
                     &needed) == -EINVAL,
           "b3a-lookup-null-object", "null object must fail");
     CHECK(g->update(NULL, &name, key, sizeof(key), dst, sizeof(dst),
                     LMB_MAP_UPDATE_ANY) == -EINVAL,
           "b3a-update-null-object", "null object must fail");
+    make_topts(&to);
+    make_tresult(&tr);
+    CHECK(g->testrun(NULL, &name, &to, &tr) == -EINVAL,
+          "b3a-testrun-null-object", "null object must fail");
+    make_aopts(&ao, "on_getpid");
+    ao.target_a.ptr = (const uint8_t *)"syscalls";
+    ao.target_a.len = sizeof("syscalls") - 1;
+    ao.target_b.ptr = (const uint8_t *)"sys_enter_getpid";
+    ao.target_b.len = sizeof("sys_enter_getpid") - 1;
+    link = lsentinel;
+    CHECK(g->attach(NULL, &ao, &link) == -EINVAL && link == NULL,
+          "b3a-attach-null-object", "null object must fail cleared");
+    make_bopts(&bo, "events");
+    buf = bsentinel;
+    CHECK(g->bufopen(NULL, &bo, &buf) == -EINVAL && buf == NULL,
+          "b3a-bufopen-null-object", "null object must fail cleared");
+
+    /* Record-validation rows need a valid owner: without the
+     * fixture they SKIP rather than confound the named defect
+     * with a null owner. */
+    valid = open_valid(g, elf, elf_len);
+    if (valid == NULL) {
+        SKIP("b3a-validation",
+             "needs the fixture ELF for a valid owner");
+        return;
+    }
+
+    make_v1name(&name, "test_hash");
+    CHECK(g->lookup(valid, &name, key, sizeof(key), dst, sizeof(dst),
+                    NULL) == -EINVAL,
+          "b3a-lookup-null-needed", "null needed cell must fail");
+    needed = 123;
+    CHECK(g->lookup(valid, &name, key, sizeof(key), NULL, 8,
+                    &needed) == -EINVAL &&
+              needed == 123,
+          "b3a-lookup-null-dst", "null dst with capacity must fail");
+    needed = 123;
+    CHECK(g->lookup(valid, &name, key, sizeof(key), dst, sizeof(dst),
+                    (uint64_t *)key) == -EINVAL &&
+              needed == 123,
+          "b3a-lookup-needed-in-key", "needed inside key must fail");
+    needed = 123;
+    CHECK(g->lookup(valid, &name, key, sizeof(key), dst, sizeof(dst),
+                    (uint64_t *)(dst + 8)) == -EINVAL &&
+              needed == 123,
+          "b3a-lookup-needed-in-dst", "needed inside dst must fail");
+    needed = 123;
+    CHECK(g->lookup(valid, NULL, key, sizeof(key), dst, sizeof(dst),
+                    &needed) == -EINVAL &&
+              needed == 123,
+          "b3a-lookup-null-name", "null name must fail");
 
     /* Test-run validation: bounds, repeat, flags, out/out alias.
      * Failed validation leaves the result struct untouched. */
+    memset(&tr_before, 0xAA, sizeof(tr_before));
+    tr_before.abi_version = LMB_GENERIC_ABI_VERSION;
+    tr_before.struct_size = sizeof(tr_before);
     make_topts(&to);
     to.data_in.ptr = big;
     to.data_in.len = (uint64_t)LMB_GENERIC_MAX_TEST_BYTES + 1;
-    CHECK(g->testrun(NULL, &name, &to, &tr) == -EINVAL,
+    tr = tr_before;
+    CHECK(g->testrun(valid, &name, &to, &tr) == -EINVAL &&
+              memcmp(&tr, &tr_before, sizeof(tr)) == 0,
           "b3a-testrun-big-data", "oversized packet input must fail");
     make_topts(&to);
     to.ctx_in.ptr = big;
     to.ctx_in.len = (uint64_t)LMB_GENERIC_MAX_TEST_BYTES + 1;
-    CHECK(g->testrun(NULL, &name, &to, &tr) == -EINVAL,
+    tr = tr_before;
+    CHECK(g->testrun(valid, &name, &to, &tr) == -EINVAL &&
+              memcmp(&tr, &tr_before, sizeof(tr)) == 0,
           "b3a-testrun-big-ctx", "oversized context input must fail");
     make_topts(&to);
     to.data_out.ptr = out;
     to.data_out.len = (uint64_t)LMB_GENERIC_MAX_TEST_BYTES + 1;
-    CHECK(g->testrun(NULL, &name, &to, &tr) == -EINVAL,
+    tr = tr_before;
+    CHECK(g->testrun(valid, &name, &to, &tr) == -EINVAL &&
+              memcmp(&tr, &tr_before, sizeof(tr)) == 0,
           "b3a-testrun-big-out", "oversized packet output must fail");
     make_topts(&to);
     to.repeat = 0;
-    CHECK(g->testrun(NULL, &name, &to, &tr) == -EINVAL,
+    tr = tr_before;
+    CHECK(g->testrun(valid, &name, &to, &tr) == -EINVAL &&
+              memcmp(&tr, &tr_before, sizeof(tr)) == 0,
           "b3a-testrun-repeat-zero", "repeat 0 must fail");
     make_topts(&to);
     to.repeat = (uint64_t)0xFFFFFFFF + 1;
-    CHECK(g->testrun(NULL, &name, &to, &tr) == -EINVAL,
+    tr = tr_before;
+    CHECK(g->testrun(valid, &name, &to, &tr) == -EINVAL &&
+              memcmp(&tr, &tr_before, sizeof(tr)) == 0,
           "b3a-testrun-repeat-huge", "huge repeat must fail");
     make_topts(&to);
     to.flags = 1;
-    CHECK(g->testrun(NULL, &name, &to, &tr) == -EINVAL,
+    tr = tr_before;
+    CHECK(g->testrun(valid, &name, &to, &tr) == -EINVAL &&
+              memcmp(&tr, &tr_before, sizeof(tr)) == 0,
           "b3a-testrun-flags", "nonzero flags must fail");
     make_topts(&to);
     to.data_out.ptr = out;
     to.data_out.len = sizeof(out);
     to.ctx_out.ptr = out + 32;
     to.ctx_out.len = 32;
-    CHECK(g->testrun(NULL, &name, &to, &tr) == -EINVAL,
+    tr = tr_before;
+    CHECK(g->testrun(valid, &name, &to, &tr) == -EINVAL &&
+              memcmp(&tr, &tr_before, sizeof(tr)) == 0,
           "b3a-testrun-out-alias",
           "overlapping outputs must fail");
     make_topts(&to);
     to.abi_version = 99;
-    memset(&tr_before, 0xAA, sizeof(tr_before));
     tr = tr_before;
-    CHECK(g->testrun(NULL, &name, &to, &tr) == -EINVAL &&
+    CHECK(g->testrun(valid, &name, &to, &tr) == -EINVAL &&
               memcmp(&tr, &tr_before, sizeof(tr)) == 0,
           "b3a-testrun-untouched",
           "failed test-run must not touch result");
@@ -690,54 +809,57 @@ static void part_b3a(struct gen_api *g) {
     make_aopts(&ao, "on_getpid");
     ao.abi_version = 99;
     link = lsentinel;
-    CHECK(g->attach(NULL, &ao, &link) == -EINVAL && link == NULL,
+    CHECK(g->attach(valid, &ao, &link) == -EINVAL && link == NULL,
           "b3a-attach-cleared", "failed attach must clear handle");
     make_aopts(&ao, "on_getpid");
     ao.family = 0;
-    CHECK(g->attach(NULL, &ao, &link) == -EINVAL,
+    CHECK(g->attach(valid, &ao, &link) == -EINVAL,
           "b3a-attach-family", "unknown family must fail");
     make_aopts(&ao, "on_getpid");
     ao.flags = 1;
-    CHECK(g->attach(NULL, &ao, &link) == -EINVAL,
+    CHECK(g->attach(valid, &ao, &link) == -EINVAL,
           "b3a-attach-flags", "nonzero flags must fail");
     make_aopts(&ao, "on_getpid");
     ao._reserved = 1;
-    CHECK(g->attach(NULL, &ao, &link) == -EINVAL,
+    CHECK(g->attach(valid, &ao, &link) == -EINVAL,
           "b3a-attach-reserved", "nonzero reserved must fail");
     make_aopts(&ao, "on_getpid");
     ao.program.ptr = NULL;
     ao.program.len = 0;
-    CHECK(g->attach(NULL, &ao, &link) == -EINVAL,
+    CHECK(g->attach(valid, &ao, &link) == -EINVAL,
           "b3a-attach-empty-program", "empty program must fail");
     make_aopts(&ao, "on_getpid");
-    CHECK(g->attach(NULL, &ao, &link) == -EINVAL,
+    CHECK(g->attach(valid, &ao, &link) == -EINVAL,
           "b3a-attach-empty-targets", "empty targets must fail");
     make_bopts(&bo, "events");
     bo.abi_version = 99;
     buf = bsentinel;
-    CHECK(g->bufopen(NULL, &bo, &buf) == -EINVAL && buf == NULL,
+    CHECK(g->bufopen(valid, &bo, &buf) == -EINVAL && buf == NULL,
           "b3a-bufopen-cleared", "failed buffer open must clear");
     make_bopts(&bo, "events");
     bo.ring.ptr = NULL;
     bo.ring.len = 0;
-    CHECK(g->bufopen(NULL, &bo, &buf) == -EINVAL,
+    CHECK(g->bufopen(valid, &bo, &buf) == -EINVAL,
           "b3a-bufopen-empty-ring", "empty ring name must fail");
     make_bopts(&bo, "events");
     bo.max_raw_bytes = 0;
-    CHECK(g->bufopen(NULL, &bo, &buf) == -EINVAL,
+    CHECK(g->bufopen(valid, &bo, &buf) == -EINVAL,
           "b3a-bufopen-raw-zero", "zero raw cap must fail");
     make_bopts(&bo, "events");
     bo.max_raw_bytes = LMB_GENERIC_MAX_RAW_BYTES + 1;
-    CHECK(g->bufopen(NULL, &bo, &buf) == -EINVAL,
+    CHECK(g->bufopen(valid, &bo, &buf) == -EINVAL,
           "b3a-bufopen-raw-huge", "huge raw cap must fail");
     make_bopts(&bo, "events");
     bo.stage_slots = 0;
-    CHECK(g->bufopen(NULL, &bo, &buf) == -EINVAL,
+    CHECK(g->bufopen(valid, &bo, &buf) == -EINVAL,
           "b3a-bufopen-slots", "zero stage slots must fail");
     make_bopts(&bo, "events");
     bo.flags = 1;
-    CHECK(g->bufopen(NULL, &bo, &buf) == -EINVAL,
+    CHECK(g->bufopen(valid, &bo, &buf) == -EINVAL,
           "b3a-bufopen-flags", "nonzero flags must fail");
+
+    CHECK(g->close(&valid) == 0 && valid == NULL, "b3a-close",
+          "close must release the validation owner");
 }
 
 /* B3b: pre-load behavior on a valid unloaded object. Needs the
@@ -873,6 +995,146 @@ static void part_b3b(struct gen_api *g, const uint8_t *elf,
 
     CHECK(g->close(&obj) == 0 && obj == NULL, "b3b-close",
           "close must release the unloaded object");
+}
+
+/* B3c: retained owner-bound views on a valid unloaded object.
+ * Views hold native references (ref/unref), capture the
+ * configuration generation (gen), and reject stale use
+ * (gen_check). None of it needs load or privilege: views,
+ * moves, and parent release all work pre-load. */
+static void part_b3c(struct gen_api *g, const uint8_t *elf,
+                     uint64_t elf_len) {
+    struct lmb_object_options_v1 o;
+    struct lmb_program_options_v1 po;
+    struct lmb_object *obj = NULL;
+    struct lmb_object *moved = NULL;
+    struct lmb_object *alias = NULL;
+    uint64_t gen0 = 0xDEAD;
+    uint64_t gen1 = 0xDEAD;
+    uint64_t cur = 0xDEAD;
+    int32_t code = 0;
+
+    make_oopts(&o);
+    o.log_level = LMB_LOG_DISCARD;
+    o.log_capacity = 0;
+    CHECK(g->open(elf, elf_len, &o, &obj) == 0 && obj != NULL,
+          "b3c-open", "valid fixture must open unprivileged");
+    if (obj == NULL)
+        return;
+
+    /* View-pointer validation uses its own operations. */
+    CHECK(g->ref(NULL) == -EINVAL, "b3c-ref-null",
+          "null view ref must fail");
+    CHECK(gen_is(g, LMB_GENERIC_OP_VIEW_REF,
+                 LMB_GENERIC_DOMAIN_BRIDGE, NULL),
+          "b3c-ref-null-record", "ref failure must report view-ref");
+    CHECK(g->gen(NULL, &cur) == -EINVAL, "b3c-gen-null-object",
+          "null gen object must fail");
+    CHECK(g->gen(obj, NULL) == -EINVAL, "b3c-gen-null-cell",
+          "null gen cell must fail");
+    CHECK(g->gencheck(NULL, 0) == -EINVAL, "b3c-check-null",
+          "null check object must fail");
+    g->unref(NULL);
+    OK("b3c-unref-null");
+
+    /* One view reference: capture, validate, view-only BUSY. */
+    CHECK(g->ref(obj) == 0, "b3c-ref", "view ref must succeed");
+    CHECK(g->gen(obj, &gen0) == 0 && gen0 == 0, "b3c-gen-zero",
+          "fresh object generation must be zero");
+    CHECK(g->gencheck(obj, gen0) == 0, "b3c-check-fresh",
+          "fresh capture must validate");
+    CHECK(g->close(&obj) == -EBUSY && obj != NULL,
+          "b3c-view-busy", "close with only a view must report BUSY");
+    CHECK(g->gen(obj, &cur) == 0 && cur == gen0,
+          "b3c-busy-usable", "BUSY owner must stay usable");
+    /* References count, not just mark: two refs need two unrefs. */
+    CHECK(g->ref(obj) == 0, "b3c-ref-second",
+          "second ref must succeed");
+    g->unref(obj);
+    CHECK(g->close(&obj) == -EBUSY && obj != NULL,
+          "b3c-still-busy", "one surviving view must stay BUSY");
+    g->unref(obj);
+    CHECK(g->close(&obj) == 0 && obj == NULL, "b3c-close",
+          "childless close must succeed");
+
+    /* Stale-view rejection across a configuration bump. */
+    make_oopts(&o);
+    o.log_level = LMB_LOG_DISCARD;
+    o.log_capacity = 0;
+    CHECK(g->open(elf, elf_len, &o, &obj) == 0 && obj != NULL,
+          "b3c-reopen", "valid fixture must open again");
+    if (obj == NULL)
+        return;
+    CHECK(g->ref(obj) == 0, "b3c-stale-ref",
+          "view ref must succeed");
+    CHECK(g->gen(obj, &gen0) == 0, "b3c-stale-capture",
+          "capture must succeed");
+    make_popts(&po, "on_getpid");
+    po.autoload = LMB_AUTOLOAD_DISABLE;
+    CHECK(g->config(obj, &po) == 0, "b3c-stale-bump",
+          "configure must bump the generation");
+    CHECK(g->gen(obj, &gen1) == 0 && gen1 == gen0 + 1,
+          "b3c-stale-churn", "generation must advance by one");
+    CHECK(g->gencheck(obj, gen0) == -ESTALE, "b3c-stale",
+          "superseded capture must report ESTALE");
+    CHECK(gen_is(g, LMB_GENERIC_OP_VIEW_CHECK,
+                 LMB_GENERIC_DOMAIN_BRIDGE, &code) &&
+              code == -ESTALE,
+          "b3c-stale-record", "stale check keeps signed ESTALE");
+    CHECK(g->gencheck(obj, gen1) == 0, "b3c-current",
+          "current capture must validate");
+    g->unref(obj);
+    CHECK(g->close(&obj) == 0 && obj == NULL, "b3c-stale-close",
+          "close must succeed");
+
+    /* Moves transfer the external handle; the view is unaffected. */
+    make_oopts(&o);
+    o.log_level = LMB_LOG_DISCARD;
+    o.log_capacity = 0;
+    CHECK(g->open(elf, elf_len, &o, &obj) == 0 && obj != NULL,
+          "b3c-move-open", "valid fixture must open again");
+    if (obj == NULL)
+        return;
+    CHECK(g->ref(obj) == 0, "b3c-move-ref",
+          "view ref must succeed");
+    CHECK(g->gen(obj, &gen0) == 0, "b3c-move-capture",
+          "capture must succeed");
+    moved = obj;
+    obj = NULL;
+    g->release(&obj);
+    CHECK(obj == NULL, "b3c-move-nulls",
+          "moved-from release must stay a no-op");
+    CHECK(g->gen(moved, &cur) == 0 && cur == gen0,
+          "b3c-moved-usable", "view must survive the owner move");
+    CHECK(g->gencheck(moved, gen0) == 0, "b3c-moved-check",
+          "capture must validate after the move");
+    g->unref(moved);
+    CHECK(g->close(&moved) == 0 && moved == NULL, "b3c-moved-close",
+          "close must succeed");
+
+    /* Parent release drops the external reference; the view keeps
+     * the native state alive until the last unref. */
+    make_oopts(&o);
+    o.log_level = LMB_LOG_DISCARD;
+    o.log_capacity = 0;
+    CHECK(g->open(elf, elf_len, &o, &obj) == 0 && obj != NULL,
+          "b3c-release-open", "valid fixture must open again");
+    if (obj == NULL)
+        return;
+    CHECK(g->ref(obj) == 0, "b3c-release-ref",
+          "view ref must succeed");
+    CHECK(g->gen(obj, &gen0) == 0, "b3c-release-capture",
+          "capture must succeed");
+    alias = obj;
+    g->release(&obj);
+    CHECK(obj == NULL, "b3c-release-nulls",
+          "release must null the owner with a live view");
+    CHECK(g->gen(alias, &cur) == 0 && cur == gen0,
+          "b3c-orphan-usable", "view must survive parent release");
+    CHECK(g->gencheck(alias, gen0) == 0, "b3c-orphan-check",
+          "capture must validate after release");
+    g->unref(alias);
+    OK("b3c-orphan-destroyed");
 }
 
 /* B4: diagnostic semantics. Needs a valid open for the
@@ -1075,6 +1337,50 @@ static void part_b6a(struct gen_api *g, const uint8_t *elf,
               "log copy must write exactly actual bytes");
     } else {
         printf("note b6a-log-tail: log fills the 8-byte window\n");
+    }
+    /* Forced truncation: with a nonempty log, a short window must
+     * deliver the exact prefix with the flag set and the guard
+     * bytes intact. An empty log cannot force truncation and
+     * SKIP-reports instead of passing vacuously. */
+    if (actual == 0) {
+        SKIP("b6a-truncated", "empty log cannot force truncation");
+    } else {
+        uint64_t small = actual > 16 ? 16 : actual - 1;
+        uint8_t *full = malloc((size_t)actual);
+        uint8_t *part = malloc((size_t)small + 16);
+        if (full == NULL || part == NULL) {
+            FAIL("b6a-truncated-alloc", "out of memory");
+        } else {
+            uint64_t i;
+            int intact = 1;
+            make_pinfo(&pi);
+            pi.log.ptr = full;
+            pi.log.len = actual;
+            CHECK(g->pinfo(obj, &prog, &pi) == 0 &&
+                      pi.log_actual == actual &&
+                      pi.log_truncated == 0,
+                  "b6a-log-full",
+                  "full window must deliver without truncation");
+            for (i = 0; i < 16; i++)
+                part[small + i] = 0xA5;
+            make_pinfo(&pi);
+            pi.log.ptr = part;
+            pi.log.len = small;
+            CHECK(g->pinfo(obj, &prog, &pi) == 0 &&
+                      pi.log_actual == actual &&
+                      pi.log_truncated == 1 &&
+                      memcmp(part, full, (size_t)small) == 0,
+                  "b6a-truncated",
+                  "short window must deliver the exact prefix");
+            for (i = 0; i < 16; i++) {
+                if (part[small + i] != 0xA5)
+                    intact = 0;
+            }
+            CHECK(intact, "b6a-truncated-guard",
+                  "truncated copy must not overrun");
+        }
+        free(full);
+        free(part);
     }
     CHECK(g->close(&obj) == 0, "b6a-close", "close must succeed");
 
@@ -1279,6 +1585,9 @@ static void check_testrun(struct gen_api *g, struct lmb_object *obj,
     struct lmb_program_test_result_v1 tr, tr_before;
     uint8_t data[128];
     uint8_t ctx[16];
+    /* Function scope: the input span below borrows this buffer
+     * through the test-run call, so it must outlive the call. */
+    uint8_t pkt[64];
     uint64_t i;
     int32_t rc;
     int intact;
@@ -1294,7 +1603,6 @@ static void check_testrun(struct gen_api *g, struct lmb_object *obj,
         to.data_out.ptr = data;
         to.data_out.len = sizeof(data);
     } else {
-        uint8_t pkt[64];
         for (i = 0; i < sizeof(pkt); i++)
             pkt[i] = (uint8_t)(0xC0 + (i & 0x3F));
         memset(data, 0xA5, sizeof(data));
@@ -1564,6 +1872,7 @@ static void part_b6e(struct gen_api *g, const uint8_t *elf,
     struct lmb_object *obj = NULL;
     struct lmb_link *link = NULL;
     struct lmb_buffer *buf = NULL;
+    struct lmb_object *view = NULL;
     struct lmb_attach_options_v1 ao;
     struct lmb_buffer_options_v1 bo;
     struct lmb_name_v1 name;
@@ -1571,6 +1880,7 @@ static void part_b6e(struct gen_api *g, const uint8_t *elf,
     uint8_t dst[64];
     uint64_t used = 0;
     uint64_t needed = 0;
+    uint64_t vgen = 0;
     long fds0, fds1, fds2;
 
     make_aopts(&ao, "on_getpid");
@@ -1593,7 +1903,14 @@ static void part_b6e(struct gen_api *g, const uint8_t *elf,
     CHECK(g->bufopen(obj, &bo, &buf) == 0 && buf != NULL,
           "b6e-bufopen-y", "buffer open must succeed");
     if (link == NULL || buf == NULL) {
-        g->close(&obj);
+        /* A surviving child keeps explicit close BUSY, so drop
+         * children first and release the parent: no reference
+         * may be lost on a failure exit. */
+        if (buf != NULL)
+            g->bufclose(&buf);
+        if (link != NULL)
+            g->linkclose(&link);
+        g->release(&obj);
         return;
     }
     CHECK(g->bufclose(&buf) == 0 && buf == NULL, "b6e-bufclose-y",
@@ -1618,7 +1935,12 @@ static void part_b6e(struct gen_api *g, const uint8_t *elf,
     CHECK(g->bufopen(obj, &bo, &buf) == 0 && buf != NULL,
           "b6e-bufopen-x", "buffer open must succeed");
     if (link == NULL || buf == NULL) {
-        g->close(&obj);
+        /* Same BUSY-safe unwind as the child-first cycle. */
+        if (buf != NULL)
+            g->bufclose(&buf);
+        if (link != NULL)
+            g->linkclose(&link);
+        g->release(&obj);
         return;
     }
     CHECK(g->close(&obj) == -EBUSY && obj != NULL,
@@ -1636,6 +1958,13 @@ static void part_b6e(struct gen_api *g, const uint8_t *elf,
     CHECK(g->bufpoll(buf, dst, sizeof(dst), 0, &used, &needed) == 0 &&
               used == 0 && needed == 0,
           "b6e-child-usable", "child of BUSY owner must work");
+    /* A retained view joins the children: it survives the
+     * release with them and counts toward the last release. */
+    CHECK(g->ref(obj) == 0, "b6e-view-ref",
+          "view ref must succeed");
+    CHECK(g->gen(obj, &vgen) == 0, "b6e-view-capture",
+          "capture must succeed");
+    view = obj;
     g->release(&obj);
     CHECK(obj == NULL, "b6e-release-nulls",
           "release must null the owner with children");
@@ -1644,10 +1973,14 @@ static void part_b6e(struct gen_api *g, const uint8_t *elf,
     CHECK(g->bufpoll(buf, dst, sizeof(dst), 0, &used, &needed) == 0 &&
               used == 0 && needed == 0,
           "b6e-orphan-usable", "child must survive parent release");
+    CHECK(g->gencheck(view, vgen) == 0, "b6e-view-orphan",
+          "view must survive parent release");
     CHECK(g->bufclose(&buf) == 0 && buf == NULL, "b6e-bufclose-x",
           "orphaned buffer close must succeed");
     CHECK(g->linkclose(&link) == 0 && link == NULL, "b6e-linkclose-x",
-          "last release must destroy exactly once");
+          "orphaned link close must succeed");
+    g->unref(view);
+    OK("b6e-view-unref");
     g->release(&obj);
     OK("b6e-release-again");
     fds2 = count_fds();
@@ -1713,6 +2046,10 @@ int main(int argc, char **argv) {
     resolve(bhdl, gen_names[13], &g.bufopen, sizeof(g.bufopen));
     resolve(bhdl, gen_names[14], &g.bufpoll, sizeof(g.bufpoll));
     resolve(bhdl, gen_names[15], &g.bufclose, sizeof(g.bufclose));
+    resolve(bhdl, gen_names[16], &g.ref, sizeof(g.ref));
+    resolve(bhdl, gen_names[17], &g.unref, sizeof(g.unref));
+    resolve(bhdl, gen_names[18], &g.gen, sizeof(g.gen));
+    resolve(bhdl, gen_names[19], &g.gencheck, sizeof(g.gencheck));
     resolve(bhdl, "lmb_open", &v1.open, sizeof(v1.open));
     resolve(bhdl, "lmb_last_error", &v1.lasterr, sizeof(v1.lasterr));
     present = (g.open != NULL) + (g.config != NULL) +
@@ -1722,9 +2059,11 @@ int main(int argc, char **argv) {
               (g.lookup != NULL) + (g.update != NULL) +
               (g.testrun != NULL) + (g.attach != NULL) +
               (g.linkclose != NULL) + (g.bufopen != NULL) +
-              (g.bufpoll != NULL) + (g.bufclose != NULL);
-    if (present < 16) {
-        printf("SKIP generic-behavior: %d of 16 symbols in %s\n",
+              (g.bufpoll != NULL) + (g.bufclose != NULL) +
+              (g.ref != NULL) + (g.unref != NULL) +
+              (g.gen != NULL) + (g.gencheck != NULL);
+    if (present < 20) {
+        printf("SKIP generic-behavior: %d of 20 symbols in %s\n",
                present, bpath);
         skips++;
         goto done;
@@ -1738,12 +2077,14 @@ int main(int argc, char **argv) {
         }
     }
     part_b1(&g);
-    part_b2(&g);
-    part_b3a(&g);
+    part_b2(&g, elf, elf_len);
+    part_b3a(&g, elf, elf_len);
     if (elf != NULL) {
         part_b3b(&g, elf, elf_len);
+        part_b3c(&g, elf, elf_len);
     } else {
         SKIP("b3b", "needs the fixture ELF");
+        SKIP("b3c", "needs the fixture ELF");
     }
     if (v1.open != NULL && v1.lasterr != NULL) {
         part_b4(&g, &v1, elf, elf_len);

@@ -426,6 +426,9 @@ comptime GENERIC_OP_LINK_CLOSE = UInt32(11)
 comptime GENERIC_OP_BUFFER_OPEN = UInt32(12)
 comptime GENERIC_OP_BUFFER_POLL = UInt32(13)
 comptime GENERIC_OP_BUFFER_CLOSE = UInt32(14)
+comptime GENERIC_OP_VIEW_REF = UInt32(15)
+comptime GENERIC_OP_VIEW_GEN = UInt32(16)
+comptime GENERIC_OP_VIEW_CHECK = UInt32(17)
 
 comptime GENERIC_DOMAIN_NONE = UInt32(0)
 comptime GENERIC_DOMAIN_POSIX = UInt32(1)
@@ -580,7 +583,7 @@ struct BufferOptionsV1(Copyable):
 
 
 def generic_symbol_names() -> List[String]:
-    """The sixteen generic ABI symbols in header order."""
+    """The twenty generic ABI symbols in header order."""
     var names = List[String]()
     names.append(String("lmb_object_open_v1"))
     names.append(String("lmb_object_configure_program_v1"))
@@ -598,6 +601,10 @@ def generic_symbol_names() -> List[String]:
     names.append(String("lmb_buffer_open_v1"))
     names.append(String("lmb_buffer_poll_v1"))
     names.append(String("lmb_buffer_close_v1"))
+    names.append(String("lmb_object_ref_v1"))
+    names.append(String("lmb_object_unref_v1"))
+    names.append(String("lmb_object_gen_v1"))
+    names.append(String("lmb_object_gen_check_v1"))
     return names^
 
 

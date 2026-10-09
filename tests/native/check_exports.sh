@@ -52,8 +52,17 @@ lmb_object_attach_v1@@LIBBPF_MOJO_GENERIC_1
 lmb_link_close_v1@@LIBBPF_MOJO_GENERIC_1
 lmb_buffer_open_v1@@LIBBPF_MOJO_GENERIC_1
 lmb_buffer_poll_v1@@LIBBPF_MOJO_GENERIC_1
-lmb_buffer_close_v1@@LIBBPF_MOJO_GENERIC_1"
-funcs=$(printf '%s\n' "$defs" | grep ' T ' | tr -s ' ' | cut -d' ' -f3)
+lmb_buffer_close_v1@@LIBBPF_MOJO_GENERIC_1
+lmb_object_ref_v1@@LIBBPF_MOJO_GENERIC_1
+lmb_object_unref_v1@@LIBBPF_MOJO_GENERIC_1
+lmb_object_gen_v1@@LIBBPF_MOJO_GENERIC_1
+lmb_object_gen_check_v1@@LIBBPF_MOJO_GENERIC_1"
+# Every defined dynamic symbol is classified by its nm type letter:
+# text/weak/ifunc entries (upper- or lowercase) are functions and
+# must be allowlisted; anything else must be a linker version node.
+# No type is skipped: lowercase globals such as IFUNC (i) and GNU
+# unique (u) symbols are rejected unless explicitly allowlisted.
+funcs=$(printf '%s\n' "$defs" | tr -s ' ' | grep ' [TtWwIi] ' | cut -d' ' -f3)
 if [ -z "$funcs" ]; then
     echo "exports BAD: no exported text symbols" >&2
     exit 1
@@ -90,7 +99,9 @@ if [ -n "$leaked" ]; then
     bad=1
 fi
 # Only the linker's own version nodes may appear as non-text globals.
-other=$(printf '%s\n' "$defs" | grep ' [A-Z] ' | grep -v ' T ' | tr -s ' ' | cut -d' ' -f3 || true)
+# This covers the complete remaining defined dynamic-symbol set: every
+# type letter outside the function classes above, upper- or lowercase.
+other=$(printf '%s\n' "$defs" | tr -s ' ' | grep -v ' [TtWwIi] ' | cut -d' ' -f3 || true)
 for sym in $(printf '%s\n' "$other" | sort -u); do
     if [ -z "$sym" ]; then
         continue

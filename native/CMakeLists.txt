@@ -163,6 +163,36 @@ lmb_test(poll_semantics)
 lmb_test(attach_rollback)
 lmb_test(map_access)
 
+# Generic ABI contract probe: dlsym-based acceptance battery for
+# docs/generic-abi-v1.md. Takes the candidate shared library plus the
+# fixture object; Part A always runs, Part B SKIP-reports until the
+# generic implementation lands.
+add_executable(test_generic_abi_probe
+  ${LMB_ROOT}/tests/native/generic_abi_probe.c)
+target_include_directories(test_generic_abi_probe PRIVATE
+  ${CMAKE_CURRENT_SOURCE_DIR}/include
+  ${LMB_ROOT}/tests/native
+  ${LIBBPF_ROOT}/include)
+target_link_libraries(test_generic_abi_probe PRIVATE ${CMAKE_DL_LIBS})
+add_dependencies(test_generic_abi_probe libbpf_external bpf_fixtures)
+add_test(NAME generic_abi_probe
+  COMMAND test_generic_abi_probe $<TARGET_FILE:lmb>
+    ${CMAKE_BINARY_DIR}/fixtures/ring_test.bpf.o)
+set_tests_properties(generic_abi_probe PROPERTIES
+  WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
+
+# Old-header consumer fixture: exercises all eleven v1 operations
+# through the frozen header only, linked against the candidate
+# shared library.
+add_executable(test_old_consumer_v1
+  ${LMB_ROOT}/tests/native/old_consumer_v1.c)
+target_include_directories(test_old_consumer_v1 PRIVATE
+  ${LMB_ROOT}/tests/native)
+target_link_libraries(test_old_consumer_v1 PRIVATE lmb)
+add_test(NAME old_consumer_v1 COMMAND test_old_consumer_v1)
+set_tests_properties(old_consumer_v1 PROPERTIES
+  WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
+
 # ring_framing intentionally passes a giant allocation size; ASan must
 # return NULL instead of aborting. Non-sanitizer binaries ignore it.
 set_tests_properties(ring_framing PROPERTIES

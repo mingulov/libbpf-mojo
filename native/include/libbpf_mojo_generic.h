@@ -74,7 +74,10 @@ enum lmb_generic_op_v1 {
     LMB_GENERIC_OP_LINK_CLOSE = 11,
     LMB_GENERIC_OP_BUFFER_OPEN = 12,
     LMB_GENERIC_OP_BUFFER_POLL = 13,
-    LMB_GENERIC_OP_BUFFER_CLOSE = 14
+    LMB_GENERIC_OP_BUFFER_CLOSE = 14,
+    LMB_GENERIC_OP_VIEW_REF = 15,
+    LMB_GENERIC_OP_VIEW_GEN = 16,
+    LMB_GENERIC_OP_VIEW_CHECK = 17
 };
 
 enum lmb_generic_domain_v1 {
@@ -233,6 +236,19 @@ int32_t lmb_buffer_poll_v1(struct lmb_buffer *buffer, uint8_t *dst,
                            uint64_t capacity, int32_t timeout_ms,
                            uint64_t *used, uint64_t *needed);
 int32_t lmb_buffer_close_v1(struct lmb_buffer **buffer);
+
+/* Retained owner-bound views: each view holds one native object
+ * reference (counted like a child for BUSY/last-release) plus the
+ * library handle at the Mojo layer, and validates the object
+ * configuration generation before operations. A view survives owner
+ * moves and parent release; the last reference of any kind destroys
+ * the native state exactly once. */
+int32_t lmb_object_ref_v1(struct lmb_object *object);
+void lmb_object_unref_v1(struct lmb_object *object);
+int32_t lmb_object_gen_v1(const struct lmb_object *object,
+                          uint64_t *generation);
+int32_t lmb_object_gen_check_v1(const struct lmb_object *object,
+                                uint64_t expected);
 
 #ifdef __cplusplus
 }

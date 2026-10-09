@@ -40,7 +40,7 @@ def test_presence_controls() raises:
     assert_true(lib.has_symbol(String("lmb_open")))
     assert_false(lib.has_symbol(String("lmb_no_such_symbol")))
     var names = generic_symbol_names()
-    assert_equal(len(names), 16)
+    assert_equal(len(names), 20)
     # Two handles to one library agree exactly (deterministic query).
     var again = GenericLib(native_lib_path())
     for name in names:
@@ -48,7 +48,7 @@ def test_presence_controls() raises:
             lib.has_symbol(name.copy()), again.has_symbol(name.copy())
         )
     var present = count_present(lib, names)
-    print("generic symbols present: " + String(present) + " of 16")
+    print("generic symbols present: " + String(present) + " of 20")
 
 
 def test_stub_never_requires_generic() raises:

@@ -93,6 +93,12 @@ int32_t lmb_buffer_poll_v1(struct lmb_buffer *buffer, uint8_t *dst,
     uint64_t capacity, int32_t timeout_ms, uint64_t *used,
     uint64_t *needed);
 int32_t lmb_buffer_close_v1(struct lmb_buffer **buffer);
+int32_t lmb_object_ref_v1(struct lmb_object *object);
+void lmb_object_unref_v1(struct lmb_object *object);
+int32_t lmb_object_gen_v1(const struct lmb_object *object,
+    uint64_t *generation);
+int32_t lmb_object_gen_check_v1(const struct lmb_object *object,
+    uint64_t expected);
 ```
 
 Every call except `lmb_object_release_v1` returns 0 on success or
@@ -253,6 +259,9 @@ enum lmb_generic_op_v1 {
     LMB_GENERIC_OP_BUFFER_OPEN = 12,
     LMB_GENERIC_OP_BUFFER_POLL = 13,
     LMB_GENERIC_OP_BUFFER_CLOSE = 14,
+    LMB_GENERIC_OP_VIEW_REF = 15,
+    LMB_GENERIC_OP_VIEW_GEN = 16,
+    LMB_GENERIC_OP_VIEW_CHECK = 17,
 };
 
 enum lmb_generic_domain_v1 {
@@ -397,17 +406,29 @@ report the first teardown error; null pointees succeed
 trivially. Partial load/attach failures roll back only the
 calling handle's resources.
 
-`ProgramView` and `MapView` are owner-bound views, not free
-pointers: each view borrows its Mojo object owner (which holds
-the external native reference and the library handle), so the
-native state provably outlives every view, and using a view
-after its owner moved is a compile error. Views capture the
-object generation at creation and re-check it before operations;
-a view whose generation no longer matches fails with domain
-`BRIDGE` and `-ESTALE` (116). Map geometry never changes after
-open, so map views additionally gate only on load state. All
-owners remain single-threaded until a separately tested
-concurrency contract exists.
+`ProgramView` and `MapView` are retained owner-bound views,
+not free pointers: each view holds one native object reference
+(acquired with `lmb_object_ref_v1`, released with
+`lmb_object_unref_v1`) and retains the library handle at the
+Mojo layer, so the native state and the library provably
+outlive every view. A view survives owner moves and parent
+release: moving the Mojo owner transfers only the external
+handle, and releasing the parent only drops the external
+reference while views keep the native state alive. Views
+capture the object configuration generation at creation (with
+`lmb_object_gen_v1`) and re-check it before operations (with
+`lmb_object_gen_check_v1`); a view whose generation no longer
+matches fails with domain `BRIDGE` and `-ESTALE` (116 on
+Linux) without touching the operation outputs. View
+references count exactly like children for explicit-close
+`BUSY` and for last-release destruction: with live views,
+explicit close returns `-EBUSY` and preserves the usable
+owner; the last release of any kind (external, child, or
+view) performs native destruction exactly once. Map geometry
+never changes after open, so map views additionally gate on
+load state (map operations on an unloaded object report
+`-EINVAL`). All owners remain single-threaded until a
+separately tested concurrency contract exists.
 
 The dynamic library outlives all owners and foreign callables:
 Mojo owners destroy native state before dropping their library
@@ -434,7 +455,10 @@ structs unchanged, except explicitly documented size outputs
 (which are never produced on the validation path itself: a
 rejected call writes nothing but the cleared handle and the
 diagnostic record). Runtime failures expose only fields the
-pinned native contract guarantees valid.
+pinned native contract guarantees valid. The view operations
+take no structs: they validate their object pointer and
+output cell before any state access, in the same
+pointers-before-state position.
 
 ## Per-operation failure-output tables
 
@@ -492,6 +516,21 @@ pinned native contract guarantees valid.
 - `buffer_open`: `*out` cleared first, null on failure.
   Unknown rings report `BRIDGE`/`-ENOENT`; unloaded
   objects report `BRIDGE`/`-EINVAL`.
+- `object_ref`: null object fails with `BRIDGE`/`-EINVAL`
+  and operation `VIEW_REF`. Success adds one view reference
+  and clears the generic record.
+- `object_unref`: infallible; a null object is a no-op. No
+  diagnostic record is written. Dropping the last reference
+  of any kind destroys the native state exactly once.
+- `object_gen`: null object or null output cell fails with
+  `BRIDGE`/`-EINVAL` and operation `VIEW_GEN`. Success
+  writes the current configuration generation and clears
+  the generic record.
+- `object_gen_check`: null object fails with
+  `BRIDGE`/`-EINVAL`; a generation that no longer matches
+  fails with `BRIDGE`/`-ESTALE` (116 on Linux). Both use
+  operation `VIEW_CHECK`. Success clears the generic
+  record.
 - `buffer_poll`: mirrors v1 poll with 64-bit cells.
   `used` and `needed` must be distinct cells outside
   `[dst, dst+capacity)`. Success writes one frame (`used`
@@ -591,30 +630,29 @@ version script hides every upstream symbol, and
 nothing (probed on every run). Consumers load the bridge
 from one path per process.
 
-## Internal view retain/release ABI
+## View reference discipline
 
-Owner-bound views need native reference discipline that
-stays out of the public headers and the export map. The
-native implementation provides these internal operations
-(declared in its own internal headers, never exported,
-operating only on the opaque bridge owner, never on raw
-upstream pointers):
+Owner-bound views use native reference discipline through
+the exported `lmb_object_ref_v1`, `lmb_object_unref_v1`,
+`lmb_object_gen_v1`, and `lmb_object_gen_check_v1`
+operations above, so Mojo views retain real native
+references without touching raw upstream pointers. The
+external owner holds one reference, each live link, buffer,
+or view holds one; dropping the last reference of any kind
+destroys the native state exactly once, after a link or
+buffer child has detached or freed its own resource.
+Explicit close consults the live child-plus-view count for
+its `BUSY` decision; that count itself stays internal to
+the native implementation:
 
 ```c
-void lmb_object_ref(struct lmb_object *obj);
-void lmb_object_unref(struct lmb_object *obj);
-uint64_t lmb_object_gen(const struct lmb_object *obj);
 unsigned lmb_object_live_children(const struct lmb_object *obj);
 ```
 
-The external owner holds one reference, each live link or
-buffer holds one; unreference to zero destroys the native
-state exactly once, after the child has detached or freed
-its own resource. Explicit close consults the live-children
-count for its BUSY decision. Mojo views hold no C
-reference of their own: they borrow the Mojo owner (which
-holds the external reference plus the library) and validate
-the generation before operations.
+(declared in the native implementation's own internal
+headers, never exported, operating only on the opaque
+bridge owner, never on raw upstream pointers, and counting
+live views together with live links and buffers).
 
 ## Versioning
 
@@ -638,4 +676,3 @@ package or an unpacked mojobpf source archive, and verify
 its manifest digest before use; there is no unpinned mode.
 Standalone library operation has no runtime dependency on
 that package.
-

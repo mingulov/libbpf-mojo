@@ -39,4 +39,8 @@ LIBBPF_MOJO_GENERIC_1 {
         lmb_buffer_open_v1;
         lmb_buffer_poll_v1;
         lmb_buffer_close_v1;
+        lmb_object_ref_v1;
+        lmb_object_unref_v1;
+        lmb_object_gen_v1;
+        lmb_object_gen_check_v1;
 };
