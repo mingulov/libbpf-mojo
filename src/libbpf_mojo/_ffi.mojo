@@ -399,3 +399,232 @@ struct NativeLib(Movable):
                 OP_CLOSE, DOMAIN_BRIDGE, ENOSYS,
                 String("unresolved lmb_close"),
             )
+
+
+# ---------------------------------------------------------------------------
+# Generic ABI v1 mirrors (additive; the v1 section above is unchanged).
+#
+# Byte-exact mirrors of ``native/include/libbpf_mojo_generic.h``. Names
+# and map geometry reuse the v1 ``NameV1``/``MapInfoV1`` mirrors above,
+# exactly as the C header reuses the v1 structs. Generic symbols are
+# optional: ``GenericLib`` only queries presence, and ``NativeLib``
+# still requires exactly the eleven v1 operations.
+# ---------------------------------------------------------------------------
+
+comptime GENERIC_OP_NONE = UInt32(0)
+comptime GENERIC_OP_OBJECT_OPEN = UInt32(1)
+comptime GENERIC_OP_PROGRAM_CONFIGURE = UInt32(2)
+comptime GENERIC_OP_OBJECT_LOAD = UInt32(3)
+comptime GENERIC_OP_PROGRAM_INFO = UInt32(4)
+comptime GENERIC_OP_MAP_INFO = UInt32(5)
+comptime GENERIC_OP_OBJECT_CLOSE = UInt32(6)
+comptime GENERIC_OP_MAP_LOOKUP = UInt32(7)
+comptime GENERIC_OP_MAP_UPDATE = UInt32(8)
+comptime GENERIC_OP_TEST_RUN = UInt32(9)
+comptime GENERIC_OP_ATTACH = UInt32(10)
+comptime GENERIC_OP_LINK_CLOSE = UInt32(11)
+comptime GENERIC_OP_BUFFER_OPEN = UInt32(12)
+comptime GENERIC_OP_BUFFER_POLL = UInt32(13)
+comptime GENERIC_OP_BUFFER_CLOSE = UInt32(14)
+
+comptime GENERIC_DOMAIN_NONE = UInt32(0)
+comptime GENERIC_DOMAIN_POSIX = UInt32(1)
+comptime GENERIC_DOMAIN_LIBBPF = UInt32(2)
+comptime GENERIC_DOMAIN_KERNEL = UInt32(3)
+comptime GENERIC_DOMAIN_BRIDGE = UInt32(4)
+
+comptime ATTACH_FAMILY_TRACEPOINT = UInt32(1)
+
+comptime AUTOLOAD_UNCHANGED = UInt32(0)
+comptime AUTOLOAD_ENABLE = UInt32(1)
+comptime AUTOLOAD_DISABLE = UInt32(2)
+
+comptime LOG_DISCARD = UInt32(0)
+comptime LOG_ON_FAILURE = UInt32(1)
+comptime LOG_ALWAYS = UInt32(2)
+
+comptime MAP_UPDATE_ANY = UInt32(0)
+comptime MAP_UPDATE_NOEXIST = UInt32(1)
+comptime MAP_UPDATE_EXIST = UInt32(2)
+comptime MAP_UPDATE_LOCK = UInt32(4)
+
+comptime GENERIC_MAX_LOG_BYTES = UInt64(1048576)
+comptime GENERIC_MAX_TEST_BYTES = UInt64(1048576)
+
+
+@fieldwise_init
+struct GenericSpanV1(Copyable):
+    """Mirrors ``struct lmb_span_v1``: address plus 64-bit length."""
+
+    var ptr: UInt64
+    var len: UInt64
+
+
+@fieldwise_init
+struct GenericOutSpanV1(Copyable):
+    """Mirrors ``struct lmb_out_span_v1``: mutable output storage."""
+
+    var ptr: UInt64
+    var len: UInt64
+
+
+@fieldwise_init
+struct ObjectOptionsV1(Copyable):
+    """Mirrors ``struct lmb_object_options_v1``: object open parameters."""
+
+    var abi_version: UInt32
+    var struct_size: UInt32
+    var name: GenericSpanV1
+    var custom_btf: GenericSpanV1
+    var log_level: UInt32
+    var flags: UInt32
+    var log_capacity: UInt64
+    var _reserved: UInt64
+
+
+@fieldwise_init
+struct ProgramOptionsV1(Copyable):
+    """Mirrors ``struct lmb_program_options_v1``: pre-load settings."""
+
+    var abi_version: UInt32
+    var struct_size: UInt32
+    var program: GenericSpanV1
+    var attach_target: GenericSpanV1
+    var autoload: UInt32
+    var flags: UInt32
+
+
+@fieldwise_init
+struct ProgramInfoV1(Copyable):
+    """Mirrors ``struct lmb_program_info_v1``: metadata plus log copy-out."""
+
+    var abi_version: UInt32
+    var struct_size: UInt32
+    var prog_type: UInt32
+    var attach_type: UInt32
+    var insn_count: UInt64
+    var generation: UInt64
+    var autoload: UInt32
+    var _pad0: UInt32
+    var log: GenericOutSpanV1
+    var log_actual: UInt64
+    var log_truncated: UInt32
+    var _reserved: UInt32
+
+
+@fieldwise_init
+struct GenericErrorV1(Copyable):
+    """Mirrors ``struct lmb_generic_error_v1``: generic diagnostics."""
+
+    var abi_version: UInt32
+    var struct_size: UInt32
+    var operation: UInt32
+    var domain: UInt32
+    var code: Int32
+    var msg_len: UInt32
+    var message: Array[UInt8, 1024]
+
+
+@fieldwise_init
+struct TestOptionsV1(Copyable):
+    """Mirrors ``struct lmb_program_test_options_v1``: test-run inputs."""
+
+    var abi_version: UInt32
+    var struct_size: UInt32
+    var data_in: GenericSpanV1
+    var data_out: GenericOutSpanV1
+    var ctx_in: GenericSpanV1
+    var ctx_out: GenericOutSpanV1
+    var repeat: UInt64
+    var flags: UInt64
+
+
+@fieldwise_init
+struct TestResultV1(Copyable):
+    """Mirrors ``struct lmb_program_test_result_v1``: test-run outputs."""
+
+    var abi_version: UInt32
+    var struct_size: UInt32
+    var retval: UInt32
+    var _pad: UInt32
+    var data_actual: UInt64
+    var ctx_actual: UInt64
+    var duration_ns: UInt64
+
+
+@fieldwise_init
+struct AttachOptionsV1(Copyable):
+    """Mirrors ``struct lmb_attach_options_v1``: one attach request."""
+
+    var abi_version: UInt32
+    var struct_size: UInt32
+    var program: GenericSpanV1
+    var family: UInt32
+    var flags: UInt32
+    var target_a: GenericSpanV1
+    var target_b: GenericSpanV1
+    var _reserved: UInt64
+
+
+@fieldwise_init
+struct BufferOptionsV1(Copyable):
+    """Mirrors ``struct lmb_buffer_options_v1``: ring buffer parameters."""
+
+    var abi_version: UInt32
+    var struct_size: UInt32
+    var ring: GenericSpanV1
+    var max_raw_bytes: UInt32
+    var stage_slots: UInt32
+    var flags: UInt32
+    var _reserved: UInt32
+
+
+def generic_symbol_names() -> List[String]:
+    """The sixteen generic ABI symbols in header order."""
+    var names = List[String]()
+    names.append(String("lmb_object_open_v1"))
+    names.append(String("lmb_object_configure_program_v1"))
+    names.append(String("lmb_object_load_v1"))
+    names.append(String("lmb_object_program_info_v1"))
+    names.append(String("lmb_object_map_info_v1"))
+    names.append(String("lmb_object_close_v1"))
+    names.append(String("lmb_object_release_v1"))
+    names.append(String("lmb_generic_last_error_v1"))
+    names.append(String("lmb_object_map_lookup_v1"))
+    names.append(String("lmb_object_map_update_v1"))
+    names.append(String("lmb_program_test_run_v1"))
+    names.append(String("lmb_object_attach_v1"))
+    names.append(String("lmb_link_close_v1"))
+    names.append(String("lmb_buffer_open_v1"))
+    names.append(String("lmb_buffer_poll_v1"))
+    names.append(String("lmb_buffer_close_v1"))
+    return names^
+
+
+struct GenericLib(Movable):
+    """Owned native library handle with optional generic resolution.
+
+    Unlike ``NativeLib``, construction requires no symbols: generic
+    entry points are never mandatory for v1 consumers. Callers probe
+    one symbol at a time with ``has_symbol``, which reports presence
+    and never raises.
+    """
+
+    var _handle: OwnedDLHandle
+
+    def __init__(out self, path: String) raises LmbError:
+        try:
+            self._handle = OwnedDLHandle(path)
+        except e:
+            raise LmbError(
+                GENERIC_OP_OBJECT_OPEN, GENERIC_DOMAIN_BRIDGE,
+                ENOENT, String(e),
+            )
+
+    def has_symbol(mut self, name: String) -> Bool:
+        """Report whether ``name`` resolves, without raising."""
+        try:
+            _ = self._handle.get_function[Int32](name)
+            return True
+        except e:
+            return False

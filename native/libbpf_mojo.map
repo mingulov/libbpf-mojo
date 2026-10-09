@@ -16,3 +16,27 @@ LIBBPF_MOJO_1 {
     local:
         *;
 };
+
+/* Additive generic object/link/buffer interface (docs/generic-abi-v1.md).
+ * The v1 node above is unchanged: original names at their original
+ * versions, same SONAME. Unmatched entries are inert until their
+ * implementation lands; the export check allowlists exactly these. */
+LIBBPF_MOJO_GENERIC_1 {
+    global:
+        lmb_object_open_v1;
+        lmb_object_configure_program_v1;
+        lmb_object_load_v1;
+        lmb_object_program_info_v1;
+        lmb_object_map_info_v1;
+        lmb_object_close_v1;
+        lmb_object_release_v1;
+        lmb_generic_last_error_v1;
+        lmb_object_map_lookup_v1;
+        lmb_object_map_update_v1;
+        lmb_program_test_run_v1;
+        lmb_object_attach_v1;
+        lmb_link_close_v1;
+        lmb_buffer_open_v1;
+        lmb_buffer_poll_v1;
+        lmb_buffer_close_v1;
+};
