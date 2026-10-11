@@ -44,10 +44,10 @@ reported as skipped, never as success.
 
 ## Generic object checkpoint
 
-The additive generic interface implements fourteen operations: object
+The additive generic interface implements fifteen operations: object
 open/configure/load/program-info/map-info/close/release, generic
 diagnostic retrieval, native view ref/unref/generation/check, and
-native checked map lookup/update.
+native checked map lookup/update and explicit XDP program test-run.
 The original eleven session operations, their symbol versions and
 SONAME are preserved.
 
@@ -71,20 +71,31 @@ FD accessors never install descriptors into libbpf owners. The permanent
 host guard stops unscripted BPF commands before execution and rejects
 unknown syscall signatures; its deliberate trap controls fail as expected.
 
+Native test-run host tests parse real XDP and tracepoint programs and
+execute pinned libbpf's test-run wrapper against the guarded syscall.
+They inspect the entire native options record, four independent lengths,
+retval and duration, input/option/name aliases, adjacent outputs, omitted
+outputs, exact extents and tails, dirty native failures, single-call error
+forwarding and oversized-success rejection. Every observed owned
+allocation boundary is failed and recovered; protected pages bound all
+four spans. These scripted tests do not qualify kernel execution. The
+initial result profile accepts XDP only, with flags zero; other validated
+program types return `BRIDGE/-EOPNOTSUPP` without execution.
+
 Run `tools/test native --host-only` and `tools/test mojo --host-only`
 for the explicit host scope. Omitted runtime cases are reported
 `NOT_RUN` and are excluded from their pass counts. The default suites
 keep their runtime checks. The native host scope runs guarded framing
 checks and omits the valid-fixture dual-load case and its privilege
 probe; that regression fails if the boundary is crossed. The native host
-runner selects six guarded CTest twins and two export checks, without
+runner selects seven guarded CTest twins and two export checks, without
 double-counting the ordinary tests. The guard runs only in native test
 executables, including the shared bridge's bundled libbpf. Successful generic load, loaded map geometry,
 tracing-target configuration and their target/platform evidence remain
-unqualified. Native generic map calls have host contract evidence only;
-successful kernel operations and typed Mojo map APIs remain unqualified
-or unimplemented. Program test-run, links and buffers are not implemented
-by this checkpoint.
+unqualified. Native generic map and XDP test-run calls have host contract
+evidence only; successful kernel operations and typed Mojo map/test-run
+APIs remain unqualified or unimplemented. Links and buffers are not
+implemented by this checkpoint.
 
 ## Out of scope
 

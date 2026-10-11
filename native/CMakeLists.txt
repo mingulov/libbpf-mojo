@@ -66,6 +66,7 @@ set(LMB_SOURCES
   src/errors.c
   src/object.c
   src/object_maps.c
+  src/program_test.c
 )
 
 # Product shared library. SONAME carries ABI major 1. Only the eleven
@@ -274,6 +275,22 @@ add_test(NAME generic_maps COMMAND test_generic_maps
 set_tests_properties(generic_maps PROPERTIES
   WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
 
+add_executable(test_generic_testrun ${LMB_ROOT}/tests/native/generic_testrun.c
+  ${LMB_ROOT}/tests/support/generic_host_guard.c)
+target_include_directories(test_generic_testrun PRIVATE
+  ${CMAKE_CURRENT_SOURCE_DIR}/include ${LIBBPF_ROOT}/include)
+target_link_libraries(test_generic_testrun PRIVATE lmb_static)
+target_link_options(test_generic_testrun PRIVATE
+  "LINKER:--wrap=bpf_object__load" "LINKER:--wrap=bpf_object__close"
+  "LINKER:--wrap=bpf_program__fd" "LINKER:--wrap=bpf_prog_test_run_opts"
+  "LINKER:--wrap=malloc" "LINKER:--wrap=free" "LINKER:--wrap=syscall")
+add_dependencies(test_generic_testrun generic_maps_fixture bpf_fixtures)
+add_test(NAME generic_testrun COMMAND test_generic_testrun
+  ${CMAKE_BINARY_DIR}/fixtures/generic_maps.bpf.o
+  ${CMAKE_BINARY_DIR}/fixtures/ring_test.bpf.o)
+set_tests_properties(generic_testrun PROPERTIES
+  WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
+
 # Generic ABI contract probe: dlsym-based acceptance battery for
 # docs/generic-abi-v1.md. Takes the candidate shared library plus the
 # fixture object; Part A always runs. Host-only selection explicitly
@@ -364,6 +381,9 @@ lmb_guarded_host_test(generic_object test_generic_object
   ${CMAKE_BINARY_DIR}/fixtures/generic_tracing.bpf.o)
 lmb_guarded_host_test(generic_maps test_generic_maps
   ${CMAKE_BINARY_DIR}/fixtures/generic_maps.bpf.o)
+lmb_guarded_host_test(generic_testrun test_generic_testrun
+  ${CMAKE_BINARY_DIR}/fixtures/generic_maps.bpf.o
+  ${CMAKE_BINARY_DIR}/fixtures/ring_test.bpf.o)
 lmb_guarded_host_test(generic_abi_probe test_generic_abi_probe
   $<TARGET_FILE:lmb> ${CMAKE_BINARY_DIR}/fixtures/ring_test.bpf.o
   ${CMAKE_BINARY_DIR}/fixtures/generic_maps.bpf.o)

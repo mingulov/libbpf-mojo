@@ -141,6 +141,27 @@ retry kernel refusals or normalize update flags. These native calls have
 guarded host contract evidence; successful kernel behavior remains
 unqualified.
 
+The additive `lmb_program_test_run_v1` borrows the same loaded object and
+does not create an owner or change its generation. The initial profile is
+XDP with flags zero. Ordinary validation, loaded state and named-program
+lookup precede the unsupported-type rejection. Packet and context inputs,
+option values and the program name are captured before any output commit.
+Inputs may alias outputs or the result; the two nonempty outputs must be
+disjoint from each other and from the complete result. Adjacent intervals
+are legal. Each call releases all input snapshots and output scratch.
+
+On success, each nonempty output receives exactly its native actual
+extent and retains its tail. Omitted outputs request no copy, while the
+result still reports their native lengths. A successful native result
+beyond a nonempty output's capacity returns `BRIDGE/-EOVERFLOW` without
+copyback. Every failure leaves both caller outputs and the full result
+unchanged. Native failures retain their signed KERNEL code; allocation
+failure uses POSIX and a failed program-FD getter preserves its LIBBPF
+code. The call executes one native test-run without retry. Caller-output
+preservation does not undo kernel side effects. Guarded host adapter tests
+establish these buffer/error rules; actual kernel behavior remains
+unqualified.
+
 ## Versions
 
 Four versions stay independent: ABI major (1, in every
