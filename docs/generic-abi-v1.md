@@ -386,15 +386,20 @@ struct lmb_attach_options_v1 {
 };                               /* size 72, align 8 */
 ```
 
-One call attaches one site and produces one link. Only family 1
-(tracepoint) is valid; any other family, any nonzero flag or
-reserved bit fails before native work. Tracepoint attachments
-require category and event (strict UTF-8, copied). The call
-clears its output handle before work and leaves it null on
-failure with no links leaked. Tracing programs consume their
-pre-load configured target at attach time; a configured target
-that disagrees with the ELF declaration fails instead of
-overriding silently.
+One call attaches one site and produces one link. Only family 1 (tracepoint)
+is valid. Unknown families, nonzero flags and nonzero reserved fields return
+BRIDGE/-EINVAL before native work. Category and event are required strict
+UTF-8 names; the bridge copies them before the upstream call. After ordinary
+argument validation, a loaded object and the named program are required. A
+missing program returns BRIDGE/-ENOENT. A program whose type is not
+BPF_PROG_TYPE_TRACEPOINT returns BRIDGE/-EOPNOTSUPP without attachment. A
+tracepoint program without a loaded program FD returns BRIDGE/-EINVAL. A
+valid request calls bpf_program__attach_tracepoint with the explicitly
+supplied category and event. The output link is cleared before validation
+and stays null on failure. Pre-load tracing-target configuration remains an
+object capability; this interface has no tracing, LSM or extension attach
+family. Their attachment and target qualification require separately
+specified interfaces and tests.
 
 ## Buffer options
 
@@ -583,6 +588,17 @@ pointers-before-state position.
   internal: conservation is proven behaviorally with
   controlled sources, since no stats call exists in this
   interface.
+
+Each successful buffer_poll call returns at most one complete frame. A
+consumer may assemble several frames by polling repeatedly into successive
+portions of its own destination. If a later call reports ENOSPC, earlier
+successful frames remain the consumer's completed prefix, and the next frame
+remains owned by the buffer. This is a sequence of calls, not a multi-frame
+native success or an atomic batch transaction. Repeated insufficient-capacity
+calls preserve that held frame until one sufficient call delivers it exactly
+once. A zero-byte success can also mean that the bounded malformed-record
+skip limit was reached; it is not proof that no records were classified as
+malformed.
 
 ## Batch framing
 
