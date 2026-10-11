@@ -678,7 +678,7 @@ its manifest digest before use; there is no unpinned mode.
 Standalone library operation has no runtime dependency on
 that package.
 
-## Downstream file grants (proposed)
+## Downstream slice layout
 
 The object-lifecycle, maps/test-run, and attach/ring slices
 build on this frozen contract. Each slice owns disjoint new
@@ -687,15 +687,13 @@ integrator, which serializes all header, export-map, CMake,
 export-check, FFI, probe, and documentation edits. Slice
 implementers request shared edits through the integrator and
 never write shared files directly. Every path below is relative
-to the library repository root. This table is a proposal: the
-controller formally issues the grants in the execution receipt
-and the slice task packets.
+to the library repository root.
 
 | Slice | Exclusive new files | Justification |
 |---|---|---|
-| Object lifecycle (U02) | `native/src/object.c`, `src/libbpf_mojo/object.mojo`, `tests/native/generic_object.c`, `tests/mojo/test_generic_object.mojo` | Implements object open/configure/load/info/close/release plus the view reference ABI, and owns the object-lifecycle tests. |
-| Maps and test-run (U03) | `native/src/object_maps.c`, `native/src/program_test.c`, `src/libbpf_mojo/maps.mojo`, `src/libbpf_mojo/program.mojo`, `tests/native/generic_maps.c`, `tests/native/generic_testrun.c`, `tests/mojo/test_generic_maps.mojo`, `tests/mojo/test_generic_testrun.mojo` | Implements checked map access and the test-run adapter, and owns the map/test-run tests. |
-| Attach and ring (U04) | `native/src/generic_attach.c`, `native/src/generic_ring.c`, `src/libbpf_mojo/link.mojo`, `src/libbpf_mojo/buffer.mojo`, `tests/native/generic_attach.c`, `tests/native/generic_ring.c`, `tests/mojo/test_generic_link.mojo`, `tests/mojo/test_generic_buffer.mojo` | Implements link/buffer owners with the poll framing contract, and owns the attach/event tests. |
+| Object lifecycle | `native/src/object.c`, `src/libbpf_mojo/object.mojo`, `tests/native/generic_object.c`, `tests/mojo/test_generic_object.mojo` | Implements object open/configure/load/info/close/release plus the view reference ABI, and owns the object-lifecycle tests. |
+| Maps and test-run | `native/src/object_maps.c`, `native/src/program_test.c`, `src/libbpf_mojo/maps.mojo`, `src/libbpf_mojo/program.mojo`, `tests/native/generic_maps.c`, `tests/native/generic_testrun.c`, `tests/mojo/test_generic_maps.mojo`, `tests/mojo/test_generic_testrun.mojo` | Implements checked map access and the test-run adapter, and owns the map/test-run tests. |
+| Attach and ring | `native/src/generic_attach.c`, `native/src/generic_ring.c`, `src/libbpf_mojo/link.mojo`, `src/libbpf_mojo/buffer.mojo`, `tests/native/generic_attach.c`, `tests/native/generic_ring.c`, `tests/mojo/test_generic_link.mojo`, `tests/mojo/test_generic_buffer.mojo` | Implements link/buffer owners with the poll framing contract, and owns the attach/event tests. |
 
 No path appears in more than one row. Retained shared files:
 `native/include/libbpf_mojo_generic.h`,
