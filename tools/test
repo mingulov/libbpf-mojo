@@ -49,7 +49,7 @@ run_native() {
             exit 2
         fi
         echo "test: host-only scope; kernel qualification remains NOT_RUN" >&2
-        echo "NOT_RUN native: poll_semantics attach_rollback map_access ring_framing.load-dual generic_abi_probe.PartB generic_maps.kernel-load-and-operations generic_testrun.kernel-runtime" >&2
+        echo "NOT_RUN native: poll_semantics attach_rollback map_access ring_framing.load-dual generic_abi_probe.PartB generic_maps.kernel-load-and-operations generic_testrun.kernel-runtime generic_attach.kernel-runtime generic_ring.kernel-production-and-events" >&2
         # Each twin launches a guarded native leaf. CTest and shell
         # orchestration do not inherit the syscall interposer. Select
         # each host check once, with the four read-only export checks.

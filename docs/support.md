@@ -44,10 +44,11 @@ reported as skipped, never as success.
 
 ## Generic object checkpoint
 
-The additive generic interface implements fifteen operations: object
+The additive generic interface implements twenty operations: object
 open/configure/load/program-info/map-info/close/release, generic
 diagnostic retrieval, native view ref/unref/generation/check, and
-native checked map lookup/update and explicit XDP program test-run.
+native checked map lookup/update, explicit XDP program test-run,
+and native tracepoint attach/link-close and ring open/poll/close.
 The original eleven session operations, their symbol versions and
 SONAME are preserved.
 
@@ -88,7 +89,7 @@ for the explicit host scope. Omitted runtime cases are reported
 keep their runtime checks. The native host scope runs guarded framing
 checks and omits the valid-fixture dual-load case and its privilege
 probe; that regression fails if the boundary is crossed. The native host
-runner selects eight guarded CTest twins and four export checks, without
+runner selects ten guarded CTest twins and four export checks, without
 double-counting the ordinary tests. The guard runs only in native test
 executables, including the shared bridge's bundled libbpf. Successful generic load, loaded map geometry,
 tracing-target configuration and their target/platform evidence remain
@@ -108,8 +109,32 @@ relocation with their input sources removed and no compiler on PATH. They
 exercise existing session behavior, generic view ownership and typed
 unloaded/closed/stale errors. Test-only scripted libraries are not shipped.
 Successful kernel operations, including installed package map/test-run
-execution, remain unqualified. Links and buffers are not
-implemented by this checkpoint.
+execution, remain unqualified. Native links and buffers have host contract evidence. Typed Mojo
+link/buffer owners and installed consumers of those new operations are pending.
+
+Generic ring tests execute pinned libbpf's maintained reader over owned
+memfd-backed mappings with a controlled producer. They prove copied
+callback data, exact 16-to-24 framing, repeated short retries, one frame
+per poll, consumer prefix retention, wraparound, BUSY/DISCARD behavior,
+the 64-step malformed skip, signed errors and interrupted waits. Two
+100,000-record controls check every delivered sequence and reconcile
+received/delivered/held/malformed/drop counts; the mixed control finishes
+100000/99700/0/200/100. A negative callback mechanism control confirms
+that returning ENOSPC consumes the record; the reader does not replay it.
+These are native single-threaded host controls, without kernel production,
+weak-memory, multi-CPU, ARM or performance qualification.
+
+Tracepoint attachment host tests use parsed real programs and intercept
+the attachment boundary with owned test tokens. They check explicit copied
+target names, exact type/family and option refusals, signed diagnostics,
+allocation/reference overflow, native setup rollback and destruction
+failures. They preserve existing children, enforce parent-close BUSY and
+keep links/buffers/views alive after parent release. Ring construction
+failure tests cover each observed allocation, both mappings, map-info,
+epoll creation and registration, with references, mappings and owned FDs
+returning to baseline. No test BPF or perf-event request reaches the
+kernel. Successful tracepoint attachment, real signals/blocking, kernel
+ring production and target resource cleanup remain unqualified.
 
 ## Out of scope
 

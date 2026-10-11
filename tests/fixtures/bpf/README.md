@@ -71,3 +71,28 @@ intercept all BPF syscalls. Parsing and scripted map operations do not
 establish loading, verifier acceptance, runtime execution or target
 support. The fixture is an independent test control, not production
 kernel code.
+
+## Generic tracepoint events control
+
+`generic_events.bpf.c` is an independent C fixture with program `on_getpid`
+for `syscalls:sys_enter_getpid`, a 65,536-byte `events` ring, an ARRAY
+`filter` with u32 selected TID at key zero, and `producer_counts` with
+u64 attempted/successful/failed counters at key zero. Selection uses the
+low 32-bit initial-PID-namespace TID, so live tests must establish that
+namespace identity. Events carry a 32-byte little-endian test contract:
+u16 version/size at 0/2, u32 TGID/TID/CPU at 4/8/12, u64 attempted
+sequence/time at 16/24. Sequence advances on attempts, including output
+failure. `generic_events.h` specifies the fixture layout; the library
+treats all payloads as opaque.
+
+Both new files use `Apache-2.0 WITH LLVM-exception`; the BPF source carries
+that exact truthful ELF license string. Existing fixture declarations and
+licenses are preserved. Compilation/parsing do not establish target
+verifier or helper acceptance.
+
+Native host controls use this object's parsed program/map metadata and
+a separate 16-byte sequence/complement payload. They script loaded state
+and the attachment boundary, and feed controlled mapped ring records to
+the actual pinned libbpf reader. No host fixture load, attach or BPF
+syscall executes. The 16-byte transport payload frames to 24 bytes;
+the 32-byte fixture payload would frame to 40 bytes in later live tests.

@@ -67,6 +67,8 @@ set(LMB_SOURCES
   src/object.c
   src/object_maps.c
   src/program_test.c
+  src/generic_attach.c
+  src/generic_ring.c
 )
 
 # Product shared library. SONAME carries ABI major 1. Only the eleven
@@ -154,6 +156,21 @@ add_custom_command(
 add_custom_target(generic_maps_fixture ALL
   DEPENDS ${CMAKE_BINARY_DIR}/fixtures/generic_maps.bpf.o)
 add_dependencies(generic_maps_fixture libbpf_external)
+
+add_custom_command(
+  OUTPUT ${CMAKE_BINARY_DIR}/fixtures/generic_events.bpf.o
+  COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/fixtures
+  COMMAND ${CLANG_EXE} --target=bpf -O2 -g -Wall
+    -I${LIBBPF_ROOT}/include
+    -I/usr/include/${CMAKE_SYSTEM_PROCESSOR}-linux-gnu
+    -c ${LMB_ROOT}/tests/fixtures/bpf/generic_events.bpf.c
+    -o ${CMAKE_BINARY_DIR}/fixtures/generic_events.bpf.o
+  DEPENDS ${LMB_ROOT}/tests/fixtures/bpf/generic_events.bpf.c
+    ${LMB_ROOT}/tests/fixtures/bpf/generic_events.h
+  VERBATIM)
+add_custom_target(generic_events_fixture ALL
+  DEPENDS ${CMAKE_BINARY_DIR}/fixtures/generic_events.bpf.o)
+add_dependencies(generic_events_fixture libbpf_external)
 
 # Tracepoint example: probe object, trigger, and C reference
 # consumer. Driven by tests/live/*.py, not by CTest.
@@ -306,6 +323,30 @@ add_test(NAME generic_testrun COMMAND test_generic_testrun
 set_tests_properties(generic_testrun PROPERTIES
   WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
 
+# Finite host seams retain the actual pinned ring reader and callback.
+# Attachment is a forwarding/ownership seam, never a kernel attach claim.
+foreach(events_test generic_attach generic_ring)
+  add_executable(test_${events_test}
+    ${LMB_ROOT}/tests/native/${events_test}.c
+    ${LMB_ROOT}/tests/support/generic_events_host.c
+    ${LMB_ROOT}/tests/support/generic_host_guard.c)
+  target_include_directories(test_${events_test} PRIVATE include src
+    ${LIBBPF_ROOT}/include ${LMB_ROOT}/tests/support ${LMB_ROOT}/tests/fixtures/bpf)
+  target_link_libraries(test_${events_test} PRIVATE lmb_static)
+  foreach(seam bpf_object__load bpf_object__close bpf_program__fd bpf_map__fd
+      bpf_program__attach_tracepoint bpf_link__destroy ring_buffer__epoll_fd ring_buffer__new
+      ring_buffer__consume_n malloc calloc realloc mmap mmap64 munmap epoll_create1
+      epoll_ctl epoll_wait syscall)
+    target_link_options(test_${events_test} PRIVATE "LINKER:--wrap=${seam}")
+  endforeach()
+  add_dependencies(test_${events_test} generic_events_fixture generic_fixtures)
+endforeach()
+add_test(NAME generic_attach COMMAND test_generic_attach
+  ${CMAKE_BINARY_DIR}/fixtures/generic_events.bpf.o
+  ${CMAKE_BINARY_DIR}/fixtures/generic_tracing.bpf.o)
+add_test(NAME generic_ring COMMAND test_generic_ring
+  ${CMAKE_BINARY_DIR}/fixtures/generic_events.bpf.o)
+
 # Generic ABI contract probe: dlsym-based acceptance battery for
 # docs/generic-abi-v1.md. Takes the candidate shared library plus the
 # fixture object; Part A always runs. Host-only selection explicitly
@@ -444,6 +485,11 @@ lmb_guarded_host_test(generic_abi_probe test_generic_abi_probe
   $<TARGET_FILE:lmb> ${CMAKE_BINARY_DIR}/fixtures/ring_test.bpf.o
   ${CMAKE_BINARY_DIR}/fixtures/generic_maps.bpf.o)
 lmb_guarded_host_test(old_consumer_v1 test_old_consumer_v1)
+lmb_guarded_host_test(generic_attach test_generic_attach
+  ${CMAKE_BINARY_DIR}/fixtures/generic_events.bpf.o
+  ${CMAKE_BINARY_DIR}/fixtures/generic_tracing.bpf.o)
+lmb_guarded_host_test(generic_ring test_generic_ring
+  ${CMAKE_BINARY_DIR}/fixtures/generic_events.bpf.o)
 
 # Partial ABI stub for the incompatible-library test: every
 # operation except lmb_close. Test-only; never installed.

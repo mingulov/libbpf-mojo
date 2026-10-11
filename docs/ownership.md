@@ -45,8 +45,8 @@ invalidates older views, whose metadata calls fail with `BRIDGE/-ESTALE`
 without writing outputs. A map view additionally requires successful
 loading before its metadata can be read.
 
-Explicit `Object.close()` with a live view fails with `BRIDGE/-EBUSY`
-and preserves the usable owner. Close without views nulls its handle.
+Explicit `Object.close()` with a live view, link or buffer fails with `BRIDGE/-EBUSY`
+and preserves the usable owner. Close without children or views nulls its handle.
 `Object.release()` and the destructor drop the external reference even
 with views alive. The last reference destroys the native state once.
 Closing a view releases its reference and is repeatable. Native teardown
@@ -58,6 +58,53 @@ release preserve it. Read an error immediately on the calling thread.
 The [generic ABI contract](generic-abi-v1.md) defines exact output
 validity and version checks. Host tests validate parsing and ownership;
 they do not qualify successful kernel loading, attachment or map access.
+
+## Generic native links and rings
+
+`lmb_object_attach_v1` attaches one explicitly named tracepoint site and
+returns one owned link. Only the tracepoint family and a tracepoint
+program are supported by this interface; other program types fail before
+attachment. The category and event are required copied names. Each
+successful link or buffer adds one native parent reference. A failed
+creation unwinds only that call's resources, leaving previous children
+usable. Native link close destroys its link, nulls/frees the child and
+drops the reference even when destruction reports an error. Explicit
+close reports the signed libbpf error after that cleanup.
+
+`lmb_buffer_open_v1` requires a loaded named ring map and owns the pinned
+libbpf consumer, its C callback state and one copied 4,096-byte slot. It
+requires one stage slot and zero flags/reserved fields. Buffer close calls
+libbpf's void free operation, nulls/frees the child and drops the reference;
+it cannot report unexposed close or unmap errors. Repeated null close is
+successful. A remaining child or view keeps the native object alive after
+external-owner release, and the last reference destroys it once, after
+child teardown. A caller that cancels link-then-buffer setup closes the
+successful link when later buffer creation fails.
+
+Each native `lmb_buffer_poll_v1` returns at most one complete frame. It
+copies callback bytes before the borrowed source can change, consumes at
+most one callback-visible record per step, and stops after a record stages,
+the reader drains or 64 steps pass. Held bytes are delivered before any
+new wait or consumption. Insufficient capacity returns `BRIDGE/-ENOSPC`
+with `used` zero and `needed` set to the full frame size; repeated short
+calls keep the same bytes until one sufficient retry delivers them once.
+A consumer can assemble a prefix through repeated calls: earlier frames
+remain committed if a later call is short, and the next frame stays held.
+There is no multi-frame native transaction.
+
+The two u64 size cells must be wholly disjoint from each other and the
+entire destination capacity. Validation rejection preserves those cells,
+the destination and staging. Empty success clears the size cells, including
+when the malformed skip limit is reached. EINTR is a POSIX error with
+both cells zero, no automatic retry and no destination write. Internal
+per-buffer counters obey `received = delivered + held + malformed + dropped`;
+no generic stats operation is exported. Correctly bounded ordinary polls
+do not consume a valid record while the slot is occupied. Host robustness
+tests deliberately exercise that callback case and count the loss.
+
+Typed Mojo link/buffer owners are pending. Current native host tests prove
+ownership, forwarding and the actual libbpf reader contract; successful
+kernel attachment and event production require live evidence.
 
 ## Attach and teardown
 

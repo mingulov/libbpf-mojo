@@ -40,4 +40,22 @@ int lmb_generic_ranges_overlap(const void *a, uint64_t an,
                                const void *b, uint64_t bn);
 unsigned lmb_object_live_children(const struct lmb_object *obj);
 int lmb_object_need_loaded(const struct lmb_object *obj, uint32_t op);
+/* Private generic children; no layout crosses the public boundary. */
+struct bpf_link;
+struct ring_buffer;
+struct lmb_link {
+    struct lmb_object *parent;
+    struct bpf_link *link;
+};
+struct lmb_buffer {
+    struct lmb_object *parent;
+    struct ring_buffer *rb;
+    uint32_t max_raw_bytes;
+    uint32_t stage_len;
+    uint8_t stage[4096];
+    uint64_t received;
+    uint64_t delivered;
+    uint64_t malformed;
+    uint64_t dropped;
+};
 #endif

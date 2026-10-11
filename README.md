@@ -27,7 +27,14 @@ retained views and ship in the standalone package. See
 [maps and test-run](docs/maps-and-test-run.md) for signatures and buffer
 rules. Scripted Mojo tests and installed host consumers establish the
 language/ownership boundary; successful kernel map access and test-run
-remain unqualified. Links and ring consumers await implementation.
+remain unqualified. Native generic tracepoint links and ring consumers now implement the five
+remaining operations. Each child retains its object; the ring uses one
+copied 4,096-byte slot and returns at most one frame per poll. Guarded host
+tests exercise the actual pinned libbpf reader with controlled mappings,
+short-buffer retries and exact record conservation. Attachment tests prove
+forwarding and ownership through a test seam. Successful kernel attachment
+and event production still require live qualification; typed Mojo link and
+buffer owners are pending.
 
 ## Build, test, and package
 
