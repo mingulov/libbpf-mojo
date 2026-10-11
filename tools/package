@@ -122,9 +122,14 @@ sys.exit("no version in pixi.toml")
         "$ROOT/src/libbpf_mojo/_ffi.mojo" \
         "$ROOT/src/libbpf_mojo/batch.mojo" \
         "$ROOT/src/libbpf_mojo/error.mojo" \
+        "$ROOT/src/libbpf_mojo/maps.mojo" \
         "$ROOT/src/libbpf_mojo/object.mojo" \
+        "$ROOT/src/libbpf_mojo/program.mojo" \
         "$ROOT/src/libbpf_mojo/session.mojo" \
         "$stage/mojo/libbpf_mojo/" || return 1
+    mkdir -p "$stage/docs" || return 1
+    cp "$ROOT/docs/maps-and-test-run.md" "$ROOT/docs/generic-abi-v1.md" \
+        "$ROOT/docs/ownership.md" "$stage/docs/" || return 1
     cp "$build/examples/tracepoint_main" \
         "$build/examples/tracepoint_trigger" \
         "$build/examples/probe.bpf.o" \
@@ -197,6 +202,14 @@ Opening and inspecting program metadata need no BPF privilege. Loading
 and loaded map metadata require an appropriate runtime environment and
 have not been qualified by the host-only ownership tests.
 
+Import byte/scalar lookup and update from \`libbpf_mojo.maps\`, and
+\`test_run\` and \`ProgramTestResult\` from \`libbpf_mojo.program\`.
+These functions borrow the retained views and implement checked map
+extents and explicit XDP packet/context spans. The scripted host tests
+prove the FFI, ownership and rejecting paths. Successful kernel map
+access and test-run remain unqualified. See
+[maps and test-run](docs/maps-and-test-run.md) for usage and buffer rules.
+
 Build a consumer with the pinned Mojo 1.1.0 compiler and
 \`mojo build -I <package>/mojo\`. Run the compiled consumer with
 \`LD_LIBRARY_PATH=<package>/lib\` and \`LMB_NATIVE_LIB\` pointing at
@@ -228,8 +241,8 @@ short window, 77 without privilege, 1 on failure.
   \`tracepoint_trigger\` (workload), \`probe.bpf.o\` (BPF object).
 - \`include/libbpf_mojo.h\`: the native ABI v1 header.
 - \`include/libbpf_mojo_generic.h\`: the additive generic object ABI
-  declarations; object ownership operations are implemented, while
-  later map access, test-run, link, and ring operations remain optional.
+  declarations; object ownership, map lookup/update and XDP test-run
+  are implemented. Link and ring operations remain optional.
 - \`mojo/libbpf_mojo/\`: importable Mojo wrapper sources. Build
   a consumer with \`mojo build -I <package>/mojo\`, then run it
   with \`LD_LIBRARY_PATH=<package>/lib\` and \`LMB_NATIVE_LIB\`
@@ -243,6 +256,30 @@ short window, 77 without privilege, 1 on failure.
 \`MANIFEST.json\` records the exact bridge, BPF object, binary, and
 toolchain identities this package was built from. Verify hashes
 before trusting a redistributed copy.
+EOF
+    # Bind newly installed typed modules/docs to the build's source seal.
+    # The manifest tool also checks every worktree source and staged binary.
+    python3 - "$receipt" "$stage" <<'EOF' || return 1
+import hashlib
+import json
+import pathlib
+import sys
+receipt, stage = sys.argv[1], pathlib.Path(sys.argv[2])
+with open(receipt, encoding="utf-8") as src:
+    sealed = json.load(src)["sources"]["files"]
+copies = {
+    "mojo/libbpf_mojo/object.mojo": "src/libbpf_mojo/object.mojo",
+    "mojo/libbpf_mojo/maps.mojo": "src/libbpf_mojo/maps.mojo",
+    "mojo/libbpf_mojo/program.mojo": "src/libbpf_mojo/program.mojo",
+    "docs/maps-and-test-run.md": "docs/maps-and-test-run.md",
+    "docs/generic-abi-v1.md": "docs/generic-abi-v1.md",
+    "docs/ownership.md": "docs/ownership.md",
+    "include/libbpf_mojo_generic.h": "native/include/libbpf_mojo_generic.h",
+}
+for installed, source in copies.items():
+    actual = hashlib.sha256((stage / installed).read_bytes()).hexdigest()
+    if actual != sealed[source]["sha256"]:
+        sys.exit("package: staged %s differs from its sealed source" % installed)
 EOF
     python3 tools/package_manifest.py \
         "$version" "$stage" "$ROOT/toolchain.lock.json" \

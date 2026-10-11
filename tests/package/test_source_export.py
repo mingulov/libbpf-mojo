@@ -5,19 +5,26 @@
 No borrowed build outputs or receipts. Test standalone and ignored exports
 under an unrelated clean/dirty Git parent. LMB_SOURCE_EXPORT_OUT optionally
 preserves source/runtime archives, receipts and full command logs.
+--host-only uses the four installed consumers with guarded native leaves.
+--cached-libbpf-archive PATH seeds verified source bytes before each build;
+an invalid supplied cache fails before any build and never falls back.
 """
 
+import argparse
 import gzip
+import hashlib
 import io
 import json
 import os
 from pathlib import Path
 import shutil
+import re
 import subprocess
 import tarfile
 import tempfile
 
 import test_package as tp
+import test_consumer_lane as consumers
 
 ROOT = Path(tp.ROOT)
 OUT = Path(os.environ["LMB_SOURCE_EXPORT_OUT"]).resolve() \
@@ -35,7 +42,31 @@ def run(root, *args, env=None, label=None):
     return proc.stdout.strip()
 
 
-def main():
+def cached_archive(root, archive):
+    """Match both independent declarations before using cached source bytes."""
+    try:
+        pin = json.loads((root / "toolchain.lock.json").read_text())["toolchain"]["libbpf_source"]
+        cmake = (root / "native/CMakeLists.txt").read_text()
+        url = re.search(r'set\(LIBBPF_URL\s+"([^"]+)"\)', cmake)
+        sha = re.search(r'set\(LIBBPF_SHA256\s+"([0-9a-f]{64})"\)', cmake)
+        if not url or not sha or url[1] != pin["tarball_url"] or sha[1] != pin["tarball_sha256"]:
+            raise tp.Fail("cached libbpf archive: native pin differs from toolchain lock")
+        data = archive.read_bytes()
+        if hashlib.sha256(data).hexdigest() != sha[1]:
+            raise tp.Fail("cached libbpf archive: hash mismatch")
+        return data, Path(url[1]).name, sha[1]
+    except (OSError, KeyError, ValueError) as exc:
+        raise tp.Fail("cached libbpf archive: " + str(exc)) from exc
+
+
+def main(argv=None):
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--host-only", action="store_true")
+    parser.add_argument("--cached-libbpf-archive", type=Path)
+    options = parser.parse_args(argv)
+    if options.cached_libbpf_archive:
+        options.cached_libbpf_archive = options.cached_libbpf_archive.resolve()
+        cached_archive(ROOT, options.cached_libbpf_archive)
     if OUT:
         OUT.mkdir(parents=True, exist_ok=True)
     source = subprocess.check_output(["git", "archive", "HEAD"], cwd=ROOT)
@@ -57,6 +88,14 @@ def main():
             tree.mkdir()
             with tarfile.open(fileobj=io.BytesIO(source)) as tar:
                 tar.extractall(tree, filter="data")
+            if options.cached_libbpf_archive:
+                data, name, digest = cached_archive(tree, options.cached_libbpf_archive)
+                # This is ExternalProject's normal download file, not a
+                # compiled archive or a borrowed dependency installation.
+                download = tree / "build/libbpf_external-prefix/src" / name
+                download.parent.mkdir(parents=True, exist_ok=True)
+                download.write_bytes(data)
+                print("cached libbpf source: %s sha256 %s" % (options.cached_libbpf_archive, digest), flush=True)
             env = dict(os.environ)
             env.pop("SOURCE_DATE_EPOCH", None)
             run(tree, "./tools/build", env=env, label=case + "-build")
@@ -75,7 +114,10 @@ def main():
             previous_root = tp.ROOT
             tp.ROOT = str(tree)
             try:
-                tp.consumer_check(str(ball), "0.1.0")
+                if options.host_only:
+                    consumers.object_consumer_check(str(ball), "0.1.0", host_only=True)
+                else:
+                    tp.consumer_check(str(ball), "0.1.0")
             finally:
                 tp.ROOT = previous_root
             if case == "unrelated-parent":
@@ -96,6 +138,8 @@ def main():
                 shutil.copyfile(ball, OUT / (case + "-runtime.tar.gz"))
             print("PASS %s: real source build, sealed inventory, consumer, "
                   "deterministic runtime, invalid timestamps" % case, flush=True)
+    if options.host_only:
+        print("NOT_RUN source-export: successful kernel maps and XDP test-run")
 
 
 if __name__ == "__main__":

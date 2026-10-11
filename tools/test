@@ -6,6 +6,8 @@
 # --host-only excludes live kernel cases before any privilege probe;
 # native host test executables preload the permanent no-BPF guard.
 # Omitted cases are NOT_RUN and cannot qualify kernel behavior.
+# source-export also accepts --host-only. LMB_LIBBPF_SOURCE_ARCHIVE
+# optionally supplies its hash-checked local libbpf source archive.
 #
 # Implemented suites: native, mojo, live-tracepoint, cleanup, package,
 # package-consumer, source-export, runner, selftest, provenance. The runner suite
@@ -50,9 +52,9 @@ run_native() {
         echo "NOT_RUN native: poll_semantics attach_rollback map_access ring_framing.load-dual generic_abi_probe.PartB generic_maps.kernel-load-and-operations generic_testrun.kernel-runtime" >&2
         # Each twin launches a guarded native leaf. CTest and shell
         # orchestration do not inherit the syscall interposer. Select
-        # each host check once, with the two read-only export checks.
+        # each host check once, with the four read-only export checks.
         (cd "$ROOT/$BUILD_DIR" && ctest --output-on-failure \
-            -R '^(native_host_.*|exports|testfake_exports)$')
+            -R '^(native_host_.*|exports|testfake_exports|generic_testfake_exports|generic_objectonly_exports)$')
     else
         (cd "$ROOT/$BUILD_DIR" && ctest --output-on-failure -E '^native_host_')
     fi
@@ -78,13 +80,16 @@ mojo_setup() {
 run_mojo() {
     if [ "${LMB_HOST_ONLY:-0}" = 1 ]; then
         echo "test: host-only scope; kernel qualification remains NOT_RUN" >&2
-        echo "NOT_RUN mojo: test_load_valid_branches_privilege" >&2
+        echo "NOT_RUN mojo: test_load_valid_branches_privilege generic_maps.kernel-runtime generic_testrun.kernel-runtime" >&2
     fi
     native_lib="$ROOT/$BUILD_DIR/libbpf_mojo.so.1"
     fake_lib="$ROOT/$BUILD_DIR/liblmb_testfake.so"
     stub_lib="$ROOT/$BUILD_DIR/liblmb_stub.so"
+    generic_fake="$ROOT/$BUILD_DIR/liblmb_generic_testfake.so"
+    generic_older="$ROOT/$BUILD_DIR/liblmb_generic_objectonly.so"
+    host_guard="$ROOT/$BUILD_DIR/liblmb_host_guard.so"
     fixture="$ROOT/$BUILD_DIR/fixtures/ring_test.bpf.o"
-    for need in "$native_lib" "$fake_lib" "$stub_lib" "$fixture"; do
+    for need in "$native_lib" "$fake_lib" "$stub_lib" "$fixture" "$generic_fake" "$generic_older" "$host_guard"; do
         if [ ! -f "$need" ]; then
             echo "test: missing $need; run tools/build first" >&2
             exit 2
@@ -97,20 +102,23 @@ run_mojo() {
     export LMB_FIXTURE="$fixture"
     export LMB_GENERIC_FIXTURE="$ROOT/$BUILD_DIR/fixtures/generic_object.bpf.o"
     export LMB_GENERIC_NOMAP_FIXTURE="$ROOT/$BUILD_DIR/fixtures/generic_nomap.bpf.o"
+    export LMB_GENERIC_MAPS_FIXTURE="$ROOT/$BUILD_DIR/fixtures/generic_maps.bpf.o"
+    export LMB_GENERIC_TESTFAKE_LIB="$generic_fake"
+    export LMB_GENERIC_OBJECTONLY_LIB="$generic_older"
+    tmpdir="$(mktemp -d)"
+    trap 'rm -rf "$tmpdir"' EXIT
     failed=0
     count=0
     for t in "$ROOT"/tests/mojo/test_*.mojo; do
         count=$((count + 1))
         echo "+ mojo run $t" >&2
-        (cd "$ROOT" && "${MOJO[@]}" run -I src -I tests/mojo "$t") \
+        mojo_case "$t" "$tmpdir/$(basename "$t" .mojo)" \
             || failed=1
     done
     if [ "$count" -eq 0 ]; then
         echo "test: no Mojo tests found" >&2
         exit 2
     fi
-    tmpdir="$(mktemp -d)"
-    trap 'rm -rf "$tmpdir"' EXIT
     for f in "$ROOT"/tests/mojo/compile_fail/*.mojo; do
         [ -e "$f" ] || continue
         want="$(grep -m1 '# CHECK: ' "$f" | sed 's/.*# CHECK: //')"
@@ -133,7 +141,7 @@ run_mojo() {
     for f in "$ROOT"/tests/mojo/compile_pass/*.mojo; do
         [ -e "$f" ] || continue
         echo "+ mojo run (must pass) $f" >&2
-        (cd "$ROOT" && "${MOJO[@]}" run -I src -I tests/mojo "$f") \
+        mojo_case "$f" "$tmpdir/$(basename "$f" .mojo)" \
             || failed=1
     done
     trap - EXIT
@@ -143,6 +151,18 @@ run_mojo() {
         exit 1
     fi
     echo "test: mojo suite passed ($count files)" >&2
+}
+
+mojo_case() {
+    if [ "${LMB_HOST_ONLY:-0}" = 1 ]; then
+        # Compile without the interposer; guard only the native executable.
+        (cd "$ROOT" && "${MOJO[@]}" build --num-threads 2 \
+            --target-cpu x86-64-v2 -I src -I tests/mojo "$1" -o "$2") || return 1
+        sha256sum "$2" || return 1
+        (cd "$ROOT" && LD_PRELOAD="$host_guard" "$2")
+    else
+        (cd "$ROOT" && "${MOJO[@]}" run -I src -I tests/mojo "$1")
+    fi
 }
 
 run_live() {
@@ -167,8 +187,8 @@ if [ $# -eq 0 ]; then
 fi
 if [ $# -eq 2 ] && [ "$2" = --host-only ]; then
     case "$1" in
-        native|mojo) ;;
-        *) echo "test: --host-only applies only to native or mojo" >&2; exit 2 ;;
+        native|mojo|source-export) ;;
+        *) echo "test: --host-only applies only to native, mojo or source-export" >&2; exit 2 ;;
     esac
     export LMB_HOST_ONLY=1
     set -- "$1"
@@ -216,7 +236,14 @@ case "$1" in
         exit "$?"
         ;;
     source-export)
-        (cd "$ROOT" && python3 tests/package/test_source_export.py)
+        source_args=()
+        if [ "${LMB_HOST_ONLY:-0}" = 1 ]; then
+            source_args+=(--host-only)
+        fi
+        if [ -n "${LMB_LIBBPF_SOURCE_ARCHIVE:-}" ]; then
+            source_args+=(--cached-libbpf-archive "$LMB_LIBBPF_SOURCE_ARCHIVE")
+        fi
+        (cd "$ROOT" && python3 tests/package/test_source_export.py "${source_args[@]}")
         exit "$?"
         ;;
     package-consumer)

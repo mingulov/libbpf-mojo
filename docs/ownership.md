@@ -162,6 +162,24 @@ preservation does not undo kernel side effects. Guarded host adapter tests
 establish these buffer/error rules; actual kernel behavior remains
 unqualified.
 
+The Mojo functions in `libbpf_mojo.maps` and `libbpf_mojo.program`
+borrow these same views. Generation checks precede allocation and the
+map/test-run call. Closed and stale views fail before those operations.
+Raw map lookup returns an owned byte list containing all per-CPU padding;
+scalar helpers require an ordinary four-byte key/eight-byte value and
+preserve native-endian widths. `test_run` takes immutable inputs and
+mutable outputs, and returns a copyable `ProgramTestResult` only on
+success. Its result fields are independent native values. Borrowed spans
+do not escape the call; views continue to own their object/library
+references until close or destruction.
+
+All three typed FFI operations resolve optional symbols when called.
+Missing operations raise their own `BRIDGE/-ENOSYS`; they do not prevent
+an older library's object or session operations. A failing native call's
+generic diagnostic is captured immediately on the same thread, before
+another generic operation can clear it. The [typed usage guide](maps-and-test-run.md)
+states extents, omissions, aliases and installed-consumer limits.
+
 ## Versions
 
 Four versions stay independent: ABI major (1, in every

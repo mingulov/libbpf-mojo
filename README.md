@@ -21,8 +21,13 @@ executing BPF syscalls. Native generic program test-run supports the
 initial XDP profile with independent packet/context spans, input snapshots
 and output copyback only after success and extent checks. Signed native
 failures preserve caller outputs and never trigger a retry. Typed Mojo
-map/test-run calls, links and ring consumers await implementation;
-successful kernel map access and test-run remain unqualified.
+byte/scalar map calls are in `libbpf_mojo.maps`; explicit test-run and its
+copyable result are in `libbpf_mojo.program`. They borrow the existing
+retained views and ship in the standalone package. See
+[maps and test-run](docs/maps-and-test-run.md) for signatures and buffer
+rules. Scripted Mojo tests and installed host consumers establish the
+language/ownership boundary; successful kernel map access and test-run
+remain unqualified. Links and ring consumers await implementation.
 
 ## Build, test, and package
 

@@ -4,7 +4,8 @@
 Every raw-pointer operation in `src/libbpf_mojo/` with its pointer,
 capacity, initialization, lifetime, and thread preconditions. Consumer
 accounting and CLI code must never add to this list: all unsafe work
-stays behind the `Session`/`NativeLib` boundary.
+stays behind the library's typed owner, map/program and internal FFI
+boundaries.
 
 Conventions used below:
 
@@ -14,12 +15,13 @@ Conventions used below:
   Mojo 1.1.0 the optimizer reordered stack stores across the call
   and the native side observed stale struct contents (deterministic
   `lmb_open: invalid options`; direct `Pointer` arguments fixed it).
-  Only the opaque session handle crosses as `UInt64`; it has no
+  Only opaque native handles cross as `UInt64`; they have no
   Mojo-side pointee.
 - **Output mutability rule.** Every natively written pointee is a
   `MutPointer` (or a `mut List`), which the compiler enforces: an
   immutable borrow cannot reach a native write. Input-only
-  pointees keep inferred mutability and accept either.
+  pointees use immutable pointers. Older session calls keep inferred
+  mutability; typed generic calls require immutable inputs.
 - **Subtraction bounds rule.** Range checks never add untrusted
   lengths: they compare `start <= total` and `length <= total -
   start`, and length matches subtract (`payload == count - 8`).
@@ -60,6 +62,29 @@ and the library; the destructor closes exactly once.
 | `__deinit__` close | `Pointer(to=cell)` where `cell` copies the handle. | 8 bytes. | Copy of `_handle`. | Local; the library handle is moved out first so the call always has a live loader. Errors are swallowed: destruction cannot raise; explicit `close()` reports them. | Owner thread only. |
 | `map_read` trim | Reads `buf[i]` for `i < need`, where `need` comes from a post-success `map_info`. | `need <= capacity` guaranteed by the successful native call. | Filled by the call. | Local list, returned by move. | Owner thread only. |
 | `map_read`/`map_write` spans | Input spans (`key`, `value`) with inferred mutability; the read destination is an owned local list. | `checked_u32` lengths (no silent narrowing). | Caller-initialized. | Spans outlive the call. | Owner thread only. |
+
+## Generic typed calls (`maps.mojo`, `program.mojo`, `GenericLib`)
+
+The existing views retain one native object reference and an
+`ArcPointer[GenericLib]`. Their generation is checked before allocation
+or the new operation; the shared library remains loaded throughout each
+call and diagnostic capture. These rules apply on the owner thread.
+
+| Operation | Pointer/capacity and initialization | Lifetime and checks |
+|---|---|---|
+| Optional `object_map_lookup` / `object_map_update` | Names and byte inputs are `ImmPointer`; lookup destination and `needed` are `MutPointer`. Extents/flags are exact UInt64, return is signed Int32. | Resolve only when called; no callable is retained. Missing symbols raise their own BRIDGE/-ENOSYS. Native errors are captured immediately. |
+| Optional `program_test_run` | Immutable name/options pointers and mutable result pointer. Options/result are the existing fully initialized 88/40-byte fixed records. | The view and all local records outlive the call; no pointer is retained. Result becomes a public value only after success. |
+| Raw lookup list | `Span(result).unsafe_ptr()` addresses exactly the ordinary value size or checked `stride * possible_cpus` extent, bounded to u32 and LP64 indices. `needed` is a separate UInt64 local. | Generation/metadata/key checks precede allocation. The native adapter validates the same geometry, uses scratch and copies only after success. The owned list is moved to the caller. |
+| Raw update spans | Immutable `key.unsafe_ptr()` and `value.unsafe_ptr()`, lengths from the spans. | Caller storage lives through the call. Native checks exact geometry and flags before one update; neither span escapes. |
+| Scalar byte encoding/decoding | `Pointer(to=scalar).unsafe_bitcast[UInt8]()` reads/writes only size_of[UInt32] or size_of[UInt64] bytes. | The aligned scalar local lives through every byte access. Values use native endian; no byte buffer is cast to an unaligned integer pointer. Geometry rejects per-CPU and non-4/8 maps first. |
+| Test-run span fields | `UInt64(span.unsafe_ptr())` is stored inside each options span record, with its exact UInt64 extent. The record itself crosses as a typed pointer. | Borrowed spans/backing storage live through the synchronous call. Native snapshots both inputs and uses separate output scratch. Nonempty outputs must be disjoint. Pinned-compiler tests independently check all four lengths, initialized input bytes, copied bytes and preserved tails. Empty native pointers are normalized to null. |
+
+The deliberate alias test in `test_generic_testrun.mojo` uses
+`as_unsafe_any_origin()` only for two immutable input pointers. Both
+backing lists stay alive and unmoved until return; the native adapter
+snapshots those inputs before output writes. This tests a native alias
+contract that safe Mojo origins ordinarily refuse. Public modules do not
+erase span origins.
 
 ## `batch.mojo`
 

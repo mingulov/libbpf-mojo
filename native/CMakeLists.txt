@@ -258,6 +258,21 @@ if(LMB_SANITIZE)
   target_link_options(lmb_host_guard PRIVATE -fno-sanitize=all)
 endif()
 
+add_executable(test_generic_host_guard
+  ${LMB_ROOT}/tests/native/test_generic_host_guard.c
+  ${LMB_ROOT}/tests/support/generic_host_guard.c)
+target_compile_definitions(test_generic_host_guard PRIVATE LMB_GUARD_PRELOAD)
+target_link_libraries(test_generic_host_guard PRIVATE ${CMAKE_DL_LIBS} pthread)
+target_link_options(test_generic_host_guard PRIVATE "LINKER:--wrap=dlsym")
+if(LMB_SANITIZE)
+  # This oracle replaces syscall process IDs as well as rseq. Keep it
+  # uninstrumented like the preload guard, so it cannot feed scripted
+  # identities to a sanitizer's own runtime during ELF initialization.
+  target_compile_options(test_generic_host_guard PRIVATE -fno-sanitize=all)
+  target_link_options(test_generic_host_guard PRIVATE -fno-sanitize=all)
+endif()
+add_test(NAME generic_host_guard COMMAND test_generic_host_guard)
+
 add_executable(test_generic_maps ${LMB_ROOT}/tests/native/generic_maps.c
   ${LMB_ROOT}/tests/support/generic_host_guard.c)
 target_include_directories(test_generic_maps PRIVATE
@@ -358,6 +373,46 @@ add_test(NAME testfake_exports
 set_tests_properties(testfake_exports PROPERTIES
   WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
 
+# Compile the same bridge with three renamed implementation entry points.
+# Only test libraries add counting wrappers; production sources are unchanged.
+add_library(lmb_generic_test_objects OBJECT ${LMB_SOURCES})
+set_target_properties(lmb_generic_test_objects PROPERTIES POSITION_INDEPENDENT_CODE ON)
+target_compile_definitions(lmb_generic_test_objects PRIVATE
+  lmb_object_map_lookup_v1=lmb_test_real_map_lookup
+  lmb_object_map_update_v1=lmb_test_real_map_update
+  lmb_program_test_run_v1=lmb_test_real_program_test)
+target_include_directories(lmb_generic_test_objects PRIVATE include ${LIBBPF_ROOT}/include)
+add_dependencies(lmb_generic_test_objects libbpf_external)
+file(READ ${LMB_ROOT}/tests/support/lmb_generic_testfake.map objectonly_map)
+foreach(symbol lmb_object_map_lookup_v1 lmb_object_map_update_v1 lmb_program_test_run_v1)
+  string(REPLACE "${symbol};" "" objectonly_map "${objectonly_map}")
+endforeach()
+file(WRITE ${CMAKE_BINARY_DIR}/lmb_generic_objectonly.map "${objectonly_map}")
+foreach(variant generic_testfake generic_objectonly)
+  add_library(lmb_${variant} SHARED
+    $<TARGET_OBJECTS:lmb_generic_test_objects>
+    ${LMB_ROOT}/tests/support/fake_generic.c
+    ${LMB_ROOT}/tests/support/generic_host_guard.c)
+  set(export_map ${LMB_ROOT}/tests/support/lmb_generic_testfake.map)
+  set(export_args)
+  if(variant STREQUAL generic_objectonly)
+    set(export_map ${CMAKE_BINARY_DIR}/lmb_generic_objectonly.map)
+    set(export_args object-only)
+  endif()
+  set_target_properties(lmb_${variant} PROPERTIES OUTPUT_NAME lmb_${variant} LINK_DEPENDS ${export_map})
+  target_include_directories(lmb_${variant} PRIVATE include ${LIBBPF_ROOT}/include)
+  target_link_libraries(lmb_${variant} PRIVATE libbpf_static elf z)
+  target_link_options(lmb_${variant} PRIVATE
+    "LINKER:--version-script,${export_map}" "LINKER:-Bsymbolic-functions"
+    "LINKER:--wrap=bpf_object__load" "LINKER:--wrap=bpf_object__close"
+    "LINKER:--wrap=bpf_map__fd" "LINKER:--wrap=bpf_program__fd"
+    "LINKER:--wrap=libbpf_num_possible_cpus" "LINKER:--wrap=syscall"
+    "LINKER:--wrap=bpf_prog_load")
+  add_test(NAME ${variant}_exports COMMAND sh
+    ${LMB_ROOT}/tests/support/check_generic_testfake_exports.sh
+    $<TARGET_FILE:lmb_${variant}> ${export_args})
+endforeach()
+
 # The guard belongs in native leaves, not the CTest process or its shell
 # orchestration. Host twins keep test accounting explicit; the suite runner
 # selects each host check once and omits these twins in the default scope.
@@ -381,6 +436,7 @@ lmb_guarded_host_test(generic_object test_generic_object
   ${CMAKE_BINARY_DIR}/fixtures/generic_tracing.bpf.o)
 lmb_guarded_host_test(generic_maps test_generic_maps
   ${CMAKE_BINARY_DIR}/fixtures/generic_maps.bpf.o)
+lmb_guarded_host_test(generic_host_guard test_generic_host_guard)
 lmb_guarded_host_test(generic_testrun test_generic_testrun
   ${CMAKE_BINARY_DIR}/fixtures/generic_maps.bpf.o
   ${CMAKE_BINARY_DIR}/fixtures/ring_test.bpf.o)

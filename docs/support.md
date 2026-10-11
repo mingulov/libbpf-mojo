@@ -88,13 +88,27 @@ for the explicit host scope. Omitted runtime cases are reported
 keep their runtime checks. The native host scope runs guarded framing
 checks and omits the valid-fixture dual-load case and its privilege
 probe; that regression fails if the boundary is crossed. The native host
-runner selects seven guarded CTest twins and two export checks, without
+runner selects eight guarded CTest twins and four export checks, without
 double-counting the ordinary tests. The guard runs only in native test
 executables, including the shared bridge's bundled libbpf. Successful generic load, loaded map geometry,
 tracing-target configuration and their target/platform evidence remain
 unqualified. Native generic map and XDP test-run calls have host contract
-evidence only; successful kernel operations and typed Mojo map/test-run
-APIs remain unqualified or unimplemented. Links and buffers are not
+evidence only. Typed Mojo map/test-run functions are implemented over the
+same retained views. Their scripted host tests cover full-width scalar
+values, raw per-CPU padding, exact flag/error forwarding, independent
+result fields, input snapshots, untouched failure buffers and last-release
+destruction. Optional operation symbols resolve only when called, preserving
+object-only libraries. Host tests compile Mojo without the interposer and
+guard each resulting native executable. The guard forwards the pinned
+allocator's exact rseq signature, preserves errno and resolves safely
+before its constructor; unknown signatures and unscripted BPF fail closed.
+
+Installed consumers compile from extracted modules only, then run after
+relocation with their input sources removed and no compiler on PATH. They
+exercise existing session behavior, generic view ownership and typed
+unloaded/closed/stale errors. Test-only scripted libraries are not shipped.
+Successful kernel operations, including installed package map/test-run
+execution, remain unqualified. Links and buffers are not
 implemented by this checkpoint.
 
 ## Out of scope

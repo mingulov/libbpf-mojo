@@ -748,6 +748,49 @@ struct GenericLib(Movable):
                 String("unresolved lmb_object_map_info_v1"),
             )
 
+    def object_map_lookup(
+        mut self,
+        object_handle: UInt64,
+        name: ImmPointer[NameV1, _],
+        key: ImmPointer[UInt8, _], key_bytes: UInt64,
+        value: MutPointer[UInt8, _], capacity: UInt64,
+        needed: MutPointer[UInt64, _],
+    ) raises LmbError -> Int32:
+        try:
+            var f = self._handle.get_function[Int32]("lmb_object_map_lookup_v1")
+            return f(object_handle, name, key, key_bytes, value, capacity, needed)
+        except e:
+            raise LmbError(GENERIC_OP_MAP_LOOKUP, GENERIC_DOMAIN_BRIDGE,
+                           ENOSYS, "unresolved lmb_object_map_lookup_v1")
+
+    def object_map_update(
+        mut self,
+        object_handle: UInt64,
+        name: ImmPointer[NameV1, _],
+        key: ImmPointer[UInt8, _], key_bytes: UInt64,
+        value: ImmPointer[UInt8, _], value_bytes: UInt64, flags: UInt64,
+    ) raises LmbError -> Int32:
+        try:
+            var f = self._handle.get_function[Int32]("lmb_object_map_update_v1")
+            return f(object_handle, name, key, key_bytes, value, value_bytes, flags)
+        except e:
+            raise LmbError(GENERIC_OP_MAP_UPDATE, GENERIC_DOMAIN_BRIDGE,
+                           ENOSYS, "unresolved lmb_object_map_update_v1")
+
+    def program_test_run(
+        mut self,
+        object_handle: UInt64,
+        name: ImmPointer[NameV1, _],
+        options: ImmPointer[TestOptionsV1, _],
+        result: MutPointer[TestResultV1, _],
+    ) raises LmbError -> Int32:
+        try:
+            var f = self._handle.get_function[Int32]("lmb_program_test_run_v1")
+            return f(object_handle, name, options, result)
+        except e:
+            raise LmbError(GENERIC_OP_TEST_RUN, GENERIC_DOMAIN_BRIDGE,
+                           ENOSYS, "unresolved lmb_program_test_run_v1")
+
     def close_object(
         mut self, handle: MutPointer[UInt64, _]
     ) raises LmbError -> Int32:
