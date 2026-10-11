@@ -42,6 +42,30 @@ consumer, clean-room negatives), the demo runner, and
 unprivileged self-tests. A skipped privileged suite is
 reported as skipped, never as success.
 
+## Generic object checkpoint
+
+The additive generic interface implements twelve operations: object
+open/configure/load/program-info/map-info/close/release, generic
+diagnostic retrieval, and native view ref/unref/generation/check.
+The original eleven session operations, their symbol versions and
+SONAME are preserved.
+
+Host tests exercise real pinned libbpf parsing of ringless, multi-program,
+map-free and BTF-bearing objects, malformed ELF and custom BTF failures,
+copied inputs, partial allocation failures, signed errors, retained views,
+parent moves/releases, generation changes and stable FD counts. Native
+load tests intercept the load boundary with a controlled failure before
+kernel work; that result does not establish load support. Mojo owners
+and views use one shared library handle and move-only ownership.
+
+Run `tools/test native --host-only` and `tools/test mojo --host-only`
+for the explicit host scope. Omitted runtime cases are reported
+`NOT_RUN` and are excluded from their pass counts. The default suites
+keep their runtime checks. Successful generic load, loaded map geometry,
+tracing-target configuration and their target/platform evidence remain
+unqualified. Generic map operations, program test-run, links and buffers
+are not implemented by this checkpoint.
+
 ## Out of scope
 
 A general binding generator, dynamic plugins, automatic

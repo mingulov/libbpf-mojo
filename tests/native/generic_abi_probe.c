@@ -2375,6 +2375,13 @@ int main(int argc, char **argv) {
     }
     if (part_a(argv[1]) != 0)
         return 2;
+    const char *host_only = getenv("LMB_HOST_ONLY");
+    if (host_only != NULL && strcmp(host_only, "1") == 0) {
+        printf("NOT_RUN generic-behavior: host-only scope\n");
+        printf("probe: Part A %d ok, %d skipped, %d failed; "
+               "Part B NOT_RUN\n", oks, skips, failures);
+        return failures ? 1 : 0;
+    }
     bpath = getenv("LMB_GENERIC_LIB");
     if (bpath == NULL || bpath[0] == '\0')
         bpath = argv[1];

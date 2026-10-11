@@ -602,7 +602,10 @@ program find/type/attach-type/insn-count/autoload/log
 getters and setters, pre-load attach-target setting, map
 geometry and element lookup/update, test-run, tracepoint
 attach, link destroy, ring-buffer new/poll/consume/epoll/free,
-CPU counting, error decoding, and print silencing.
+CPU counting, error decoding, print silencing, and BTF parse/free
+for eager custom-BTF path validation. The pinned object-open API
+copies that path without parsing it; the bridge parses it before
+opening so invalid custom BTF fails at the contracted open boundary.
 
 Forwarding rules are frozen. Option structs passed upstream
 (`bpf_object_open_opts`, `bpf_test_run_opts`) are

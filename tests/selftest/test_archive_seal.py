@@ -32,15 +32,26 @@ def check_fails(root, sealed):
 
 
 def ignore_env_dirs(path, names):
-    """copytree ignore: environment dirs, never same-named files."""
+    """Exclude Git metadata and environment dirs; retain ordinary files."""
     skipped = {".git", ".pixi", "build", "build-san", "dist",
                "__pycache__", ".pytest_cache", ".mypy_cache"}
     return [name for name in names
-            if name in skipped
-            and os.path.isdir(os.path.join(path, name))]
+            if name == ".git" or (name in skipped
+            and os.path.isdir(os.path.join(path, name)))]
 
 
 def main():
+    # A linked worktree stores .git as a file. Other files with
+    # environment-directory names remain ordinary source inputs.
+    with tempfile.TemporaryDirectory(prefix="seal-ignore-") as fixture:
+        for name in (".git", "build", ".pixi"):
+            with open(os.path.join(fixture, name), "w", encoding="utf-8") as handle:
+                handle.write("file\n")
+        os.mkdir(os.path.join(fixture, "dist"))
+        ignored = ignore_env_dirs(fixture, [".git", "build", ".pixi", "dist"])
+        if set(ignored) != {".git", "dist"}:
+            return "copy exclusion mishandles Git files or ordinary source files"
+
     # 1. Both modes deterministic over the live checkout.
     git_once = provenance.source_manifest(ROOT, "git")
     git_twice = provenance.source_manifest(ROOT, "git")

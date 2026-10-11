@@ -7,7 +7,7 @@
 # Assembles dist/libbpf-mojo-<version>.tar.gz from a tools/build tree:
 # the versioned bridge library, the Mojo runtime libraries the
 # example binaries need, the tracepoint example (Mojo collector, C
-# reference consumer, trigger, BPF object), the public C header,
+# reference consumer, trigger, BPF object), the public C headers,
 # the importable Mojo wrapper sources, third-party redistribution
 # notices, a package-rooted demo runner, a README, and a
 # MANIFEST.json with bridge/BPF/build identities plus per-file
@@ -122,6 +122,7 @@ sys.exit("no version in pixi.toml")
         "$ROOT/src/libbpf_mojo/_ffi.mojo" \
         "$ROOT/src/libbpf_mojo/batch.mojo" \
         "$ROOT/src/libbpf_mojo/error.mojo" \
+        "$ROOT/src/libbpf_mojo/object.mojo" \
         "$ROOT/src/libbpf_mojo/session.mojo" \
         "$stage/mojo/libbpf_mojo/" || return 1
     cp "$build/examples/tracepoint_main" \
@@ -129,7 +130,9 @@ sys.exit("no version in pixi.toml")
         "$build/examples/probe.bpf.o" \
         "$build/examples/reference_consumer" \
         "$stage/examples/" || return 1
-    cp "$ROOT/native/include/libbpf_mojo.h" "$stage/include/" || return 1
+    cp "$ROOT/native/include/libbpf_mojo.h" \
+        "$ROOT/native/include/libbpf_mojo_generic.h" \
+        "$stage/include/" || return 1
     cp "$ROOT/examples/tracepoint/run-tracepoint.sh" "$stage/" || return 1
     cp "$ROOT/LICENSE" "$stage/" || return 1
     mkdir -p "$stage/LICENSES" || return 1
@@ -181,7 +184,24 @@ EOF
 
 Minimal eBPF collection bridge: Mojo session ownership over a small
 C/libbpf ABI, plus a tracepoint example that reconciles 128 real
-observations.
+observations. The additive generic object interface opens and configures
+ringless ELF objects and provides retained metadata views.
+
+## Use generic objects
+
+Import \`Object\` from \`libbpf_mojo.object\` and open caller-provided ELF
+bytes with \`Object.open\`. Object and view ownership are move-only;
+views retain the object and its library until they close. Explicit object
+close reports BUSY while views exist; release drops the external owner.
+Opening and inspecting program metadata need no BPF privilege. Loading
+and loaded map metadata require an appropriate runtime environment and
+have not been qualified by the host-only ownership tests.
+
+Build a consumer with the pinned Mojo 1.1.0 compiler and
+\`mojo build -I <package>/mojo\`. Run the compiled consumer with
+\`LD_LIBRARY_PATH=<package>/lib\` and \`LMB_NATIVE_LIB\` pointing at
+\`<package>/lib/libbpf_mojo.so.1\`. Compiled consumers use the bundled
+runtime libraries without a compiler or Pixi at runtime.
 
 ## Run the example
 
@@ -207,6 +227,9 @@ short window, 77 without privilege, 1 on failure.
   \`reference_consumer\` (C consumer of the identical object),
   \`tracepoint_trigger\` (workload), \`probe.bpf.o\` (BPF object).
 - \`include/libbpf_mojo.h\`: the native ABI v1 header.
+- \`include/libbpf_mojo_generic.h\`: the additive generic object ABI
+  declarations; object ownership operations are implemented, while
+  later map access, test-run, link, and ring operations remain optional.
 - \`mojo/libbpf_mojo/\`: importable Mojo wrapper sources. Build
   a consumer with \`mojo build -I <package>/mojo\`, then run it
   with \`LD_LIBRARY_PATH=<package>/lib\` and \`LMB_NATIVE_LIB\`

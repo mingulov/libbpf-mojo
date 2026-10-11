@@ -2,7 +2,9 @@
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 # libbpf-mojo test runner.
 #
-# Usage: tools/test <suite> | tools/test --help
+# Usage: tools/test <suite> [--host-only] | tools/test --help
+# --host-only excludes live kernel cases before any privilege probe.
+# Omitted cases are NOT_RUN and cannot qualify kernel behavior.
 #
 # Implemented suites: native, mojo, live-tracepoint, cleanup, package,
 # package-consumer, source-export, runner, selftest, provenance. The runner suite
@@ -37,7 +39,14 @@ run_native() {
         exit 2
     fi
     echo "+ ctest in $BUILD_DIR" >&2
-    (cd "$ROOT/$BUILD_DIR" && ctest --output-on-failure)
+    if [ "${LMB_HOST_ONLY:-0}" = 1 ]; then
+        echo "test: host-only scope; kernel qualification remains NOT_RUN" >&2
+        echo "NOT_RUN native: poll_semantics attach_rollback map_access generic_abi_probe.PartB" >&2
+        (cd "$ROOT/$BUILD_DIR" && ctest --output-on-failure \
+            -E '^(poll_semantics|attach_rollback|map_access)$')
+    else
+        (cd "$ROOT/$BUILD_DIR" && ctest --output-on-failure)
+    fi
 }
 
 # Sets the MOJO array to the pinned-compiler invocation. Builds the
@@ -58,6 +67,10 @@ mojo_setup() {
 }
 
 run_mojo() {
+    if [ "${LMB_HOST_ONLY:-0}" = 1 ]; then
+        echo "test: host-only scope; kernel qualification remains NOT_RUN" >&2
+        echo "NOT_RUN mojo: test_load_valid_branches_privilege" >&2
+    fi
     native_lib="$ROOT/$BUILD_DIR/libbpf_mojo.so.1"
     fake_lib="$ROOT/$BUILD_DIR/liblmb_testfake.so"
     stub_lib="$ROOT/$BUILD_DIR/liblmb_stub.so"
@@ -73,6 +86,8 @@ run_mojo() {
     export LMB_TESTFAKE_LIB="$fake_lib"
     export LMB_STUB_LIB="$stub_lib"
     export LMB_FIXTURE="$fixture"
+    export LMB_GENERIC_FIXTURE="$ROOT/$BUILD_DIR/fixtures/generic_object.bpf.o"
+    export LMB_GENERIC_NOMAP_FIXTURE="$ROOT/$BUILD_DIR/fixtures/generic_nomap.bpf.o"
     failed=0
     count=0
     for t in "$ROOT"/tests/mojo/test_*.mojo; do
@@ -140,6 +155,14 @@ run_live() {
 if [ $# -eq 0 ]; then
     usage >&2
     exit 2
+fi
+if [ $# -eq 2 ] && [ "$2" = --host-only ]; then
+    case "$1" in
+        native|mojo) ;;
+        *) echo "test: --host-only applies only to native or mojo" >&2; exit 2 ;;
+    esac
+    export LMB_HOST_ONLY=1
+    set -- "$1"
 fi
 if [ $# -gt 1 ]; then
     echo "test: too many arguments" >&2

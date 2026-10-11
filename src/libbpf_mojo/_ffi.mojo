@@ -635,3 +635,221 @@ struct GenericLib(Movable):
             return True
         except e:
             return False
+
+    def require_object(mut self) raises LmbError:
+        """Require only the object slice before acquiring an owner."""
+        var names = List[String]()
+        names.append(String("lmb_object_open_v1"))
+        names.append(String("lmb_object_configure_program_v1"))
+        names.append(String("lmb_object_load_v1"))
+        names.append(String("lmb_object_program_info_v1"))
+        names.append(String("lmb_object_map_info_v1"))
+        names.append(String("lmb_object_close_v1"))
+        names.append(String("lmb_object_release_v1"))
+        names.append(String("lmb_generic_last_error_v1"))
+        names.append(String("lmb_object_ref_v1"))
+        names.append(String("lmb_object_unref_v1"))
+        names.append(String("lmb_object_gen_v1"))
+        names.append(String("lmb_object_gen_check_v1"))
+        for name in names:
+            if not self.has_symbol(name.copy()):
+                raise LmbError(
+                    GENERIC_OP_OBJECT_OPEN,
+                    GENERIC_DOMAIN_BRIDGE,
+                    ENOSYS,
+                    String("incomplete generic object library: ") + name,
+                )
+
+    def open_object(
+        mut self,
+        elf: ImmPointer[UInt8, _],
+        elf_len: UInt64,
+        opts: ImmPointer[ObjectOptionsV1, _],
+        handle_out: MutPointer[UInt64, _],
+    ) raises LmbError -> Int32:
+        try:
+            var f = self._handle.get_function[Int32](
+                String("lmb_object_open_v1")
+            )
+            return f(elf, elf_len, opts, handle_out)
+        except e:
+            raise LmbError(
+                GENERIC_OP_OBJECT_OPEN,
+                GENERIC_DOMAIN_BRIDGE,
+                ENOSYS,
+                String("unresolved lmb_object_open_v1"),
+            )
+
+    def configure_program(
+        mut self, object_handle: UInt64, opts: ImmPointer[ProgramOptionsV1, _]
+    ) raises LmbError -> Int32:
+        try:
+            var f = self._handle.get_function[Int32](
+                String("lmb_object_configure_program_v1")
+            )
+            return f(object_handle, opts)
+        except e:
+            raise LmbError(
+                GENERIC_OP_PROGRAM_CONFIGURE,
+                GENERIC_DOMAIN_BRIDGE,
+                ENOSYS,
+                String("unresolved lmb_object_configure_program_v1"),
+            )
+
+    def load_object(mut self, object_handle: UInt64) raises LmbError -> Int32:
+        try:
+            var f = self._handle.get_function[Int32](
+                String("lmb_object_load_v1")
+            )
+            return f(object_handle)
+        except e:
+            raise LmbError(
+                GENERIC_OP_OBJECT_LOAD,
+                GENERIC_DOMAIN_BRIDGE,
+                ENOSYS,
+                String("unresolved lmb_object_load_v1"),
+            )
+
+    def program_info(
+        mut self,
+        object_handle: UInt64,
+        name: ImmPointer[NameV1, _],
+        result: MutPointer[ProgramInfoV1, _],
+    ) raises LmbError -> Int32:
+        try:
+            var f = self._handle.get_function[Int32](
+                String("lmb_object_program_info_v1")
+            )
+            return f(object_handle, name, result)
+        except e:
+            raise LmbError(
+                GENERIC_OP_PROGRAM_INFO,
+                GENERIC_DOMAIN_BRIDGE,
+                ENOSYS,
+                String("unresolved lmb_object_program_info_v1"),
+            )
+
+    def object_map_info(
+        mut self,
+        object_handle: UInt64,
+        name: ImmPointer[NameV1, _],
+        result: MutPointer[MapInfoV1, _],
+    ) raises LmbError -> Int32:
+        try:
+            var f = self._handle.get_function[Int32](
+                String("lmb_object_map_info_v1")
+            )
+            return f(object_handle, name, result)
+        except e:
+            raise LmbError(
+                GENERIC_OP_MAP_INFO,
+                GENERIC_DOMAIN_BRIDGE,
+                ENOSYS,
+                String("unresolved lmb_object_map_info_v1"),
+            )
+
+    def close_object(
+        mut self, handle: MutPointer[UInt64, _]
+    ) raises LmbError -> Int32:
+        try:
+            var f = self._handle.get_function[Int32](
+                String("lmb_object_close_v1")
+            )
+            return f(handle)
+        except e:
+            raise LmbError(
+                GENERIC_OP_OBJECT_CLOSE,
+                GENERIC_DOMAIN_BRIDGE,
+                ENOSYS,
+                String("unresolved lmb_object_close_v1"),
+            )
+
+    def release_object(mut self, handle: MutPointer[UInt64, _]) raises LmbError:
+        try:
+            var f = self._handle.get_function[NoneType](
+                String("lmb_object_release_v1")
+            )
+            f(handle)
+        except e:
+            raise LmbError(
+                GENERIC_OP_OBJECT_CLOSE,
+                GENERIC_DOMAIN_BRIDGE,
+                ENOSYS,
+                String("unresolved lmb_object_release_v1"),
+            )
+
+    def generic_last_error(
+        mut self, result: MutPointer[GenericErrorV1, _]
+    ) raises LmbError -> Int32:
+        try:
+            var f = self._handle.get_function[Int32](
+                String("lmb_generic_last_error_v1")
+            )
+            return f(result)
+        except e:
+            raise LmbError(
+                GENERIC_OP_NONE,
+                GENERIC_DOMAIN_BRIDGE,
+                ENOSYS,
+                String("unresolved lmb_generic_last_error_v1"),
+            )
+
+    def object_ref(mut self, object_handle: UInt64) raises LmbError -> Int32:
+        try:
+            var f = self._handle.get_function[Int32](
+                String("lmb_object_ref_v1")
+            )
+            return f(object_handle)
+        except e:
+            raise LmbError(
+                GENERIC_OP_VIEW_REF,
+                GENERIC_DOMAIN_BRIDGE,
+                ENOSYS,
+                String("unresolved lmb_object_ref_v1"),
+            )
+
+    def object_unref(mut self, object_handle: UInt64) raises LmbError:
+        try:
+            var f = self._handle.get_function[NoneType](
+                String("lmb_object_unref_v1")
+            )
+            f(object_handle)
+        except e:
+            raise LmbError(
+                GENERIC_OP_VIEW_REF,
+                GENERIC_DOMAIN_BRIDGE,
+                ENOSYS,
+                String("unresolved lmb_object_unref_v1"),
+            )
+
+    def object_generation(
+        mut self, object_handle: UInt64, generation: MutPointer[UInt64, _]
+    ) raises LmbError -> Int32:
+        try:
+            var f = self._handle.get_function[Int32](
+                String("lmb_object_gen_v1")
+            )
+            return f(object_handle, generation)
+        except e:
+            raise LmbError(
+                GENERIC_OP_VIEW_GEN,
+                GENERIC_DOMAIN_BRIDGE,
+                ENOSYS,
+                String("unresolved lmb_object_gen_v1"),
+            )
+
+    def object_generation_check(
+        mut self, object_handle: UInt64, expected: UInt64
+    ) raises LmbError -> Int32:
+        try:
+            var f = self._handle.get_function[Int32](
+                String("lmb_object_gen_check_v1")
+            )
+            return f(object_handle, expected)
+        except e:
+            raise LmbError(
+                GENERIC_OP_VIEW_CHECK,
+                GENERIC_DOMAIN_BRIDGE,
+                ENOSYS,
+                String("unresolved lmb_object_gen_check_v1"),
+            )

@@ -21,6 +21,39 @@ outlive their owner. One calling thread owns a handle;
 cross-handle concurrency is unsupported until separately
 validated.
 
+## Generic object and view lifecycle
+
+The additive generic API parses ELF eagerly and opens valid objects
+without a ring. It copies retained ELF bytes, object names, custom-BTF
+path bytes and configuration. Program configuration is named and runs
+before a load attempt. Loading is explicit and never attaches. A failed
+load preserves its signed libbpf error and leaves metadata and teardown
+usable; a second load is rejected. Loaded map metadata requires a
+successful load.
+
+`Object` is move-only. Its `program(name)` and `map(name)` methods
+return move-only `ProgramView` and `MapView` owners. Views retain a
+native object reference and share the same dynamic library handle.
+Moving or releasing the parent preserves those references. Each view
+captures the configuration generation; successful configuration
+invalidates older views, whose metadata calls fail with `BRIDGE/-ESTALE`
+without writing outputs. A map view additionally requires successful
+loading before its metadata can be read.
+
+Explicit `Object.close()` with a live view fails with `BRIDGE/-EBUSY`
+and preserves the usable owner. Close without views nulls its handle.
+`Object.release()` and the destructor drop the external reference even
+with views alive. The last reference destroys the native state once.
+Closing a view releases its reference and is repeatable. Native teardown
+runs before the last shared library handle is dropped.
+
+Generic diagnostics are independent of session diagnostics. Successful
+generic calls clear the generic record; error retrieval and destructor
+release preserve it. Read an error immediately on the calling thread.
+The [generic ABI contract](generic-abi-v1.md) defines exact output
+validity and version checks. Host tests validate parsing and ownership;
+they do not qualify successful kernel loading, attachment or map access.
+
 ## Attach and teardown
 
 `lmb_attach` is an explicit transaction: every required site

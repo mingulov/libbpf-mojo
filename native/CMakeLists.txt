@@ -24,13 +24,17 @@ endif()
 include(ExternalProject)
 set(LIBBPF_URL "https://github.com/libbpf/libbpf/archive/refs/tags/v1.7.0.tar.gz")
 set(LIBBPF_SHA256 "7ab5feffbf78557f626f2e3e3204788528394494715a30fc2070fcddc2051b7b")
+set(LIBBPF_BUILD_FLAGS "-g -O2 -Werror -Wall -std=gnu89 -fPIC")
+if(LMB_SANITIZE)
+  string(APPEND LIBBPF_BUILD_FLAGS " -fsanitize=address,undefined -fno-omit-frame-pointer")
+endif()
 ExternalProject_Add(libbpf_external
   URL ${LIBBPF_URL}
   URL_HASH SHA256=${LIBBPF_SHA256}
   CONFIGURE_COMMAND ""
   # Static objects link into our shared library, so they need -fPIC.
   BUILD_COMMAND ${CMAKE_COMMAND} -E env
-    "CFLAGS=-g -O2 -Werror -Wall -std=gnu89 -fPIC"
+    "CFLAGS=${LIBBPF_BUILD_FLAGS}"
     make -C <SOURCE_DIR>/src -j
   INSTALL_COMMAND make -C <SOURCE_DIR>/src install PREFIX=<BINARY_DIR>/root
   BUILD_IN_SOURCE TRUE
@@ -60,10 +64,12 @@ set(LMB_SOURCES
   src/attach.c
   src/ring.c
   src/errors.c
+  src/object.c
 )
 
 # Product shared library. SONAME carries ABI major 1. Only the eleven
-# public lmb_* operations are exported; the bundled libbpf and all
+# original operations and implemented additive lmb_* operations are
+# exported; the bundled libbpf and all
 # bridge internals stay local (also defeating PLT interposition).
 add_library(lmb SHARED ${LMB_SOURCES})
 set_target_properties(lmb PROPERTIES
@@ -104,6 +110,29 @@ add_custom_command(
 add_custom_target(bpf_fixtures ALL
   DEPENDS ${CMAKE_BINARY_DIR}/fixtures/ring_test.bpf.o)
 add_dependencies(bpf_fixtures libbpf_external)
+
+set(GENERIC_FIXTURE_OUTPUTS)
+foreach(variant generic_object generic_nomap generic_tracing)
+  set(fixture_flags)
+  if(variant STREQUAL "generic_nomap")
+    list(APPEND fixture_flags -DGENERIC_NO_MAP)
+  elseif(variant STREQUAL "generic_tracing")
+    list(APPEND fixture_flags -DGENERIC_TRACING)
+  endif()
+  add_custom_command(
+    OUTPUT ${CMAKE_BINARY_DIR}/fixtures/${variant}.bpf.o
+    COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/fixtures
+    COMMAND ${CLANG_EXE} --target=bpf -O2 -g -Wall ${fixture_flags}
+      -I${LIBBPF_ROOT}/include
+      -I/usr/include/${CMAKE_SYSTEM_PROCESSOR}-linux-gnu
+      -c ${LMB_ROOT}/tests/fixtures/bpf/generic_object.bpf.c
+      -o ${CMAKE_BINARY_DIR}/fixtures/${variant}.bpf.o
+    DEPENDS ${LMB_ROOT}/tests/fixtures/bpf/generic_object.bpf.c
+    VERBATIM)
+  list(APPEND GENERIC_FIXTURE_OUTPUTS ${CMAKE_BINARY_DIR}/fixtures/${variant}.bpf.o)
+endforeach()
+add_custom_target(generic_fixtures ALL DEPENDS ${GENERIC_FIXTURE_OUTPUTS})
+add_dependencies(generic_fixtures libbpf_external)
 
 # Tracepoint example: probe object, trigger, and C reference
 # consumer. Driven by tests/live/*.py, not by CTest.
@@ -163,10 +192,28 @@ lmb_test(poll_semantics)
 lmb_test(attach_rollback)
 lmb_test(map_access)
 
+# Parse and inspect real libbpf objects. The load boundary is intercepted
+# with a fixed failure and any unexpected syscall aborts the host test.
+add_executable(test_generic_object ${LMB_ROOT}/tests/native/generic_object.c)
+target_include_directories(test_generic_object PRIVATE
+  ${CMAKE_CURRENT_SOURCE_DIR}/include ${LIBBPF_ROOT}/include)
+target_link_libraries(test_generic_object PRIVATE lmb_static)
+target_link_options(test_generic_object PRIVATE
+  "LINKER:--wrap=bpf_object__load" "LINKER:--wrap=bpf_object__close"
+  "LINKER:--wrap=bpf_object__open_mem" "LINKER:--wrap=bpf_program__set_attach_target"
+  "LINKER:--wrap=malloc" "LINKER:--wrap=calloc" "LINKER:--wrap=syscall")
+add_dependencies(test_generic_object generic_fixtures)
+add_test(NAME generic_object COMMAND test_generic_object
+  ${CMAKE_BINARY_DIR}/fixtures/generic_object.bpf.o
+  ${CMAKE_BINARY_DIR}/fixtures/generic_nomap.bpf.o
+  ${CMAKE_BINARY_DIR}/fixtures/generic_tracing.bpf.o)
+
 # Generic ABI contract probe: dlsym-based acceptance battery for
 # docs/generic-abi-v1.md. Takes the candidate shared library plus the
-# fixture object; Part A always runs, Part B SKIP-reports until the
-# generic implementation lands.
+# fixture object; Part A always runs. Host-only selection explicitly
+# omits Part B before any optional backend, privilege probe, or load.
+# In the default scope Part B SKIP-reports until the full generic
+# implementation lands.
 add_executable(test_generic_abi_probe
   ${LMB_ROOT}/tests/native/generic_abi_probe.c)
 target_include_directories(test_generic_abi_probe PRIVATE

@@ -7,6 +7,15 @@ The initial scope is object loading, explicit attachment, bounded event batches,
 
 Status: 0.1.0 supports ABI v1 (object loading, explicit attachment, bounded event batches, map access, errors, owned cleanup) with importable Mojo wrappers. MemVeil is the first consumer. This is not an upstream libbpf project or a Mojo-to-eBPF compiler.
 
+The additive generic object interface implements ringless ELF open,
+named pre-load program configuration, program metadata, retained views
+and deterministic ownership. Import `Object`, `ObjectOptions`,
+`ProgramView` and `MapView` from `libbpf_mojo.object`; the native contract
+is [generic ABI v1](docs/generic-abi-v1.md). Host ownership tests cover
+these operations; generic live loading and loaded map metadata still
+require target qualification. Generic map access, test-run, links and
+ring consumers are separate interfaces awaiting implementation.
+
 ## Build, test, and package
 
 Pinned Mojo 1.1.0 toolchain via pixi plus system C tooling;
@@ -16,6 +25,8 @@ see `docs/build.md` and `toolchain.lock.json`.
     ./tools/test --help                              # list suites
     ./tools/test native                              # C contracts
     ./tools/test mojo                                # Mojo ownership
+    ./tools/test native --host-only                  # no kernel probes
+    ./tools/test mojo --host-only                    # no live-load case
     ./tools/test package-consumer                    # tarball serves a consumer
     ./tools/package                                  # release tarball + MANIFEST
 

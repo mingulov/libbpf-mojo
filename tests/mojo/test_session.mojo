@@ -5,6 +5,7 @@
 Every test runs without privileges except the valid-load branch,
 which follows the independent privilege probe deterministically.
 """
+from std.os import getenv
 from std.sys import exit
 from std.testing import TestSuite, assert_equal, assert_false, assert_true
 
@@ -246,6 +247,9 @@ def test_load_garbage() raises:
 
 
 def test_load_valid_branches_privilege() raises:
+    if getenv("LMB_HOST_ONLY") == "1":
+        print("NOT_RUN test_load_valid_branches_privilege: host-only scope")
+        return
     var elf = read_fixture_elf()
     var fake = TestFake()
     var priv = fake.has_privilege()
@@ -508,7 +512,10 @@ def run() raises -> Int:
     suite.test[test_close_then_use]()
     suite.test[test_poll_range_errors]()
     suite.test[test_load_garbage]()
-    suite.test[test_load_valid_branches_privilege]()
+    if getenv("LMB_HOST_ONLY") == "1":
+        print("NOT_RUN test_load_valid_branches_privilege: host-only scope")
+    else:
+        suite.test[test_load_valid_branches_privilege]()
     suite.test[test_attach_unloaded]()
     suite.test[test_attach_empty]()
     suite.test[test_map_unloaded]()
