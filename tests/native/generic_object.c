@@ -10,6 +10,7 @@
 #include <string.h>
 #include <sys/syscall.h>
 
+#include <bpf/bpf.h>
 #include <bpf/libbpf.h>
 #include "libbpf_mojo_generic.h"
 
@@ -34,6 +35,70 @@ static unsigned allocation_hit;
 static const uint8_t *borrowed_elf, *borrowed_name, *borrowed_btf, *borrowed_target;
 #define CHECK(c) do { checks++; if (!(c)) { failures++; \
     fprintf(stderr, "FAIL line %u: %s\n", __LINE__, #c); } } while (0)
+
+enum load_case {
+    LOAD_LEGACY_FAILURE, LOAD_MIXED, LOAD_BEFORE_PROGRAMS, LOAD_AFTER_PROGRAMS,
+    LOAD_RETRY_SUCCESS, LOAD_RETRY_FAILURE, LOAD_UNKNOWN_BUFFER,
+    LOAD_RECORD_RETRY_SUCCESS
+};
+static enum load_case load_case;
+static struct lmb_object *nested_object;
+static const struct bpf_insn *expected_insns;
+static size_t expected_insn_count;
+static char *expected_log_buffer;
+static size_t expected_log_size;
+static unsigned expected_log_level, scripted_at, scripted_count;
+static int record_retry;
+static int scripted_results[2];
+static const char *scripted_log;
+static unsigned mock_program_requests, mock_memcg_probes, allow_memcg_probe;
+static const char first_success[] = "first verified successfully\n";
+static const char first_failure[] = "first verifier failure\n";
+static const char second_failure[] = "second verifier failure\n";
+static const char second_success[] = "second verified successfully\n";
+
+static void program_attempt(struct bpf_program *prog, const char *log,
+                            int terminal, int retry, char *alternate_buffer,
+                            size_t alternate_size) {
+    struct bpf_prog_load_opts opts = {0};
+    uint32_t function_info[4] = {0};
+    size_t size = 0;
+    const char *buffer = bpf_program__log_buf(prog, &size);
+    opts.sz = sizeof(opts);
+    opts.log_buf = alternate_buffer ? alternate_buffer : (char *)buffer;
+    opts.log_size = (uint32_t)(alternate_buffer ? alternate_size : size);
+    opts.log_level = alternate_buffer ? 1 : bpf_program__log_level(prog);
+    opts.attempts = 3;
+    if (retry == 2) {
+        opts.func_info = function_info;
+        opts.func_info_cnt = 1;
+        opts.func_info_rec_size = sizeof(function_info);
+    }
+    expected_insns = bpf_program__insns(prog);
+    expected_insn_count = bpf_program__insn_cnt(prog);
+    expected_log_buffer = opts.log_level ? opts.log_buf : NULL;
+    expected_log_size = opts.log_level ? opts.log_size : 0;
+    expected_log_level = opts.log_level;
+    scripted_log = log;
+    scripted_at = 0;
+    scripted_count = retry ? 2 : 1;
+    scripted_results[0] = retry == 2 ? -E2BIG : retry ? -EAGAIN : terminal;
+    scripted_results[1] = terminal;
+    record_retry = retry == 2;
+    /* A positive scripted result is never assigned to a program FD and
+     * represents no kernel object. The real pinned API handles retries. */
+    errno = ENOTTY;
+    int code = bpf_prog_load(bpf_program__type(prog), NULL, "GPL",
+                            expected_insns, expected_insn_count, &opts);
+    CHECK(code == terminal);
+    CHECK(errno == (terminal < 0 ? -terminal : retry == 2 ? E2BIG : retry ? EAGAIN : ENOTTY));
+    CHECK(scripted_at == scripted_count);
+    CHECK(opts.log_buf == (alternate_buffer ? alternate_buffer : (char *)buffer) &&
+          opts.log_size == (alternate_buffer ? alternate_size : size));
+    CHECK(!record_retry || (opts.func_info == function_info &&
+                           opts.func_info_rec_size == sizeof(function_info)));
+    expected_insns = NULL;
+}
 
 void *__real_malloc(size_t n);
 void *__real_calloc(size_t count, size_t n);
@@ -77,6 +142,36 @@ void __wrap_bpf_object__close(struct bpf_object *obj) {
 int __wrap_bpf_object__load(struct bpf_object *obj) {
     struct bpf_program *prog;
     load_calls++;
+    if (nested_object) {
+        struct lmb_object *nested = nested_object;
+        nested_object = NULL;
+        unsigned before = load_calls;
+        CHECK(lmb_object_load_v1(nested) == -EINVAL);
+        CHECK(load_calls == before);
+    }
+    if (load_case == LOAD_BEFORE_PROGRAMS) return -ENOMEM;
+    if (load_case != LOAD_LEGACY_FAILURE) {
+        struct bpf_program *first = bpf_object__find_program_by_name(obj, "first");
+        struct bpf_program *second = bpf_object__find_program_by_name(obj, "second");
+        CHECK(first && second);
+        if (!first || !second) abort();
+        if (load_case == LOAD_RETRY_FAILURE) {
+            program_attempt(first, first_failure, -133, 1, NULL, 0);
+            return -133;
+        }
+        if (load_case == LOAD_UNKNOWN_BUFFER) {
+            char unrelated[128] = {0};
+            program_attempt(first, first_failure, -133, 0,
+                            unrelated, sizeof(unrelated));
+            return -133;
+        }
+        program_attempt(first, first_success, 42,
+                        load_case == LOAD_RECORD_RETRY_SUCCESS ? 2 :
+                        load_case == LOAD_RETRY_SUCCESS, NULL, 0);
+        program_attempt(second, load_case == LOAD_AFTER_PROGRAMS ? second_success : second_failure,
+                        load_case == LOAD_AFTER_PROGRAMS ? 43 : -133, 0, NULL, 0);
+        return load_case == LOAD_AFTER_PROGRAMS ? -EIO : -133;
+    }
     bpf_object__for_each_program(prog, obj) {
         size_t size = 0;
         const char *buffer = bpf_program__log_buf(prog, &size);
@@ -92,6 +187,51 @@ int __wrap_bpf_object__load(struct bpf_object *obj) {
 /* Fail closed if host-only coverage accidentally reaches a BPF syscall. */
 long __real_syscall(long number, ...);
 long __wrap_syscall(long number, ...) {
+    if (number == SYS_bpf) {
+        va_list args;
+        va_start(args, number);
+        int command = va_arg(args, int);
+        union bpf_attr *attr = va_arg(args, union bpf_attr *);
+        unsigned size = va_arg(args, unsigned);
+        va_end(args);
+        /* Initialize libbpf's test-local memlock setting without touching
+         * RLIMIT_MEMLOCK. Its one feature probe is denied here, before any
+         * syscall. Every subsequent permitted request must match the
+         * explicit program script; unexpected requests remain fatal. */
+        if (allow_memcg_probe && command == BPF_PROG_LOAD && attr &&
+            attr->insn_cnt == 2 && !attr->log_buf && !attr->log_size) {
+            const struct bpf_insn *insns = (const void *)(uintptr_t)attr->insns;
+            CHECK(insns[0].code == (BPF_JMP | BPF_CALL) &&
+                  insns[0].imm == BPF_FUNC_ktime_get_coarse_ns &&
+                  insns[1].code == (BPF_JMP | BPF_EXIT));
+            mock_memcg_probes++; allow_memcg_probe = 0;
+            errno = EPERM;
+            return -1;
+        }
+        if (expected_insns && command == BPF_PROG_LOAD && attr &&
+            attr->insns == (uintptr_t)expected_insns &&
+            scripted_at < scripted_count) {
+            CHECK(size >= offsetof(union bpf_attr, log_size) + sizeof(attr->log_size));
+            CHECK(attr->insn_cnt == expected_insn_count);
+            CHECK(attr->log_buf == (uintptr_t)expected_log_buffer &&
+                  attr->log_size == expected_log_size && attr->log_level == expected_log_level);
+            if (record_retry) {
+                CHECK(attr->func_info_cnt == 1 && attr->func_info_rec_size == 16);
+                if (scripted_at == 0) attr->func_info_rec_size = 8;
+            }
+            if (expected_log_buffer && expected_log_size) {
+                size_t bytes = strlen(scripted_log) + 1;
+                if (bytes > expected_log_size) bytes = expected_log_size;
+                memcpy(expected_log_buffer, scripted_log, bytes);
+                attr->log_true_size = (uint32_t)strlen(scripted_log) + 1;
+            }
+            mock_program_requests++;
+            int result = scripted_results[scripted_at++];
+            if (result >= 0) return result;
+            errno = -result;
+            return -1;
+        }
+    }
     if (number == SYS_memfd_create) {
         va_list args;
         va_start(args, number);
@@ -100,7 +240,11 @@ long __wrap_syscall(long number, ...) {
         va_end(args);
         return __real_syscall(number, text, flags);
     }
-    if (number == SYS_bpf) bpf_calls++;
+    if (number == SYS_bpf) {
+        bpf_calls++;
+        fprintf(stderr, "FAIL unscripted BPF request: scenario=%u request=%u/%u feature_probe=%u\n",
+                load_case, scripted_at, scripted_count, allow_memcg_probe);
+    }
     fprintf(stderr, "FAIL unexpected syscall %ld\n", number);
     abort();
 }
@@ -366,6 +510,88 @@ static void load_failure(const uint8_t *elf, size_t size) {
     CHECK(lmb_object_load_v1(NULL) == -EINVAL);
 }
 
+static void expect_program_log(struct lmb_object *obj, const char *program,
+                               const char *expected, size_t retained) {
+    struct lmb_name_v1 n = name(program);
+    struct lmb_program_info_v1 p = info();
+    uint8_t log[130];
+    memset(log, 0xCC, sizeof(log));
+    p.log.ptr = log + 1; p.log.len = sizeof(log) - 2;
+    CHECK(lmb_object_program_info_v1(obj, &n, &p) == 0);
+    CHECK(p.log_actual == retained && p.log_truncated == 0);
+    CHECK(log[0] == 0xCC && log[sizeof(log) - 1] == 0xCC);
+    CHECK(!retained || !memcmp(log + 1, expected, retained));
+    CHECK(log[retained + 1] == 0xCC);
+    memset(log, 0xCC, sizeof(log));
+    p = info(); p.log.ptr = log + 1; p.log.len = 4;
+    CHECK(lmb_object_program_info_v1(obj, &n, &p) == 0);
+    CHECK(p.log_actual == retained && p.log_truncated == (retained > 4));
+    CHECK(log[0] == 0xCC && log[5] == 0xCC);
+    CHECK(!retained || !memcmp(log + 1, expected, retained < 4 ? retained : 4));
+}
+
+static void logging_modes(const uint8_t *elf, size_t size) {
+    /* The real pinned bpf_prog_load still executes inside the observer;
+     * only its syscall requests receive scripted results. No BPF syscall
+     * executes and the aggregate object load always returns a failure. */
+    for (unsigned mode = 0; mode < 3; mode++) {
+        for (enum load_case scenario = LOAD_MIXED; scenario <= LOAD_RECORD_RETRY_SUCCESS; scenario++) {
+            struct lmb_object_options_v1 o = options();
+            o.log_level = mode; o.log_capacity = 128;
+            struct lmb_object *obj = open_object(elf, size, &o);
+            load_case = scenario;
+            int expected_code = scenario == LOAD_BEFORE_PROGRAMS ? -ENOMEM :
+                                scenario == LOAD_AFTER_PROGRAMS ? -EIO : -133;
+            CHECK(lmb_object_load_v1(obj) == expected_code);
+            error_is(3, 2, expected_code);
+            int first_attempted = scenario != LOAD_BEFORE_PROGRAMS && scenario != LOAD_UNKNOWN_BUFFER;
+            int first_failed = scenario == LOAD_RETRY_FAILURE;
+            int second_attempted = first_attempted && !first_failed;
+            int second_failed = second_attempted && scenario != LOAD_AFTER_PROGRAMS;
+            const char *first_log = first_failed ? first_failure : first_success;
+            const char *second_log = second_failed ? second_failure : second_success;
+            size_t first_bytes = first_attempted && (mode == 2 || (mode == 1 && first_failed)) ? strlen(first_log) : 0;
+            size_t second_bytes = second_attempted && (mode == 2 || (mode == 1 && second_failed)) ? strlen(second_log) : 0;
+            expect_program_log(obj, "first", first_log, first_bytes);
+            expect_program_log(obj, "second", second_log, second_bytes);
+            CHECK(lmb_object_load_v1(obj) == -EINVAL);
+            CHECK(lmb_object_close_v1(&obj) == 0 && !obj);
+            printf("log mode=%u scenario=%u: expected first=%zu second=%zu aggregate=%d\n",
+                   mode, scenario, first_bytes, second_bytes, expected_code);
+        }
+        for (unsigned cap = 0; cap <= 8; cap += 8) {
+            struct lmb_object_options_v1 o = options();
+            o.log_level = mode; o.log_capacity = cap;
+            struct lmb_object *obj = open_object(elf, size, &o);
+            load_case = LOAD_MIXED;
+            CHECK(lmb_object_load_v1(obj) == -133);
+            error_is(3, 2, -133);
+            expect_program_log(obj, "first", first_success, mode == 2 ? cap : 0);
+            expect_program_log(obj, "second", second_failure, mode ? cap : 0);
+            CHECK(lmb_object_close_v1(&obj) == 0);
+        }
+        struct lmb_object_options_v1 o = options();
+        o.log_level = mode; o.log_capacity = 128;
+        struct lmb_object *outer = open_object(elf, size, &o);
+        struct lmb_object *nested = open_object(elf, size, &o);
+        nested_object = nested; load_case = LOAD_MIXED;
+        CHECK(lmb_object_load_v1(outer) == -133);
+        error_is(3, 2, -133);
+        expect_program_log(outer, "first", first_success, mode == 2 ? strlen(first_success) : 0);
+        expect_program_log(outer, "second", second_failure, mode ? strlen(second_failure) : 0);
+        CHECK(lmb_object_close_v1(&outer) == 0);
+        /* A nested refusal must leave the owner open for configuration
+         * and a later ordinary attempt after TLS restoration. */
+        struct lmb_program_options_v1 c = config("first");
+        CHECK(lmb_object_configure_program_v1(nested, &c) == 0);
+        load_case = LOAD_BEFORE_PROGRAMS;
+        CHECK(lmb_object_load_v1(nested) == -ENOMEM);
+        error_is(3, 2, -ENOMEM);
+        CHECK(lmb_object_close_v1(&nested) == 0);
+    }
+    load_case = LOAD_LEGACY_FAILURE;
+}
+
 static void copied_and_allocation_failures(const uint8_t *elf, size_t size,
                                           const char *btf_path) {
     struct lmb_object_options_v1 o = options();
@@ -456,6 +682,18 @@ int main(int argc, char **argv) {
     metadata_config(nomap, nomap_size);
     lifetime(elf, size);
     load_failure(elf, size);
+    {
+        /* bpf_prog_load checks attempts only after bump_rlimit_memlock.
+         * Disabling that automatic bump and intercepting its feature probe
+         * prevents host limit changes as well as BPF syscalls. */
+        struct bpf_prog_load_opts opts = {0};
+        opts.sz = sizeof(opts); opts.attempts = -1;
+        CHECK(libbpf_set_memlock_rlim(0) == 0);
+        allow_memcg_probe = 1;
+        CHECK(bpf_prog_load(BPF_PROG_TYPE_SOCKET_FILTER, NULL, "GPL", NULL, 0, &opts) == -EINVAL);
+        CHECK(mock_memcg_probes == 1 && !allow_memcg_probe);
+    }
+    logging_modes(elf, size);
     copied_and_allocation_failures(elf, size, argv[1]);
     diagnostics_independent();
     {
@@ -482,8 +720,9 @@ int main(int argc, char **argv) {
         lmb_object_unref_v1(view);
     }
     CHECK(fds() == baseline);
-    CHECK(load_calls == 1 && bpf_calls == 0);
+    CHECK(load_calls == 34 && bpf_calls == 0 && mock_program_requests == 57);
     free(elf); free(nomap); free(tracing);
-    printf("generic object: %u checks, %u failures; host BPF calls=%u\n", checks, failures, bpf_calls);
+    printf("generic object: %u checks, %u failures; host BPF calls=%u; intercepted program requests=%u, feature probes=%u\n",
+           checks, failures, bpf_calls, mock_program_requests, mock_memcg_probes);
     return failures ? 1 : 0;
 }

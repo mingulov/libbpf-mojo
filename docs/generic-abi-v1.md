@@ -603,7 +603,8 @@ getters and setters, pre-load attach-target setting, map
 geometry and element lookup/update, test-run, tracepoint
 attach, link destroy, ring-buffer new/poll/consume/epoll/free,
 CPU counting, error decoding, print silencing, and BTF parse/free
-for eager custom-BTF path validation. The pinned object-open API
+for eager custom-BTF path validation, plus `bpf_prog_load` forwarding
+to observe terminal per-program load results. The pinned object-open API
 copies that path without parsing it; the bridge parses it before
 opening so invalid custom BTF fails at the contracted open boundary.
 

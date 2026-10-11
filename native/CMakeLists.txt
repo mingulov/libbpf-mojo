@@ -78,7 +78,8 @@ set_target_properties(lmb PROPERTIES
   SOVERSION 1
   LINK_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/libbpf_mojo.map)
 target_link_options(lmb PRIVATE
-  "LINKER:--version-script,${CMAKE_CURRENT_SOURCE_DIR}/libbpf_mojo.map")
+  "LINKER:--version-script,${CMAKE_CURRENT_SOURCE_DIR}/libbpf_mojo.map"
+  "LINKER:--wrap=bpf_prog_load")
 target_include_directories(lmb PRIVATE
   include ${LIBBPF_ROOT}/include)
 target_link_libraries(lmb PRIVATE libbpf_static elf z)
@@ -92,6 +93,10 @@ set_target_properties(lmb_static PROPERTIES POSITION_INDEPENDENT_CODE ON)
 target_include_directories(lmb_static PRIVATE
   include ${LIBBPF_ROOT}/include)
 target_link_libraries(lmb_static PUBLIC libbpf_static elf z)
+# Keep the same terminal program-load observer when the bridge archive is
+# linked into test executables or the test-support shared library.
+target_link_options(lmb_static INTERFACE
+  "LINKER:--wrap=bpf_prog_load" "LINKER:--undefined=__wrap_bpf_prog_load")
 add_dependencies(lmb_static libbpf_external)
 
 # Owned C eBPF fixtures.
@@ -187,13 +192,30 @@ function(lmb_test name)
 endfunction()
 
 lmb_test(ring_framing)
+
+# Exercise the host selector with a link-time syscall guard. A regression
+# must fail before BPF execution, including the privilege probe.
+add_executable(test_ring_framing_host_guard
+  ${LMB_ROOT}/tests/native/ring_framing.c)
+target_compile_definitions(test_ring_framing_host_guard PRIVATE LMB_HOST_GUARD_TEST)
+target_include_directories(test_ring_framing_host_guard PRIVATE
+  include ${LMB_ROOT}/tests/native ${LIBBPF_ROOT}/include)
+target_link_libraries(test_ring_framing_host_guard PRIVATE lmb_static)
+target_link_options(test_ring_framing_host_guard PRIVATE "LINKER:--wrap=syscall")
+add_test(NAME ring_framing_host_guard COMMAND test_ring_framing_host_guard
+  ${CMAKE_BINARY_DIR}/fixtures/ring_test.bpf.o)
+set_tests_properties(ring_framing_host_guard PROPERTIES
+  WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+  ENVIRONMENT "LMB_HOST_ONLY=1;ASAN_OPTIONS=allocator_may_return_null=1")
+
 lmb_test(fake_source)
 lmb_test(poll_semantics)
 lmb_test(attach_rollback)
 lmb_test(map_access)
 
 # Parse and inspect real libbpf objects. The load boundary is intercepted
-# with a fixed failure and any unexpected syscall aborts the host test.
+# with failures and scripted program outcomes; every BPF syscall is
+# intercepted before execution and unexpected requests abort the test.
 add_executable(test_generic_object ${LMB_ROOT}/tests/native/generic_object.c)
 target_include_directories(test_generic_object PRIVATE
   ${CMAKE_CURRENT_SOURCE_DIR}/include ${LIBBPF_ROOT}/include)

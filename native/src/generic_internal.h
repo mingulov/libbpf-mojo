@@ -11,6 +11,7 @@ struct lmb_program_state {
     char *attach_target;
     char *log;
     size_t log_actual;
+    unsigned load_failed;
 };
 
 struct lmb_object {

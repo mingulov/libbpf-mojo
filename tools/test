@@ -41,9 +41,11 @@ run_native() {
     echo "+ ctest in $BUILD_DIR" >&2
     if [ "${LMB_HOST_ONLY:-0}" = 1 ]; then
         echo "test: host-only scope; kernel qualification remains NOT_RUN" >&2
-        echo "NOT_RUN native: poll_semantics attach_rollback map_access generic_abi_probe.PartB" >&2
+        echo "NOT_RUN native: poll_semantics attach_rollback map_access ring_framing.load-dual generic_abi_probe.PartB" >&2
+        # Run the guarded framing binary in place of its ordinary twin;
+        # it covers the same host checks without counting them twice.
         (cd "$ROOT/$BUILD_DIR" && ctest --output-on-failure \
-            -E '^(poll_semantics|attach_rollback|map_access)$')
+            -E '^(ring_framing|poll_semantics|attach_rollback|map_access)$')
     else
         (cd "$ROOT/$BUILD_DIR" && ctest --output-on-failure)
     fi

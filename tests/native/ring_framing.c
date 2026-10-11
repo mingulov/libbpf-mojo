@@ -1,9 +1,31 @@
 /* SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception */
 
-/* Unprivileged contract tests: framing constants, open validation,
- * lifecycle, stats, and error records. No BPF syscalls are expected to
- * succeed here; privileged steps must fail closed without crashing. */
+/* Contract tests: framing constants, open validation, lifecycle, stats,
+ * and error records. Explicit host mode omits the valid-fixture load
+ * and its privilege probe; the default suite retains that case. */
 #include "testutil.h"
+
+#ifdef LMB_HOST_GUARD_TEST
+#include <stdarg.h>
+#include <sys/syscall.h>
+
+/* The dedicated host regression stops an accidental load or privilege
+ * probe before kernel execution, including calls from bundled libbpf. */
+long __real_syscall(long number, ...);
+long __wrap_syscall(long number, ...) {
+    if (number == SYS_memfd_create) {
+        va_list args;
+        va_start(args, number);
+        const char *name = va_arg(args, const char *);
+        unsigned flags = va_arg(args, unsigned);
+        va_end(args);
+        return __real_syscall(number, name, flags);
+    }
+    fprintf(stderr, "HOST GUARD: unexpected syscall %ld; stopped before execution\n",
+            number);
+    _exit(number == SYS_bpf ? 99 : 98);
+}
+#endif
 
 static int check_open_reject(const uint8_t *elf, uint64_t elf_len,
                              struct lmb_options_v1 *o, const char *name) {
@@ -251,7 +273,9 @@ int main(int argc, char **argv) {
     /* Dual-mode load: privileged loads latch no native error;
      * unprivileged refusals latch the native code. A load failure
      * with privileges present is a real defect. */
-    {
+    if (getenv("LMB_HOST_ONLY") && !strcmp(getenv("LMB_HOST_ONLY"), "1")) {
+        puts("NOT_RUN ring_framing.load-dual: host-only scope; no load or privilege probe");
+    } else {
         struct lmb_session *d = NULL;
         lmb_make_options(&o, "events", 4096);
         if (lmb_open(elf, elf_len, &o, &d) == 0 && d != NULL) {

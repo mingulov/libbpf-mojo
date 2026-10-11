@@ -31,6 +31,11 @@ load preserves its signed libbpf error and leaves metadata and teardown
 usable; a second load is rejected. Loaded map metadata requires a
 successful load.
 
+Verifier-log retention applies per program: `LOG_ON_FAILURE` retains
+only failed program loads, while `LOG_ALWAYS` also retains successful
+program logs. An object failure before any program attempt produces
+no program logs. Each retained log respects the configured cap.
+
 `Object` is move-only. Its `program(name)` and `map(name)` methods
 return move-only `ProgramView` and `MapView` owners. Views retain a
 native object reference and share the same dynamic library handle.

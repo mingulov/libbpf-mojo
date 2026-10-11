@@ -4,12 +4,44 @@
 #include <linux/bpf.h>
 #include <stdlib.h>
 #include <string.h>
+#include <bpf/bpf.h>
 #include <bpf/btf.h>
 #include <bpf/libbpf.h>
 #include "internal.h"
 #include "generic_internal.h"
 
 static _Thread_local struct lmb_generic_error_v1 generic_error;
+static _Thread_local struct lmb_object *loading_object;
+
+int __real_bpf_prog_load(enum bpf_prog_type type, const char *name,
+    const char *license, const struct bpf_insn *insns, size_t count,
+    struct bpf_prog_load_opts *opts);
+
+/* The bundled libbpf calls this hidden link wrapper. Its retained-mode
+ * caller buffers are unique per program and stay unchanged through
+ * retries; bpf_prog_load returns the terminal result before object-level
+ * rollback clears FDs. Forward options, result and errno unchanged. */
+int __wrap_bpf_prog_load(enum bpf_prog_type type, const char *name,
+    const char *license, const struct bpf_insn *insns, size_t count,
+    struct bpf_prog_load_opts *opts) {
+    struct lmb_object *obj = loading_object;
+    char *log = NULL;
+    if (obj && opts && opts->sz >= offsetof(struct bpf_prog_load_opts, log_buf) +
+                                  sizeof(opts->log_buf))
+        log = opts->log_buf;
+    int code = __real_bpf_prog_load(type, name, license, insns, count, opts);
+    int native_errno = errno;
+    if (obj && log) {
+        for (size_t i = 0; i < obj->program_count; i++) {
+            if (obj->programs[i].log == log) {
+                obj->programs[i].load_failed = code < 0;
+                break;
+            }
+        }
+    }
+    errno = native_errno;
+    return code;
+}
 
 void lmb_generic_clear(void) {
     memset(&generic_error, 0, sizeof(generic_error));
@@ -243,12 +275,19 @@ int32_t lmb_object_load_v1(struct lmb_object *obj) {
     int32_t code;
     if (!obj || obj->load_attempted)
         return fail(op, 4, -EINVAL, "object load already attempted or owner is null");
+    if (loading_object)
+        return fail(op, 4, -EINVAL, "nested object load is unsupported");
     obj->load_attempted = 1;
+    for (size_t i = 0; i < obj->program_count; i++)
+        obj->programs[i].load_failed = 0;
+    struct lmb_object *previous = loading_object;
+    loading_object = obj;
     code = bpf_object__load(obj->obj);
+    loading_object = previous;
     obj->loaded = code == 0;
     for (size_t i = 0; i < obj->program_count; i++) {
         struct lmb_program_state *state = &obj->programs[i];
-        if (state->log && (obj->log_level == 2 || code))
+        if (state->log && (obj->log_level == 2 || state->load_failed))
             state->log_actual = strnlen(state->log, obj->log_capacity);
         else {
             state->log_actual = 0;

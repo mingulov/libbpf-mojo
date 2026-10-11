@@ -54,14 +54,18 @@ Host tests exercise real pinned libbpf parsing of ringless, multi-program,
 map-free and BTF-bearing objects, malformed ELF and custom BTF failures,
 copied inputs, partial allocation failures, signed errors, retained views,
 parent moves/releases, generation changes and stable FD counts. Native
-load tests intercept the load boundary with a controlled failure before
-kernel work; that result does not establish load support. Mojo owners
+load tests return controlled object failures and script per-program
+outcomes through the pinned load API, intercepting its BPF requests
+before execution. They cover log retention and retries without
+establishing load support. Mojo owners
 and views use one shared library handle and move-only ownership.
 
 Run `tools/test native --host-only` and `tools/test mojo --host-only`
 for the explicit host scope. Omitted runtime cases are reported
 `NOT_RUN` and are excluded from their pass counts. The default suites
-keep their runtime checks. Successful generic load, loaded map geometry,
+keep their runtime checks. The native host scope runs guarded framing
+checks and omits the valid-fixture dual-load case and its privilege
+probe; that regression fails if the boundary is crossed. Successful generic load, loaded map geometry,
 tracing-target configuration and their target/platform evidence remain
 unqualified. Generic map operations, program test-run, links and buffers
 are not implemented by this checkpoint.
