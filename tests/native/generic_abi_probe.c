@@ -4,16 +4,18 @@
  * docs/generic-abi-v1.md. Uses only the public headers plus dlsym,
  * so this binary links before the generic implementation lands.
  *
- * Usage: probe <lib.so> [fixture.bpf.o]
+ * Usage: probe <lib.so> [fixture.bpf.o [xdp-fixture.bpf.o]]
  * Part A always runs: C layout smoke, v1 presence, hidden upstream
  * symbols, generic presence report. Part B (behavior battery)
  * runs only when all twenty generic symbols resolve; otherwise it
  * reports SKIP, never PASS. Live sections additionally need the
- * fixture and collection privilege; without them they SKIP.
+ * tracepoint fixture and collection privilege. The XDP test-run
+ * section requires its separate fixture when runtime is enabled;
+ * a missing XDP fixture or declined positive is a failure.
  * LMB_GENERIC_LIB overrides the Part B dlopen path (differential
  * exercise against another build); LMB_TEST_RUN_PROGRAM overrides
- * the test-run program name (default on_getpid, the only program
- * with a pinned expected retval). LMB_ASSUME_PRIVILEGE=1 bypasses
+ * the XDP program name (default packet_control; its DROP/PASS
+ * byte oracle remains required). LMB_ASSUME_PRIVILEGE=1 bypasses
  * the privilege gate for differential stub exercise with
  * LMB_GENERIC_LIB only; standard runs must not set it.
  */
@@ -681,7 +683,7 @@ static void part_b2(struct gen_api *g, const uint8_t *elf,
  * distinguish the rejecting check: with one, omitting every
  * named validation below still passes. The loaded owner plus
  * the per-operation controls (unknown names reach lookup with
- * ENOENT; a valid test-run reaches the kernel) proves the named
+ * ENOENT; a valid tracepoint test-run reaches type rejection) proves the named
  * check rejected. Every -EINVAL row additionally verifies the
  * rejecting domain immediately (operation + BRIDGE + signed
  * -EINVAL): a backend that skips validation and falls through
@@ -1013,10 +1015,83 @@ static void part_b3a(struct gen_api *g, const uint8_t *elf,
               dcode == -EINVAL,
           "b3a-testrun-untouched-record",
           "bad version reports test-run BRIDGE/-EINVAL");
-    /* Control: a fully valid record reaches past validation.
-     * Success checks the output shape; a kernel decline keeps
-     * its signed code with the result untouched. BRIDGE/-EINVAL
-     * here would mean the valid record was rejected. */
+    /* Output/result overlap precedes the unsupported tracepoint
+     * profile, and preserves the entire result record. */
+    make_topts(&to);
+    to.data_out.ptr = (uint8_t *)&tr;
+    to.data_out.len = sizeof(tr);
+    tr = tr_before;
+    CHECK(g->testrun(valid, &prog, &to, &tr) == -EINVAL &&
+              memcmp(&tr, &tr_before, sizeof(tr)) == 0,
+          "b3a-testrun-data-result-alias",
+          "packet output/result overlap must fail before type rejection");
+    CHECK(gen_is(g, LMB_GENERIC_OP_TEST_RUN,
+                 LMB_GENERIC_DOMAIN_BRIDGE, &dcode) && dcode == -EINVAL,
+          "b3a-testrun-data-result-alias-record",
+          "result overlap reports test-run BRIDGE/-EINVAL");
+    make_topts(&to);
+    to.ctx_out.ptr = (uint8_t *)&tr + sizeof(tr) - 1;
+    to.ctx_out.len = 1;
+    tr = tr_before;
+    CHECK(g->testrun(valid, &prog, &to, &tr) == -EINVAL &&
+              memcmp(&tr, &tr_before, sizeof(tr)) == 0,
+          "b3a-testrun-ctx-result-alias",
+          "context output/result overlap must fail before type rejection");
+    CHECK(gen_is(g, LMB_GENERIC_OP_TEST_RUN,
+                 LMB_GENERIC_DOMAIN_BRIDGE, &dcode) && dcode == -EINVAL,
+          "b3a-testrun-ctx-result-alias-record",
+          "result overlap reports test-run BRIDGE/-EINVAL");
+    make_topts(&to);
+    to.data_in.len = 1;
+    tr = tr_before;
+    CHECK(g->testrun(valid, &prog, &to, &tr) == -EINVAL &&
+              memcmp(&tr, &tr_before, sizeof(tr)) == 0,
+          "b3a-testrun-input-before-type",
+          "null nonempty input fails before unsupported type");
+    CHECK(gen_is(g, LMB_GENERIC_OP_TEST_RUN,
+                 LMB_GENERIC_DOMAIN_BRIDGE, &dcode) && dcode == -EINVAL,
+          "b3a-testrun-input-before-type-record",
+          "input rejection reports test-run BRIDGE/-EINVAL");
+    make_topts(&to);
+    make_v1name(&prog, "no_such_program");
+    tr = tr_before;
+    CHECK(g->testrun(valid, &prog, &to, &tr) == -ENOENT &&
+              memcmp(&tr, &tr_before, sizeof(tr)) == 0,
+          "b3a-testrun-name-before-type",
+          "missing program reports ENOENT before type selection");
+    CHECK(gen_is(g, LMB_GENERIC_OP_TEST_RUN,
+                 LMB_GENERIC_DOMAIN_BRIDGE, &dcode) && dcode == -ENOENT,
+          "b3a-testrun-name-before-type-record",
+          "missing name reports test-run BRIDGE/-ENOENT");
+    to.data_in.len = 1;
+    tr = tr_before;
+    CHECK(g->testrun(valid, &prog, &to, &tr) == -EINVAL &&
+              memcmp(&tr, &tr_before, sizeof(tr)) == 0,
+          "b3a-testrun-input-before-name",
+          "malformed input rejects before missing-name lookup");
+    CHECK(gen_is(g, LMB_GENERIC_OP_TEST_RUN,
+                 LMB_GENERIC_DOMAIN_BRIDGE, &dcode) && dcode == -EINVAL,
+          "b3a-testrun-input-before-name-record",
+          "input rejection reports test-run BRIDGE/-EINVAL");
+    make_v1name(&prog, "on_getpid");
+    make_topts(&to);
+    to.data_in.ptr = (const uint8_t *)(uintptr_t)UINTPTR_MAX;
+    to.ctx_in.ptr = (const uint8_t *)(uintptr_t)UINTPTR_MAX;
+    to.data_out.ptr = (uint8_t *)(uintptr_t)UINTPTR_MAX;
+    to.ctx_out.ptr = (uint8_t *)(uintptr_t)UINTPTR_MAX;
+    tr = tr_before;
+    CHECK(g->testrun(valid, &prog, &to, &tr) == -EOPNOTSUPP &&
+              memcmp(&tr, &tr_before, sizeof(tr)) == 0,
+          "b3a-testrun-ignored-zero-pointers",
+          "ignored empty pointers reach unsupported type rejection");
+    CHECK(gen_is(g, LMB_GENERIC_OP_TEST_RUN,
+                 LMB_GENERIC_DOMAIN_BRIDGE, &dcode) && dcode == -EOPNOTSUPP,
+          "b3a-testrun-ignored-zero-pointers-record",
+          "valid empty spans report test-run BRIDGE/-EOPNOTSUPP");
+
+    /* A fully valid tracepoint record reaches the explicit XDP-only
+     * profile boundary. Neither native success nor kernel decline
+     * is an acceptable substitute for this bridge rejection. */
     make_topts(&to);
     to.data_in.ptr = big;
     to.data_in.len = sizeof(big);
@@ -1024,21 +1099,14 @@ static void part_b3a(struct gen_api *g, const uint8_t *elf,
     to.data_out.len = sizeof(out);
     tr = tr_before;
     {
-        int32_t rc = g->testrun(valid, &prog, &to, &tr);
-        if (rc == 0) {
-            CHECK(tr.data_actual <= sizeof(out) &&
-                      tr.ctx_actual == 0 && tr._pad == 0,
-                  "b3a-testrun-control",
-                  "valid test-run outputs must be bounded");
-        } else {
-            int32_t code = 0;
-            CHECK(gen_is(g, LMB_GENERIC_OP_TEST_RUN,
-                         LMB_GENERIC_DOMAIN_KERNEL, &code) &&
-                      code < 0 &&
-                      memcmp(&tr, &tr_before, sizeof(tr)) == 0,
-                  "b3a-testrun-control",
-                  "kernel decline keeps signed code, result intact");
-        }
+        CHECK(g->testrun(valid, &prog, &to, &tr) == -EOPNOTSUPP &&
+                  memcmp(&tr, &tr_before, sizeof(tr)) == 0,
+              "b3a-testrun-control",
+              "valid tracepoint must reject as unsupported with result intact");
+        CHECK(gen_is(g, LMB_GENERIC_OP_TEST_RUN,
+                     LMB_GENERIC_DOMAIN_BRIDGE, &dcode) && dcode == -EOPNOTSUPP,
+              "b3a-testrun-control-record",
+              "unsupported profile reports test-run BRIDGE/-EOPNOTSUPP");
     }
 
     /* Attach validation clears output handles first. Every row
@@ -1922,121 +1990,234 @@ static void part_b6b(struct gen_api *g, const uint8_t *elf,
     CHECK(g->close(&obj) == 0, "b6b-close", "close must succeed");
 }
 
-/* B6c: program test-run. The kernel may decline tracepoint
- * execution on some targets; both outcomes prove their output
- * table (success fields vs unchanged-on-failure). */
-static void check_testrun(struct gen_api *g, struct lmb_object *obj,
-                          const char *progname, int same_buffer,
-                          int expect_retval) {
+/* B6c: the initial result profile is XDP. Tracepoint execution is
+ * rejected by the bridge, while every enabled XDP positive must run. */
+static void check_unsupported_testrun(struct gen_api *g,
+                                     struct lmb_object *obj, int same_buffer) {
     struct lmb_name_v1 prog;
     struct lmb_program_test_options_v1 to;
-    struct lmb_program_test_result_v1 tr, tr_before;
-    uint8_t data[128];
-    uint8_t ctx[16];
-    /* Function scope: the input span below borrows this buffer
-     * through the test-run call, so it must outlive the call. */
-    uint8_t pkt[64];
-    uint64_t i;
-    int32_t rc;
-    int intact;
-
-    make_v1name(&prog, progname);
+    struct lmb_program_test_result_v1 tr, before;
+    uint8_t data[128], data_before[128], ctx[16], packet[64];
+    int32_t code = 0;
+    make_v1name(&prog, "on_getpid");
     make_topts(&to);
-    for (i = 0; i < sizeof(data); i++)
-        data[i] = (uint8_t)(i & 0xFF);
+    memset(data, 0xA5, sizeof(data));
     memset(ctx, 0xA5, sizeof(ctx));
-    if (same_buffer) {
-        to.data_in.ptr = data;
-        to.data_in.len = 64;
-        to.data_out.ptr = data;
-        to.data_out.len = sizeof(data);
-    } else {
-        for (i = 0; i < sizeof(pkt); i++)
-            pkt[i] = (uint8_t)(0xC0 + (i & 0x3F));
-        memset(data, 0xA5, sizeof(data));
-        to.data_in.ptr = pkt;
-        to.data_in.len = sizeof(pkt);
-        to.data_out.ptr = data;
-        to.data_out.len = sizeof(data);
-    }
+    memset(packet, 0xC0, sizeof(packet));
+    if (same_buffer)
+        memcpy(data, packet, sizeof(packet));
+    memcpy(data_before, data, sizeof(data));
+    to.data_in.ptr = same_buffer ? data : packet;
+    to.data_in.len = sizeof(packet);
+    to.data_out.ptr = data;
+    to.data_out.len = sizeof(data);
     to.ctx_out.ptr = ctx;
     to.ctx_out.len = sizeof(ctx);
-    memset(&tr_before, 0xAA, sizeof(tr_before));
-    tr_before.abi_version = LMB_GENERIC_ABI_VERSION;
-    tr_before.struct_size = sizeof(tr_before);
-    tr = tr_before;
-    rc = g->testrun(obj, &prog, &to, &tr);
-    if (rc == 0) {
-        intact = 1;
-        CHECK(tr.data_actual <= sizeof(data) && tr.ctx_actual == 0 &&
-                  tr._pad == 0,
-              same_buffer ? "b6c-aliased-shape" : "b6c-shape",
-              "success outputs must be bounded and padded zero");
-        if (expect_retval)
-            CHECK(tr.retval == 0, "b6c-retval",
-                  "tracepoint fixture must return 0");
-        for (i = tr.data_actual; i < sizeof(data); i++) {
-            uint8_t want =
-                same_buffer ? (uint8_t)(i & 0xFF) : 0xA5;
-            if (data[i] != want)
-                intact = 0;
-        }
-        for (i = tr.ctx_actual; i < sizeof(ctx); i++) {
-            if (ctx[i] != 0xA5)
-                intact = 0;
-        }
-        CHECK(intact, same_buffer ? "b6c-aliased-guards" : "b6c-guards",
-              "outputs must write exactly actual bytes");
-        printf("note b6c-duration: %llu ns\n",
-               (unsigned long long)tr.duration_ns);
-        return;
+    memset(&before, 0xAA, sizeof(before));
+    before.abi_version = LMB_GENERIC_ABI_VERSION;
+    before.struct_size = sizeof(before);
+    tr = before;
+    CHECK(g->testrun(obj, &prog, &to, &tr) == -EOPNOTSUPP,
+          same_buffer ? "b6c-aliased-unsupported" : "b6c-unsupported",
+          "tracepoint must reject without native execution");
+    CHECK(gen_is(g, LMB_GENERIC_OP_TEST_RUN,
+                 LMB_GENERIC_DOMAIN_BRIDGE, &code) && code == -EOPNOTSUPP,
+          same_buffer ? "b6c-aliased-unsupported-record" : "b6c-unsupported-record",
+          "unsupported type must report BRIDGE/-EOPNOTSUPP");
+    CHECK(memcmp(&tr, &before, sizeof(tr)) == 0 &&
+              memcmp(data, data_before, sizeof(data)) == 0,
+          same_buffer ? "b6c-aliased-unsupported-untouched" : "b6c-unsupported-untouched",
+          "unsupported type must leave result and packet output unchanged");
+    int intact = 1;
+    for (size_t i = 0; i < sizeof(ctx); i++)
+        if (ctx[i] != 0xA5) intact = 0;
+    CHECK(intact, "b6c-unsupported-context-untouched",
+          "unsupported type must leave context output unchanged");
+}
+
+static void testrun_property(int condition, const char *testcase,
+                             const char *property, const char *message) {
+    char name[96];
+    snprintf(name, sizeof(name), "%s-%s", testcase, property);
+    CHECK(condition, name, "%s", message);
+}
+
+enum xdp_probe_case {
+    XDP_DATA_ALIAS = 1, XDP_CTX_ALIAS = 2,
+    XDP_OMIT_DATA = 4, XDP_OMIT_CTX = 8,
+    XDP_RESULT_DATA_INPUT = 16, XDP_RESULT_CTX_INPUT = 32,
+    XDP_ADJACENT = 64
+};
+
+static void check_xdp_testrun(struct gen_api *g, struct lmb_object *obj,
+                              const char *progname, const char *testcase,
+                              unsigned mode, int short_output) {
+    _Static_assert(sizeof(struct xdp_md) == 24, "native XDP context size");
+    struct lmb_name_v1 prog, counter;
+    struct lmb_program_test_options_v1 to;
+    struct lmb_program_test_result_v1 before;
+    struct {
+        struct lmb_program_test_result_v1 result;
+        uint8_t spill[21];
+    } local;
+    struct {
+        uint8_t pre[16];
+        struct lmb_program_test_result_v1 result;
+        uint8_t data[97], ctx[40], post[16];
+    } adjacent;
+    struct { uint8_t pre[16], bytes[97], post[16]; } packet_output;
+    struct { uint8_t pre[16], bytes[40], post[16]; } context_output;
+    struct xdp_md context = {0};
+    uint8_t packet[61], expected_packet[61], expected_context[24];
+    uint8_t data_before[97], ctx_before[40], spill_before[21], guards[16];
+    struct lmb_program_test_result_v1 *result = &local.result;
+    uint8_t *data = packet_output.bytes, *ctx = context_output.bytes;
+    uint32_t key = 0;
+    uint64_t count_before = 0, count_after = 0, needed = 123;
+    int32_t rc, code = 0;
+
+    memset(&local, 0xAA, sizeof(local));
+    memset(&adjacent, 0xA5, sizeof(adjacent));
+    memset(&packet_output, 0xA5, sizeof(packet_output));
+    memset(&context_output, 0xA5, sizeof(context_output));
+    memset(guards, 0xA5, sizeof(guards));
+    if (mode & XDP_ADJACENT) {
+        result = &adjacent.result;
+        data = adjacent.data; ctx = adjacent.ctx;
+        testrun_property(data == (uint8_t *)result + sizeof(*result) &&
+                             ctx == data + sizeof(data_before),
+                         testcase, "adjacent-layout", "output/result intervals are adjacent");
     }
-    {
-        int32_t code = 0;
-        CHECK(gen_is(g, LMB_GENERIC_OP_TEST_RUN,
-                     LMB_GENERIC_DOMAIN_KERNEL, &code) &&
-                  code < 0,
-              same_buffer ? "b6c-aliased-declined" : "b6c-declined",
-              "kernel decline keeps signed code");
+    memset(result, 0xAA, sizeof(*result));
+    result->abi_version = LMB_GENERIC_ABI_VERSION;
+    result->struct_size = sizeof(*result);
+    for (size_t i = 0; i < sizeof(packet); i++) packet[i] = (uint8_t)(11 + i * 3);
+    packet[0] = mode & XDP_DATA_ALIAS ? 0 : 1;
+    context.data_end = sizeof(packet); /* Native context matches the packet extent. */
+    make_v1name(&prog, progname);
+    make_v1name(&counter, "counter");
+    make_topts(&to);
+    to.data_in.ptr = packet; to.data_in.len = sizeof(packet);
+    to.ctx_in.ptr = (const uint8_t *)&context; to.ctx_in.len = sizeof(context);
+    if (mode & XDP_DATA_ALIAS) {
+        memcpy(data, packet, sizeof(packet)); to.data_in.ptr = data;
     }
-    CHECK(memcmp(&tr, &tr_before, sizeof(tr)) == 0,
-          same_buffer ? "b6c-aliased-unchanged" : "b6c-unchanged",
-          "runtime failure must leave the result unchanged");
-    intact = 1;
-    for (i = 0; i < sizeof(data); i++) {
-        uint8_t want = same_buffer ? (uint8_t)(i & 0xFF) : 0xA5;
-        if (data[i] != want)
-            intact = 0;
+    if (mode & XDP_CTX_ALIAS) {
+        memcpy(ctx, &context, sizeof(context)); to.ctx_in.ptr = ctx;
     }
-    for (i = 0; i < sizeof(ctx); i++) {
-        if (ctx[i] != 0xA5)
-            intact = 0;
+    if (mode & XDP_RESULT_DATA_INPUT)
+        to.data_in.ptr = (const uint8_t *)&local; /* 40-byte result plus 21-byte spill. */
+    if (mode & XDP_RESULT_CTX_INPUT) {
+        memcpy((uint8_t *)result + 16, &context, sizeof(context));
+        to.ctx_in.ptr = (const uint8_t *)result + 16;
     }
-    CHECK(intact, same_buffer ? "b6c-aliased-out-untouched"
-                              : "b6c-out-untouched",
-          "runtime failure must leave outputs untouched");
-    SKIP(same_buffer ? "b6c-aliased-exec" : "b6c-exec",
-         "target declined tracepoint test-run execution");
+    memcpy(expected_packet, to.data_in.ptr, sizeof(expected_packet));
+    memcpy(expected_context, to.ctx_in.ptr, sizeof(expected_context));
+    memcpy(data_before, data, sizeof(data_before));
+    memcpy(ctx_before, ctx, sizeof(ctx_before));
+    memcpy(spill_before, local.spill, sizeof(spill_before));
+    before = *result;
+    to.data_out.ptr = mode & XDP_OMIT_DATA ? (uint8_t *)(uintptr_t)UINTPTR_MAX : data;
+    to.data_out.len = mode & XDP_OMIT_DATA ? 0 : sizeof(data_before);
+    to.ctx_out.ptr = mode & XDP_OMIT_CTX ? (uint8_t *)(uintptr_t)UINTPTR_MAX : ctx;
+    to.ctx_out.len = mode & XDP_OMIT_CTX ? 0 : sizeof(ctx_before);
+    if (short_output == 1) to.data_out.len = 7;
+    if (short_output == 2) to.ctx_out.len = sizeof(context) - 1;
+
+    testrun_property(g->lookup(obj, &counter, (const uint8_t *)&key, sizeof(key),
+                                   (uint8_t *)&count_before, sizeof(count_before), &needed) == 0 && needed == 0,
+                     testcase, "counter-before", "fixture counter must be readable");
+    rc = g->testrun(obj, &prog, &to, result);
+    if (short_output) {
+        testrun_property(rc == -ENOSPC, testcase, "native-error",
+                         "short XDP output must retain native -ENOSPC");
+        testrun_property(gen_is(g, LMB_GENERIC_OP_TEST_RUN,
+                                   LMB_GENERIC_DOMAIN_KERNEL, &code) && code == rc && rc == -ENOSPC,
+                         testcase, "native-error-record", "native signed code/domain must agree");
+    } else {
+        testrun_property(rc == 0, testcase, "run", "required XDP positive must succeed");
+    }
+    if (rc != 0) {
+        testrun_property(memcmp(result, &before, sizeof(before)) == 0 &&
+                             memcmp(data, data_before, sizeof(data_before)) == 0 &&
+                             memcmp(ctx, ctx_before, sizeof(ctx_before)) == 0,
+                         testcase, "failure-untouched", "failure preserves both outputs and complete result");
+    } else {
+        testrun_property(result->abi_version == LMB_GENERIC_ABI_VERSION &&
+                             result->struct_size == sizeof(*result) && result->_pad == 0 &&
+                             result->retval == (expected_packet[0] == 0 ? XDP_DROP : XDP_PASS) &&
+                             result->duration_ns <= UINT32_MAX,
+                         testcase, "result", "XDP scalar return, duration and result header are independent");
+        testrun_property(result->data_actual == sizeof(expected_packet) &&
+                             ((mode & XDP_OMIT_CTX) ? result->ctx_actual <= UINT32_MAX :
+                                                       result->ctx_actual == sizeof(context)),
+                         testcase, "actual", "native actual lengths are distinct from requested copies");
+        int data_ok = mode & XDP_OMIT_DATA ?
+            memcmp(data, data_before, sizeof(data_before)) == 0 :
+            result->data_actual <= to.data_out.len &&
+                memcmp(data, expected_packet, sizeof(expected_packet)) == 0 &&
+                memcmp(data + sizeof(expected_packet), data_before + sizeof(expected_packet),
+                       sizeof(data_before) - sizeof(expected_packet)) == 0;
+        int ctx_ok = mode & XDP_OMIT_CTX ?
+            memcmp(ctx, ctx_before, sizeof(ctx_before)) == 0 :
+            result->ctx_actual <= to.ctx_out.len &&
+                memcmp(ctx, expected_context, sizeof(expected_context)) == 0 &&
+                memcmp(ctx + sizeof(expected_context), ctx_before + sizeof(expected_context),
+                       sizeof(ctx_before) - sizeof(expected_context)) == 0;
+        testrun_property(data_ok && ctx_ok, testcase, "outputs", "exact snapshot bytes and tails; omitted outputs stay untouched");
+        printf("note %s-native-actual: packet=%llu context=%llu duration=%llu ns\n", testcase,
+               (unsigned long long)result->data_actual, (unsigned long long)result->ctx_actual,
+               (unsigned long long)result->duration_ns);
+    }
+    testrun_property(memcmp(packet_output.pre, guards, 16) == 0 &&
+                         memcmp(packet_output.post, guards, 16) == 0 &&
+                         memcmp(context_output.pre, guards, 16) == 0 &&
+                         memcmp(context_output.post, guards, 16) == 0 &&
+                         memcmp(adjacent.pre, guards, 16) == 0 &&
+                         memcmp(adjacent.post, guards, 16) == 0 &&
+                         memcmp(local.spill, spill_before, sizeof(spill_before)) == 0,
+                     testcase, "guards", "caller storage outside outputs/result remains intact");
+    needed = 123;
+    testrun_property(g->lookup(obj, &counter, (const uint8_t *)&key, sizeof(key),
+                                   (uint8_t *)&count_after, sizeof(count_after), &needed) == 0 &&
+                         needed == 0 && count_after == count_before + 1,
+                     testcase, "single-execution", "repeat=1 advances fixture once, including native failure; no rollback");
 }
 
 static void part_b6c(struct gen_api *g, const uint8_t *elf,
-                     uint64_t elf_len) {
+                     uint64_t elf_len, const uint8_t *xdp_elf, uint64_t xdp_len) {
     struct lmb_object *obj = NULL;
     const char *prog = getenv("LMB_TEST_RUN_PROGRAM");
-    int pinned = 0;
-    if (prog == NULL || prog[0] == '\0')
-        prog = "on_getpid";
-    pinned = strcmp(prog, "on_getpid") == 0;
-
-    CHECK(open_loaded(g, elf, elf_len, LMB_LOG_DISCARD, 0, &obj) ==
-                  0 &&
-              obj != NULL,
-          "b6c-load", "fixture must load");
-    if (obj == NULL)
+    if (prog == NULL || prog[0] == '\0') prog = "packet_control";
+    if (elf != NULL) {
+        CHECK(open_loaded(g, elf, elf_len, LMB_LOG_DISCARD, 0, &obj) == 0 && obj != NULL,
+              "b6c-load", "tracepoint fixture must load");
+        if (obj != NULL) {
+            check_unsupported_testrun(g, obj, 0);
+            check_unsupported_testrun(g, obj, 1);
+            CHECK(g->close(&obj) == 0 && obj == NULL, "b6c-close", "tracepoint close must succeed");
+        }
+    }
+    if (xdp_elf == NULL || xdp_len == 0) {
+        FAIL("b6c-xdp-fixture", "required XDP fixture is absent");
         return;
-    check_testrun(g, obj, prog, 0, pinned);
-    check_testrun(g, obj, prog, 1, pinned);
-    CHECK(g->close(&obj) == 0, "b6c-close", "close must succeed");
+    }
+    CHECK(open_loaded(g, xdp_elf, xdp_len, LMB_LOG_DISCARD, 0, &obj) == 0 && obj != NULL,
+          "b6c-xdp-load", "XDP fixture must load for required positives");
+    if (obj == NULL) return;
+    check_xdp_testrun(g, obj, prog, "b6c-xdp-full", 0, 0);
+    check_xdp_testrun(g, obj, prog, "b6c-xdp-data-alias", XDP_DATA_ALIAS, 0);
+    check_xdp_testrun(g, obj, prog, "b6c-xdp-ctx-alias", XDP_CTX_ALIAS, 0);
+    check_xdp_testrun(g, obj, prog, "b6c-xdp-both-alias", XDP_DATA_ALIAS | XDP_CTX_ALIAS, 0);
+    check_xdp_testrun(g, obj, prog, "b6c-xdp-omit-data", XDP_OMIT_DATA, 0);
+    check_xdp_testrun(g, obj, prog, "b6c-xdp-omit-ctx", XDP_OMIT_CTX, 0);
+    check_xdp_testrun(g, obj, prog, "b6c-xdp-omit-both", XDP_OMIT_DATA | XDP_OMIT_CTX, 0);
+    check_xdp_testrun(g, obj, prog, "b6c-xdp-result-data-input", XDP_RESULT_DATA_INPUT, 0);
+    check_xdp_testrun(g, obj, prog, "b6c-xdp-result-ctx-input", XDP_RESULT_CTX_INPUT, 0);
+    check_xdp_testrun(g, obj, prog, "b6c-xdp-adjacent", XDP_ADJACENT, 0);
+    check_xdp_testrun(g, obj, prog, "b6c-xdp-short-data", 0, 1);
+    check_xdp_testrun(g, obj, prog, "b6c-xdp-short-ctx", 0, 2);
+    CHECK(g->close(&obj) == 0 && obj == NULL, "b6c-xdp-close", "XDP close must succeed");
 }
 
 /* Arm the fixture PID filter for this process (keys 0/1/2:
@@ -2337,9 +2518,10 @@ static void part_b6e(struct gen_api *g, const uint8_t *elf,
 }
 
 static void part_b6(struct gen_api *g, const uint8_t *elf,
-                    uint64_t elf_len) {
+                    uint64_t elf_len, const uint8_t *xdp_elf, uint64_t xdp_len) {
     if (elf == NULL) {
         SKIP("b6", "needs the fixture ELF");
+        FAIL("b6c-xdp-fixture", "runtime scope requires the XDP fixture argument");
         return;
     }
     if (!has_privilege()) {
@@ -2353,7 +2535,7 @@ static void part_b6(struct gen_api *g, const uint8_t *elf,
     }
     part_b6a(g, elf, elf_len);
     part_b6b(g, elf, elf_len);
-    part_b6c(g, elf, elf_len);
+    part_b6c(g, elf, elf_len, xdp_elf, xdp_len);
     part_b6d(g, elf, elf_len);
     part_b6e(g, elf, elf_len);
 }
@@ -2363,13 +2545,15 @@ int main(int argc, char **argv) {
     const char *fixture = NULL;
     uint8_t *elf = NULL;
     uint64_t elf_len = 0;
+    uint8_t *xdp_elf = NULL;
+    uint64_t xdp_len = 0;
     void *bhdl = NULL;
     struct gen_api g;
     struct v1_api v1;
     int present = 0;
 
-    if (argc < 2 || argc > 3) {
-        fprintf(stderr, "usage: %s <lib.so> [fixture.bpf.o]\n",
+    if (argc < 2 || argc > 4) {
+        fprintf(stderr, "usage: %s <lib.so> [fixture.bpf.o [xdp-fixture.bpf.o]]\n",
                 argv[0]);
         return 2;
     }
@@ -2428,13 +2612,21 @@ int main(int argc, char **argv) {
         skips++;
         goto done;
     }
-    if (argc == 3) {
+    if (argc >= 3) {
         fixture = argv[2];
         if (read_file(fixture, &elf, &elf_len) != 0 || elf_len == 0) {
             printf("probe: cannot read fixture %s\n", fixture);
             dlclose(bhdl);
             return 2;
         }
+    }
+    if (argc == 4 &&
+        (read_file(argv[3], &xdp_elf, &xdp_len) != 0 || xdp_len == 0)) {
+        printf("probe: cannot read XDP fixture %s\n", argv[3]);
+        free(elf);
+        free(xdp_elf);
+        dlclose(bhdl);
+        return 2;
     }
     part_b1(&g);
     part_b2(&g, elf, elf_len);
@@ -2452,12 +2644,13 @@ int main(int argc, char **argv) {
         SKIP("b4", "v1 entry points absent from behavior library");
     }
     part_b5(&g);
-    part_b6(&g, elf, elf_len);
+    part_b6(&g, elf, elf_len, xdp_elf, xdp_len);
 
 done:
     printf("probe: %d ok, %d skipped, %d failed\n", oks, skips,
            failures);
     free(elf);
+    free(xdp_elf);
     if (bhdl != NULL)
         dlclose(bhdl);
     return failures ? 1 : 0;

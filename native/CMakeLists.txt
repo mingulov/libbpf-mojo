@@ -287,10 +287,12 @@ target_include_directories(test_generic_abi_probe PRIVATE
   ${LMB_ROOT}/tests/native
   ${LIBBPF_ROOT}/include)
 target_link_libraries(test_generic_abi_probe PRIVATE ${CMAKE_DL_LIBS})
-add_dependencies(test_generic_abi_probe libbpf_external bpf_fixtures)
+add_dependencies(test_generic_abi_probe libbpf_external bpf_fixtures
+  generic_maps_fixture)
 add_test(NAME generic_abi_probe
   COMMAND test_generic_abi_probe $<TARGET_FILE:lmb>
-    ${CMAKE_BINARY_DIR}/fixtures/ring_test.bpf.o)
+    ${CMAKE_BINARY_DIR}/fixtures/ring_test.bpf.o
+    ${CMAKE_BINARY_DIR}/fixtures/generic_maps.bpf.o)
 set_tests_properties(generic_abi_probe PROPERTIES
   WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
 
@@ -363,7 +365,8 @@ lmb_guarded_host_test(generic_object test_generic_object
 lmb_guarded_host_test(generic_maps test_generic_maps
   ${CMAKE_BINARY_DIR}/fixtures/generic_maps.bpf.o)
 lmb_guarded_host_test(generic_abi_probe test_generic_abi_probe
-  $<TARGET_FILE:lmb> ${CMAKE_BINARY_DIR}/fixtures/ring_test.bpf.o)
+  $<TARGET_FILE:lmb> ${CMAKE_BINARY_DIR}/fixtures/ring_test.bpf.o
+  ${CMAKE_BINARY_DIR}/fixtures/generic_maps.bpf.o)
 lmb_guarded_host_test(old_consumer_v1 test_old_consumer_v1)
 
 # Partial ABI stub for the incompatible-library test: every

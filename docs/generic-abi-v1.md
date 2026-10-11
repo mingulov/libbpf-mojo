@@ -328,17 +328,44 @@ struct lmb_program_test_result_v1 {
 ```
 
 Each of the four buffers is bounded to 1048576 bytes. Inputs are
-copied into bridge-owned snapshots before the native call, so an
-input may alias its own output (same buffer for packet in/out is
-legal); outputs are caller-owned and borrowed only for the call,
-and the two outputs must not overlap each other. Nothing is
-retained past return. `repeat` is conversion-checked to the
-upstream signed range. The result is all-or-nothing: on success
-all four fields are valid (`retval`, both actual lengths, and
-duration independently); on failure the result struct is left
-unchanged, because the pinned native contract guarantees no
-output field on failure. Outputs are written exactly `actual`
-bytes; tails stay untouched (guard-byte verified).
+copied into bridge-owned snapshots before the native call. Both
+inputs and the required option/name values are captured before
+any output commit, so inputs may alias either output or the
+result record. Outputs are caller-owned and borrowed only for
+the call. Both nonempty output spans must be disjoint from each
+other and from the complete result record; overlap returns
+`BRIDGE`/`-EINVAL` before native work. Adjacent intervals are
+legal. Nothing is retained past return. `repeat` is
+conversion-checked to the upstream signed range.
+
+Zero-length spans ignore their supplied pointer and forward
+null/zero. An omitted output requests no copy. On success,
+`data_actual` and `ctx_actual` report the native returned lengths,
+including for omitted outputs; a nonzero omitted-output length
+does not mean bytes were copied. Each nonempty output receives
+exactly its returned actual extent, with its tail untouched. If
+native success reports an actual size beyond a nonempty output's
+capacity, return `BRIDGE`/`-EOVERFLOW` and leave both outputs and
+the result unchanged. Omitted outputs do not undergo that
+capacity check. Do not clamp lengths or retry the operation.
+
+The initial result profile supports `BPF_PROG_TYPE_XDP`, with
+flags zero. After ordinary input, loaded-owner and named-program
+validation, other program types return `BRIDGE`/`-EOPNOTSUPP`
+without execution. Broader program types and options require
+their own native field-validity evidence.
+
+The result is all-or-nothing: on success all four fields are
+valid (`retval`, both actual lengths, and duration independently).
+On any failure, both caller outputs and the complete result
+record remain unchanged, even if native code wrote partial
+scratch outputs or result fields. Native failure retains its
+original signed code in `KERNEL`. Execute exactly one native
+test-run call; never silently retry EINTR, ENOSPC or another
+error. This caller-output guarantee does not undo kernel side
+effects. The bridge uses separate scratch outputs and a local
+result, zero-initializes the complete pinned native options with
+`sz`, and leaves unsupported fields such as cpu and batch zero.
 
 ## Attach options
 
@@ -504,10 +531,16 @@ pointers-before-state position.
   bits are rejected before the native call. Sizes must
   match exactly (single value or full per-CPU spread).
   Kernel refusals report `KERNEL` with the signed code.
-- `test_run`: result unchanged on any failure; outputs
-  untouched on failure; exactly `actual` bytes on success.
-  Only the two outputs aliasing each other is rejected;
-  inputs alias freely (they are snapshotted first).
+- `test_run`: result and both outputs unchanged on any failure.
+  Each nonempty output receives exactly its native actual extent
+  on success; omitted outputs request no copy but retain native
+  actual lengths. Nonempty outputs must be disjoint from each
+  other and the complete result; adjacent intervals and input
+  aliases are legal. Oversized native success is
+  `BRIDGE`/`-EOVERFLOW`; native failure preserves its signed
+  `KERNEL` code. One native call, no retry or kernel rollback.
+  The initial profile is XDP; other validated program types
+  return `BRIDGE`/`-EOPNOTSUPP` without execution.
 - `object_attach`: `*out` cleared first, null on failure,
   no links leaked. Unknown programs report
   `BRIDGE`/`-ENOENT`.
