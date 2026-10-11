@@ -13,8 +13,13 @@ and deterministic ownership. Import `Object`, `ObjectOptions`,
 `ProgramView` and `MapView` from `libbpf_mojo.object`; the native contract
 is [generic ABI v1](docs/generic-abi-v1.md). Host ownership tests cover
 these operations; generic live loading and loaded map metadata still
-require target qualification. Generic map access, test-run, links and
-ring consumers are separate interfaces awaiting implementation.
+require target qualification. Native generic map lookup/update are
+implemented with checked ordinary/per-CPU extents, exact update flags,
+signed diagnostics and lookup copyback only on success. Guarded host
+tests exercise parsed BTF objects and the pinned libbpf wrappers without
+executing BPF syscalls. Typed Mojo map calls, program test-run, links and
+ring consumers await implementation; successful kernel map access
+remains unqualified.
 
 ## Build, test, and package
 

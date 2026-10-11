@@ -116,6 +116,31 @@ ranges the ABI names: the `required` cell must lie outside
 overlap is refused with `-EINVAL` before anything is
 written. The map-name struct is not part of that check.
 
+The additive `lmb_object_map_lookup_v1` and `lmb_object_map_update_v1`
+operate on the same retained generic object and require successful load.
+They neither change generation nor acquire another resource owner. Keys
+match metadata exactly. Ordinary values match `value_size`; per-CPU values
+include every eight-byte padded slot for the possible-CPU count, including
+offline CPUs. The complete spread must fit u32. A sequence of reads is
+not an atomic snapshot.
+
+Lookup uses owned scratch of the required extent and copies exactly that
+extent only after the pinned native call succeeds. The destination and
+its tail remain untouched on every failure, including a native failure
+after dirty scratch writes. Key/destination aliasing is allowed. The
+`needed` cell must be outside the key and full destination capacity;
+argument/extent rejection preserves it, a short destination reports the
+exact extent with `BRIDGE/-ENOSPC`, and native failure reports zero.
+
+Update forwards flags 0/1/2/4/5/6 unchanged. LOCK forwarding is not a
+promise that a particular map accepts a spin-lock operation. Native
+lookup/update failures preserve the returned signed code in the KERNEL
+domain; possible-CPU query failures use LIBBPF, extent rejection uses
+BRIDGE, and scratch allocation failure uses POSIX. Operations do not
+retry kernel refusals or normalize update flags. These native calls have
+guarded host contract evidence; successful kernel behavior remains
+unqualified.
+
 ## Versions
 
 Four versions stay independent: ABI major (1, in every

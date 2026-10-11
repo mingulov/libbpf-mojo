@@ -3,7 +3,8 @@
 # libbpf-mojo test runner.
 #
 # Usage: tools/test <suite> [--host-only] | tools/test --help
-# --host-only excludes live kernel cases before any privilege probe.
+# --host-only excludes live kernel cases before any privilege probe;
+# native host test executables preload the permanent no-BPF guard.
 # Omitted cases are NOT_RUN and cannot qualify kernel behavior.
 #
 # Implemented suites: native, mojo, live-tracepoint, cleanup, package,
@@ -40,14 +41,20 @@ run_native() {
     fi
     echo "+ ctest in $BUILD_DIR" >&2
     if [ "${LMB_HOST_ONLY:-0}" = 1 ]; then
+        guard="$ROOT/$BUILD_DIR/liblmb_host_guard.so"
+        if [ ! -f "$guard" ]; then
+            echo "test: missing host guard $guard; run tools/build first" >&2
+            exit 2
+        fi
         echo "test: host-only scope; kernel qualification remains NOT_RUN" >&2
-        echo "NOT_RUN native: poll_semantics attach_rollback map_access ring_framing.load-dual generic_abi_probe.PartB" >&2
-        # Run the guarded framing binary in place of its ordinary twin;
-        # it covers the same host checks without counting them twice.
+        echo "NOT_RUN native: poll_semantics attach_rollback map_access ring_framing.load-dual generic_abi_probe.PartB generic_maps.kernel-load-and-operations" >&2
+        # Each twin launches a guarded native leaf. CTest and shell
+        # orchestration do not inherit the syscall interposer. Select
+        # each host check once, with the two read-only export checks.
         (cd "$ROOT/$BUILD_DIR" && ctest --output-on-failure \
-            -E '^(ring_framing|poll_semantics|attach_rollback|map_access)$')
+            -R '^(native_host_.*|exports|testfake_exports)$')
     else
-        (cd "$ROOT/$BUILD_DIR" && ctest --output-on-failure)
+        (cd "$ROOT/$BUILD_DIR" && ctest --output-on-failure -E '^native_host_')
     fi
 }
 

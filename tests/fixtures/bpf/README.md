@@ -48,5 +48,26 @@ objects land in the build tree, never in the source tree.
 Loading and attaching fixtures needs collection privileges. The
 native suites report SKIP (not success) when the kernel refuses with
 a permission error, and prove behavior in a privileged isolated
-environment. Fixture programs attach only to the getpid tracepoint
-and emit pids and timestamps; they read no payloads.
+environment. The tracepoint fixture programs attach only to the getpid
+tracepoint and emit pids and timestamps; they read no payloads.
+
+## Generic maps and XDP control
+
+`generic_maps.bpf.c` is a C control object for native map geometry and
+explicit XDP testing. It declares BTF maps `counter` (ARRAY, u32 key,
+u64 value, one entry), `values` (HASH, u32/u64, eight entries),
+`percpu_values` (PERCPU_ARRAY, u32 key, 13-byte byte-array value,
+one entry), and `percpu_hash` (PERCPU_HASH, the same key/value,
+eight entries). A per-CPU value occupies a 16-byte padded slot.
+
+Its scalar packet oracle is explicit: each invocation increments
+`counter[0]` once when the lookup succeeds; an available first input byte
+equal to zero returns XDP_DROP (1), otherwise it returns XDP_PASS (2).
+No packet or context output is modified. Map helpers are used with the
+source's truthful `Apache-2.0 WITH LLVM-exception` ELF license string.
+
+Host tests compile and parse this standard ELF/BTF object locally but
+intercept all BPF syscalls. Parsing and scripted map operations do not
+establish loading, verifier acceptance, runtime execution or target
+support. The fixture is an independent test control, not production
+kernel code.

@@ -65,6 +65,7 @@ set(LMB_SOURCES
   src/ring.c
   src/errors.c
   src/object.c
+  src/object_maps.c
 )
 
 # Product shared library. SONAME carries ABI major 1. Only the eleven
@@ -138,6 +139,20 @@ foreach(variant generic_object generic_nomap generic_tracing)
 endforeach()
 add_custom_target(generic_fixtures ALL DEPENDS ${GENERIC_FIXTURE_OUTPUTS})
 add_dependencies(generic_fixtures libbpf_external)
+
+add_custom_command(
+  OUTPUT ${CMAKE_BINARY_DIR}/fixtures/generic_maps.bpf.o
+  COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/fixtures
+  COMMAND ${CLANG_EXE} --target=bpf -O2 -g -Wall
+    -I${LIBBPF_ROOT}/include
+    -I/usr/include/${CMAKE_SYSTEM_PROCESSOR}-linux-gnu
+    -c ${LMB_ROOT}/tests/fixtures/bpf/generic_maps.bpf.c
+    -o ${CMAKE_BINARY_DIR}/fixtures/generic_maps.bpf.o
+  DEPENDS ${LMB_ROOT}/tests/fixtures/bpf/generic_maps.bpf.c
+  VERBATIM)
+add_custom_target(generic_maps_fixture ALL
+  DEPENDS ${CMAKE_BINARY_DIR}/fixtures/generic_maps.bpf.o)
+add_dependencies(generic_maps_fixture libbpf_external)
 
 # Tracepoint example: probe object, trigger, and C reference
 # consumer. Driven by tests/live/*.py, not by CTest.
@@ -230,6 +245,35 @@ add_test(NAME generic_object COMMAND test_generic_object
   ${CMAKE_BINARY_DIR}/fixtures/generic_nomap.bpf.o
   ${CMAKE_BINARY_DIR}/fixtures/generic_tracing.bpf.o)
 
+# Permanent host-only guard for the complete selected suite, including the
+# shared library's statically bundled libbpf. Never package this library.
+# Keep it uninstrumented even in sanitizer trees: preloading ASan into
+# unrelated CTest/shell utilities would pollute the validation harness.
+add_library(lmb_host_guard SHARED ${LMB_ROOT}/tests/support/generic_host_guard.c)
+target_compile_definitions(lmb_host_guard PRIVATE LMB_GUARD_PRELOAD)
+target_link_libraries(lmb_host_guard PRIVATE ${CMAKE_DL_LIBS})
+if(LMB_SANITIZE)
+  target_compile_options(lmb_host_guard PRIVATE -fno-sanitize=all)
+  target_link_options(lmb_host_guard PRIVATE -fno-sanitize=all)
+endif()
+
+add_executable(test_generic_maps ${LMB_ROOT}/tests/native/generic_maps.c
+  ${LMB_ROOT}/tests/support/generic_host_guard.c)
+target_include_directories(test_generic_maps PRIVATE
+  ${CMAKE_CURRENT_SOURCE_DIR}/include ${LIBBPF_ROOT}/include)
+target_link_libraries(test_generic_maps PRIVATE lmb_static)
+target_link_options(test_generic_maps PRIVATE
+  "LINKER:--wrap=bpf_object__load" "LINKER:--wrap=bpf_object__close"
+  "LINKER:--wrap=bpf_object__open_mem" "LINKER:--wrap=bpf_map__fd"
+  "LINKER:--wrap=libbpf_num_possible_cpus" "LINKER:--wrap=bpf_map_lookup_elem"
+  "LINKER:--wrap=bpf_map_update_elem" "LINKER:--wrap=malloc"
+  "LINKER:--wrap=syscall" "LINKER:--wrap=sysconf")
+add_dependencies(test_generic_maps generic_maps_fixture)
+add_test(NAME generic_maps COMMAND test_generic_maps
+  ${CMAKE_BINARY_DIR}/fixtures/generic_maps.bpf.o)
+set_tests_properties(generic_maps PROPERTIES
+  WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
+
 # Generic ABI contract probe: dlsym-based acceptance battery for
 # docs/generic-abi-v1.md. Takes the candidate shared library plus the
 # fixture object; Part A always runs. Host-only selection explicitly
@@ -294,6 +338,33 @@ add_test(NAME testfake_exports
     $<TARGET_FILE:lmb_testfake>)
 set_tests_properties(testfake_exports PROPERTIES
   WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
+
+# The guard belongs in native leaves, not the CTest process or its shell
+# orchestration. Host twins keep test accounting explicit; the suite runner
+# selects each host check once and omits these twins in the default scope.
+function(lmb_guarded_host_test name target)
+  add_test(NAME native_host_${name}
+    COMMAND ${CMAKE_COMMAND} -E env LMB_HOST_ONLY=1
+      "LD_PRELOAD=$<TARGET_FILE:lmb_host_guard>"
+      $<TARGET_FILE:${target}> ${ARGN})
+  set_tests_properties(native_host_${name} PROPERTIES
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
+endfunction()
+lmb_guarded_host_test(ring_framing test_ring_framing_host_guard
+  ${CMAKE_BINARY_DIR}/fixtures/ring_test.bpf.o)
+set_tests_properties(native_host_ring_framing PROPERTIES
+  ENVIRONMENT "ASAN_OPTIONS=allocator_may_return_null=1")
+lmb_guarded_host_test(fake_source test_fake_source
+  ${CMAKE_BINARY_DIR}/fixtures/ring_test.bpf.o)
+lmb_guarded_host_test(generic_object test_generic_object
+  ${CMAKE_BINARY_DIR}/fixtures/generic_object.bpf.o
+  ${CMAKE_BINARY_DIR}/fixtures/generic_nomap.bpf.o
+  ${CMAKE_BINARY_DIR}/fixtures/generic_tracing.bpf.o)
+lmb_guarded_host_test(generic_maps test_generic_maps
+  ${CMAKE_BINARY_DIR}/fixtures/generic_maps.bpf.o)
+lmb_guarded_host_test(generic_abi_probe test_generic_abi_probe
+  $<TARGET_FILE:lmb> ${CMAKE_BINARY_DIR}/fixtures/ring_test.bpf.o)
+lmb_guarded_host_test(old_consumer_v1 test_old_consumer_v1)
 
 # Partial ABI stub for the incompatible-library test: every
 # operation except lmb_close. Test-only; never installed.
