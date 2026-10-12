@@ -6,6 +6,7 @@
 #include <linux/bpf.h>
 #include <stdio.h>
 #include <stdarg.h>
+#include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/syscall.h>
@@ -33,6 +34,8 @@ static unsigned checks, failures, native_closes, load_calls, bpf_calls;
 static long allocation_fault = -1, allocation_index;
 static unsigned allocation_hit;
 static const uint8_t *borrowed_elf, *borrowed_name, *borrowed_btf, *borrowed_target;
+static int autoload_fault;
+static unsigned attach_target_calls;
 #define CHECK(c) do { checks++; if (!(c)) { failures++; \
     fprintf(stderr, "FAIL line %u: %s\n", __LINE__, #c); } } while (0)
 
@@ -130,7 +133,14 @@ int __wrap_bpf_program__set_attach_target(struct bpf_program *program,
                                          int fd, const char *target) {
     CHECK(program && fd == 0 && target != (const char *)borrowed_target);
     CHECK(!strcmp(target, "do_sys_open"));
+    attach_target_calls++;
     return -2041;
+}
+
+int __real_bpf_program__set_autoload(struct bpf_program *prog, bool autoload);
+int __wrap_bpf_program__set_autoload(struct bpf_program *prog, bool autoload) {
+    if (autoload_fault) return autoload_fault;
+    return __real_bpf_program__set_autoload(prog, autoload);
 }
 
 void __real_bpf_object__close(struct bpf_object *obj);
@@ -706,6 +716,26 @@ int main(int argc, char **argv) {
         c.autoload = 2; borrowed_target = c.attach_target.ptr;
         CHECK(lmb_object_configure_program_v1(obj, &c) == -2041);
         error_is(2, 2, -2041);
+        struct lmb_name_v1 n = name("traced");
+        struct lmb_program_info_v1 p = info();
+        CHECK(lmb_object_program_info_v1(obj, &n, &p) == 0 && p.generation == 0 && p.autoload == 1);
+        CHECK(lmb_object_close_v1(&obj) == 0);
+    }
+    {
+        /* An autoload failure must leave the native attach target
+         * untouched: the bridge applies autoload before the target,
+         * so the target setter is never reached here. */
+        struct lmb_object_options_v1 o = options();
+        struct lmb_object *obj = open_object(tracing, tracing_size, &o);
+        struct lmb_program_options_v1 c = config("traced");
+        c.attach_target.ptr = (const uint8_t *)"do_sys_open"; c.attach_target.len = 11;
+        c.autoload = 2;
+        unsigned calls_before = attach_target_calls;
+        autoload_fault = -2039;
+        CHECK(lmb_object_configure_program_v1(obj, &c) == -2039);
+        error_is(2, 2, -2039);
+        CHECK(attach_target_calls == calls_before);
+        autoload_fault = 0;
         struct lmb_name_v1 n = name("traced");
         struct lmb_program_info_v1 p = info();
         CHECK(lmb_object_program_info_v1(obj, &n, &p) == 0 && p.generation == 0 && p.autoload == 1);

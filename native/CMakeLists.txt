@@ -256,6 +256,7 @@ target_link_libraries(test_generic_object PRIVATE lmb_static)
 target_link_options(test_generic_object PRIVATE
   "LINKER:--wrap=bpf_object__load" "LINKER:--wrap=bpf_object__close"
   "LINKER:--wrap=bpf_object__open_mem" "LINKER:--wrap=bpf_program__set_attach_target"
+  "LINKER:--wrap=bpf_program__set_autoload"
   "LINKER:--wrap=malloc" "LINKER:--wrap=calloc" "LINKER:--wrap=syscall")
 add_dependencies(test_generic_object generic_fixtures)
 add_test(NAME generic_object COMMAND test_generic_object
