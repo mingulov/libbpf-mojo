@@ -9,8 +9,19 @@ from libbpf_mojo.error import EINVAL, EOVERFLOW, LmbError
 from libbpf_mojo.object import MapView, _query_name, capture_generic_error
 
 
+comptime MAP_TYPE_PERCPU_HASH = UInt32(5)
+comptime MAP_TYPE_PERCPU_ARRAY = UInt32(6)
+comptime MAP_TYPE_LRU_PERCPU_HASH = UInt32(10)
+comptime MAP_TYPE_PERCPU_CGROUP_STORAGE = UInt32(21)
+
+
 def _percpu(kind: UInt32) -> Bool:
-    return kind == 5 or kind == 6 or kind == 10 or kind == 21
+    return (
+        kind == MAP_TYPE_PERCPU_HASH
+        or kind == MAP_TYPE_PERCPU_ARRAY
+        or kind == MAP_TYPE_LRU_PERCPU_HASH
+        or kind == MAP_TYPE_PERCPU_CGROUP_STORAGE
+    )
 
 
 def _extent(info: MapInfoV1) raises LmbError -> Int:
