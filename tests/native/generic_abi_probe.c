@@ -541,8 +541,9 @@ static struct lmb_object *open_valid(struct gen_api *g,
     return obj;
 }
 
-/* Forward declaration: B3a validation isolation loads its owner;
- * the definition lives with the other load-gated helpers. */
+/* Forward declaration: map/test/attach/buffer validation isolation
+ * loads its owner; the definition lives with the other load-gated
+ * helpers. */
 static int open_loaded(struct gen_api *g, const uint8_t *elf,
                        uint64_t elf_len, uint32_t log_level,
                        uint64_t log_capacity, struct lmb_object **obj);
@@ -674,7 +675,7 @@ static void part_b2(struct gen_api *g, const uint8_t *elf,
           "close must release the validation owner");
 }
 
-/* B3a: map/test/attach/buffer validation on a loaded owner.
+/* Map/test/attach/buffer validation on a loaded owner.
  * Null-object rows use otherwise-valid arguments and run
  * unprivileged. Every bounds, flag, and alias row uses a loaded
  * owner with valid names and attach targets, so only the input
