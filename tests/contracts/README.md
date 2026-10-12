@@ -12,7 +12,7 @@ This is a canonical digest, rather than the raw `bundle.json` digest.
 An installed MojoBPF package can export the data through its public
 `mojobpf.validation.export_schema_bundle` function. Supply the resulting
 directory as `LMB_TEST_CONTRACT_BUNDLE`; the library tests import no publisher
-code and require no sibling checkout or network fallback:
+code and require no additional source checkout or network fallback:
 
 ```sh
 LMB_TEST_CONTRACT_BUNDLE=/path/to/schema-data ./tools/test contracts

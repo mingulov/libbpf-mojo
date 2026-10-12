@@ -720,11 +720,14 @@ frozen record, not implementation detail.
 
 ## Validation contracts
 
-Result reporting for this interface follows the versioned
-`test-contracts-v1` and `suite-result-v1` contracts,
-consumed as the `mojobpf-test-contracts` version 1 schema
-bundle (manifest digest
+Result-reporting formats for this interface are the
+versioned `test-contracts-v1` and `suite-result-v1`
+contracts, consumed as the `mojobpf-test-contracts`
+version 1 schema bundle (manifest digest
 `f26344f33e5efd863ece1ce59d8e19bf26daaae0c82b97074afd176ae7011ad7`).
+This is forward-looking: the library ships schema
+acquisition only (the pin plus `tests/contracts/`), with
+no result emitter, validator, or conformance test.
 Acquire the bundle by exporting from an installed mojobpf
 package or an unpacked mojobpf source archive, and verify
 its manifest digest before use; there is no unpinned mode.
@@ -732,6 +735,10 @@ Standalone library operation has no runtime dependency on
 that package.
 
 ## Downstream slice layout
+
+Non-normative: this section records the historical
+implementation-slice layout for the frozen contract
+above; it prescribes no integrator workflow.
 
 The object-lifecycle, maps/test-run, and attach/ring slices
 build on this frozen contract. Each slice owns disjoint new
