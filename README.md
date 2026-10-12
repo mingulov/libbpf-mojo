@@ -5,7 +5,7 @@ Small Mojo interface to libbpf, using one C compatibility layer and clang-built 
 
 The initial scope is object loading, explicit attachment, bounded event batches, map access, errors, and owned cleanup. MemVeil is the first intended consumer. Application-specific probes, event meanings, correlation, and reporting belong to the application.
 
-Status: 0.1.0 supports ABI v1 (object loading, explicit attachment, bounded event batches, map access, errors, owned cleanup) with importable Mojo wrappers. MemVeil is the first consumer. This is not an upstream libbpf project or a Mojo-to-eBPF compiler.
+Status: 0.2.0 supports ABI v1 (object loading, explicit attachment, bounded event batches, map access, errors, owned cleanup) plus the generic object/link/buffer interface (retained tracepoint links, ring buffers, typed maps, XDP test-run) with importable Mojo wrappers. MemVeil is the first consumer. This is not an upstream libbpf project or a Mojo-to-eBPF compiler.
 
 The additive generic object interface implements ringless ELF open,
 named pre-load program configuration, program metadata, retained views
