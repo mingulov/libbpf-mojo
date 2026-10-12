@@ -33,8 +33,11 @@ copied 4,096-byte slot and returns at most one frame per poll. Guarded host
 tests exercise the actual pinned libbpf reader with controlled mappings,
 short-buffer retries and exact record conservation. Attachment tests prove
 forwarding and ownership through a test seam. Successful kernel attachment
-and event production still require live qualification; typed Mojo link and
-buffer owners are pending.
+and event production still require live qualification. Move-only `Link` and
+`Buffer` owners are available through `libbpf_mojo.link` and
+`libbpf_mojo.buffer`, with optional-symbol preflight and copied poll results.
+See [links and ring consumers](docs/links-and-ring.md) for their signatures,
+retention and installed-consumer boundaries.
 
 ## Build, test, and package
 
@@ -48,6 +51,7 @@ see `docs/build.md` and `toolchain.lock.json`.
     ./tools/test native --host-only                  # no kernel probes
     ./tools/test mojo --host-only                    # no live-load case
     ./tools/test package-consumer                    # tarball serves a consumer
+    LMB_TEST_CONTRACT_BUNDLE=/path/to/data ./tools/test contracts
     ./tools/package                                  # release tarball + MANIFEST
 
 `docs/abi-v1.md` is the normative C boundary contract;

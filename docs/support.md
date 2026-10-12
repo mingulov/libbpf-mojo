@@ -89,7 +89,7 @@ for the explicit host scope. Omitted runtime cases are reported
 keep their runtime checks. The native host scope runs guarded framing
 checks and omits the valid-fixture dual-load case and its privilege
 probe; that regression fails if the boundary is crossed. The native host
-runner selects ten guarded CTest twins and four export checks, without
+runner selects ten guarded CTest twins and eleven export checks, without
 double-counting the ordinary tests. The guard runs only in native test
 executables, including the shared bridge's bundled libbpf. Successful generic load, loaded map geometry,
 tracing-target configuration and their target/platform evidence remain
@@ -109,8 +109,15 @@ relocation with their input sources removed and no compiler on PATH. They
 exercise existing session behavior, generic view ownership and typed
 unloaded/closed/stale errors. Test-only scripted libraries are not shipped.
 Successful kernel operations, including installed package map/test-run
-execution, remain unqualified. Native links and buffers have host contract evidence. Typed Mojo
-link/buffer owners and installed consumers of those new operations are pending.
+execution, remain unqualified. Native and typed Mojo links and buffers have
+host contract evidence. Their installed consumers use extracted public modules
+only, then run after source removal and relocation. Product-library cases prove
+unloaded/closed and option refusals; an explicit external test-library mode
+proves successful children, copied bytes, short retry and last-release cleanup
+over the actual pinned reader. Each attempt can retain binaries and complete
+command logs through `LMB_PACKAGE_CONSUMER_OUT`. These test libraries and schema
+acquisition helpers do not enter runtime packages. Successful installed kernel
+attachment and event production remain unqualified.
 
 Generic ring tests execute pinned libbpf's maintained reader over owned
 memfd-backed mappings with a controlled producer. They prove copied

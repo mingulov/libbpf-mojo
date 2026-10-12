@@ -6,7 +6,15 @@
 #include "libbpf_mojo_generic.h"
 /* Test-only controls: no BPF load/attach or perf-event syscall is forwarded. */
 enum ge_query { GE_ATTACH = 1, GE_DESTROY, GE_NEW, GE_CONSUME, GE_WAIT,
-    GE_INFO, GE_MAPS, GE_OBJECT_CLOSE, GE_ALLOCS, GE_FAULT_HITS };
+    GE_INFO, GE_MAPS, GE_OBJECT_CLOSE, GE_ALLOCS, GE_FAULT_HITS,
+    GE_RING_FREE, GE_RECEIVED, GE_DELIVERED, GE_STAGED, GE_MALFORMED, GE_DROPPED,
+    GE_CONSUMER_POSITION, GE_PRODUCER_POSITION, GE_FAILURES, GE_OPEN_READERS,
+    GE_OWNED_FDS, GE_WRITER_ACTIVE, GE_LIVE_LINKS, GE_ATTACH_ENTRY,
+    GE_LINK_CLOSE_ENTRY, GE_BUFFER_OPEN_ENTRY, GE_BUFFER_POLL_ENTRY,
+    GE_BUFFER_CLOSE_ENTRY };
+enum ge_scenario { GE_DEFAULT = 0, GE_EINTR, GE_BEGIN, GE_PUBLISH_A,
+    GE_PUBLISH_B, GE_OVERWRITE_A, GE_CONSUME_ENOSPC, GE_ATTACH_EIO,
+    GE_DESTROY_EIO, GE_NEW_ENOMEM, GE_END };
 void ge_check(int condition, const char *expression, unsigned line);
 #define CHECK(c) ge_check(!!(c), #c, __LINE__)
 int ge_ring_fd(void);

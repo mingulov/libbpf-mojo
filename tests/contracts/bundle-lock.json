@@ -1,0 +1,15 @@
+{
+  "canonical_sha256": "f26344f33e5efd863ece1ce59d8e19bf26daaae0c82b97074afd176ae7011ad7",
+  "manifest": {
+    "bundle": "mojobpf-test-contracts",
+    "contracts": ["test-contracts-v1", "suite-result-v1"],
+    "schemas": {
+      "cost.schema.json": {"sha256": "4db9e5a8bf821077e85896df28e1252e0640f37227e9b1c6063aed3ce4356097", "version": 1},
+      "fixture.schema.json": {"sha256": "4f0d007a38b39176d3b6146bebd222bda0f3af772c5ac35f3425190011b27ff2", "version": 1},
+      "result.schema.json": {"sha256": "222c12563552f5044f4fa6698ac47e304458e969a0b5f26ffa9a93a64983715b", "version": 1},
+      "run-plan.schema.json": {"sha256": "e48385efc38aa27616f36ba002522825718d4daf21205f4fa8ec0247a18f8af3", "version": 1},
+      "target.schema.json": {"sha256": "d5b25ab6c67fad351e0828e8918f6f7235babfdb6a2a39d1222c1d9aaa67ba21", "version": 1}
+    },
+    "version": 1
+  }
+}

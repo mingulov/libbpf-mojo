@@ -86,6 +86,16 @@ snapshots those inputs before output writes. This tests a native alias
 contract that safe Mojo origins ordinarily refuse. Public modules do not
 erase span origins.
 
+## `link.mojo` and `buffer.mojo`
+
+| Operation | Pointer and extent | Initialization, lifetime and thread preconditions |
+|---|---|---|
+| Optional factory preflight | Symbol lookup through the view's original `GenericLib`; no child pointer yet. | Generation is checked first. Attach+close or open+poll+close must all resolve before acquisition. The unchanged object/Session slices stay independent. |
+| Attach/ring options | Local fixed-width `AttachOptionsV1`/`BufferOptionsV1` cross as typed immutable pointers. Embedded name spans carry `UInt64` addresses plus exact u64 byte lengths. | Every record field is initialized. The view name and caller strings live through the synchronous call; native code copies required names and retains no Mojo pointer. |
+| Child handle cells | Initialized local UInt64 cells cross as `MutPointer[UInt64]`. Native handles are opaque integers to Mojo. | A successful factory owns one child; no raw-handle adoption API exists. Move transfers that child and its shared library. Close/destruction use a local cell, retain the native null result and never destroy twice. |
+| Ring destination and sizes | `dst.unsafe_ptr()` is mutable, with capacity `UInt64(len(dst))`; separate initialized u64 `used` and `needed` locals cross as typed mutable pointers. | The destination and cells outlive the call. Native range/overlap checks precede writes. No output span escapes. The child retains its native parent; generation is checked before polling. Closed handles fail before parent access. |
+| Error capture and teardown | Generic error-record locals use the existing immediate capture helper. | A failing native operation is captured before another generic call. Explicit close does not check generation and exposes signed teardown failure. Native children retire before the last ArcPointer/OwnedDLHandle. All operations remain on the owning thread. |
+
 ## `batch.mojo`
 
 | Operation | Pointer | Capacity | Init | Lifetime | Threads |

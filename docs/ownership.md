@@ -102,9 +102,23 @@ no generic stats operation is exported. Correctly bounded ordinary polls
 do not consume a valid record while the slot is occupied. Host robustness
 tests deliberately exercise that callback case and count the loss.
 
-Typed Mojo link/buffer owners are pending. Current native host tests prove
-ownership, forwarding and the actual libbpf reader contract; successful
-kernel attachment and event production require live evidence.
+Typed Mojo `Link` and `Buffer` are move-only and share the originating library.
+Factories validate the retained view's generation before acquiring a child,
+and preflight their optional acquisition, poll and destructor symbols. Missing
+destruction support refuses before native acquisition. Both children survive
+the parent/view's local scope; native teardown precedes dynamic-library release.
+Close remains available without a generation check. A closed buffer clears its
+stored parent values and rejects later polling before checking that parent.
+
+`Buffer.poll` borrows a mutable span and returns a copyable `BufferPollResult`
+with u64 `used`/`needed` cells and an owned diagnostic. It preserves the native
+short-buffer error, signed EINTR and LIBBPF failures. Only the expected
+BUFFER_POLL/BRIDGE/-ENOSPC diagnostic and valid required extent classify as
+short. Immediate same-thread error capture preserves a result after later
+successful operations. The [usage guide](links-and-ring.md) specifies these
+signatures and outcomes. Host tests prove ownership, forwarding and the actual
+libbpf reader contract; successful kernel attachment and event production
+require live evidence.
 
 ## Attach and teardown
 

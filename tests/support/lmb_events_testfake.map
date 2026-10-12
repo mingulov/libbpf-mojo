@@ -1,0 +1,24 @@
+/* SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception */
+LIBBPF_MOJO_1 {
+    global:
+        lmb_open; lmb_load; lmb_attach; lmb_poll; lmb_map_info;
+        lmb_map_read; lmb_map_write; lmb_stats; lmb_last_error;
+        lmb_detach; lmb_close;
+    local: *;
+};
+LIBBPF_MOJO_GENERIC_1 {
+    global:
+        lmb_object_open_v1; lmb_object_configure_program_v1; lmb_object_load_v1;
+        lmb_object_program_info_v1; lmb_object_map_info_v1;
+        lmb_object_close_v1; lmb_object_release_v1; lmb_generic_last_error_v1;
+        lmb_object_map_lookup_v1; lmb_object_map_update_v1; lmb_program_test_run_v1;
+        lmb_object_attach_v1; lmb_link_close_v1; lmb_buffer_open_v1;
+        lmb_buffer_poll_v1; lmb_buffer_close_v1;
+        lmb_object_ref_v1; lmb_object_unref_v1; lmb_object_gen_v1;
+        lmb_object_gen_check_v1;
+};
+LMB_EVENTS_TEST_1 {
+    global:
+        lmb_events_reset; lmb_events_scenario;
+        lmb_events_call_count; lmb_events_close_count;
+};

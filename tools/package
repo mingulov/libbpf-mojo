@@ -122,13 +122,15 @@ sys.exit("no version in pixi.toml")
         "$ROOT/src/libbpf_mojo/_ffi.mojo" \
         "$ROOT/src/libbpf_mojo/batch.mojo" \
         "$ROOT/src/libbpf_mojo/error.mojo" \
+        "$ROOT/src/libbpf_mojo/link.mojo" \
+        "$ROOT/src/libbpf_mojo/buffer.mojo" \
         "$ROOT/src/libbpf_mojo/maps.mojo" \
         "$ROOT/src/libbpf_mojo/object.mojo" \
         "$ROOT/src/libbpf_mojo/program.mojo" \
         "$ROOT/src/libbpf_mojo/session.mojo" \
         "$stage/mojo/libbpf_mojo/" || return 1
     mkdir -p "$stage/docs" || return 1
-    cp "$ROOT/docs/maps-and-test-run.md" "$ROOT/docs/generic-abi-v1.md" \
+    cp "$ROOT/docs/maps-and-test-run.md" "$ROOT/docs/links-and-ring.md" "$ROOT/docs/generic-abi-v1.md" \
         "$ROOT/docs/ownership.md" "$stage/docs/" || return 1
     cp "$build/examples/tracepoint_main" \
         "$build/examples/tracepoint_trigger" \
@@ -210,6 +212,15 @@ prove the FFI, ownership and rejecting paths. Successful kernel map
 access and test-run remain unqualified. See
 [maps and test-run](docs/maps-and-test-run.md) for usage and buffer rules.
 
+Import \`attach_tracepoint\` from \`libbpf_mojo.link\` and \`open_ring\`
+from \`libbpf_mojo.buffer\`. Their move-only children retain the original
+object/library; buffer polling borrows mutable caller storage and returns
+copied diagnostics with u64 sizes. Required close/poll symbols are checked
+before acquisition. Host controls exercise the actual pinned reader over
+controlled mappings and explicit attachment seams; successful kernel
+attachment and event production remain unqualified. See
+[links and ring consumers](docs/links-and-ring.md).
+
 Build a consumer with the pinned Mojo 1.1.0 compiler and
 \`mojo build -I <package>/mojo\`. Run the compiled consumer with
 \`LD_LIBRARY_PATH=<package>/lib\` and \`LMB_NATIVE_LIB\` pointing at
@@ -242,7 +253,8 @@ short window, 77 without privilege, 1 on failure.
 - \`include/libbpf_mojo.h\`: the native ABI v1 header.
 - \`include/libbpf_mojo_generic.h\`: the additive generic object ABI
   declarations; object ownership, map lookup/update and XDP test-run
-  are implemented. Link and ring operations remain optional.
+  and explicit tracepoint link/ring ownership are implemented. New generic
+  operations resolve optionally, preserving older object/Session libraries.
 - \`mojo/libbpf_mojo/\`: importable Mojo wrapper sources. Build
   a consumer with \`mojo build -I <package>/mojo\`, then run it
   with \`LD_LIBRARY_PATH=<package>/lib\` and \`LMB_NATIVE_LIB\`
@@ -271,7 +283,10 @@ copies = {
     "mojo/libbpf_mojo/object.mojo": "src/libbpf_mojo/object.mojo",
     "mojo/libbpf_mojo/maps.mojo": "src/libbpf_mojo/maps.mojo",
     "mojo/libbpf_mojo/program.mojo": "src/libbpf_mojo/program.mojo",
+    "mojo/libbpf_mojo/link.mojo": "src/libbpf_mojo/link.mojo",
+    "mojo/libbpf_mojo/buffer.mojo": "src/libbpf_mojo/buffer.mojo",
     "docs/maps-and-test-run.md": "docs/maps-and-test-run.md",
+    "docs/links-and-ring.md": "docs/links-and-ring.md",
     "docs/generic-abi-v1.md": "docs/generic-abi-v1.md",
     "docs/ownership.md": "docs/ownership.md",
     "include/libbpf_mojo_generic.h": "native/include/libbpf_mojo_generic.h",

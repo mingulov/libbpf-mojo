@@ -680,6 +680,71 @@ struct GenericLib(Movable):
                 String("unresolved lmb_object_open_v1"),
             )
 
+    def require_link(mut self) raises LmbError:
+        """Refuse an incomplete owner slice before native acquisition."""
+        for name in [String("lmb_object_attach_v1"), String("lmb_link_close_v1")]:
+            if not self.has_symbol(name.copy()):
+                raise LmbError(GENERIC_OP_ATTACH, GENERIC_DOMAIN_BRIDGE,
+                               ENOSYS, "incomplete link library: " + name)
+
+    def require_buffer(mut self) raises LmbError:
+        """A ring owner requires open, poll and deterministic teardown."""
+        for name in [String("lmb_buffer_open_v1"), String("lmb_buffer_poll_v1"),
+                     String("lmb_buffer_close_v1")]:
+            if not self.has_symbol(name.copy()):
+                raise LmbError(GENERIC_OP_BUFFER_OPEN, GENERIC_DOMAIN_BRIDGE,
+                               ENOSYS, "incomplete buffer library: " + name)
+
+    def object_attach(
+        mut self, object_handle: UInt64, options: ImmPointer[AttachOptionsV1, _],
+        link_out: MutPointer[UInt64, _],
+    ) raises LmbError -> Int32:
+        try:
+            var function = self._handle.get_function[Int32]("lmb_object_attach_v1")
+            return function(object_handle, options, link_out)
+        except e:
+            raise LmbError(GENERIC_OP_ATTACH, GENERIC_DOMAIN_BRIDGE,
+                           ENOSYS, "unresolved lmb_object_attach_v1")
+
+    def close_link(mut self, link: MutPointer[UInt64, _]) raises LmbError -> Int32:
+        try:
+            var function = self._handle.get_function[Int32]("lmb_link_close_v1")
+            return function(link)
+        except e:
+            raise LmbError(GENERIC_OP_LINK_CLOSE, GENERIC_DOMAIN_BRIDGE,
+                           ENOSYS, "unresolved lmb_link_close_v1")
+
+    def open_buffer(
+        mut self, object_handle: UInt64, options: ImmPointer[BufferOptionsV1, _],
+        buffer_out: MutPointer[UInt64, _],
+    ) raises LmbError -> Int32:
+        try:
+            var function = self._handle.get_function[Int32]("lmb_buffer_open_v1")
+            return function(object_handle, options, buffer_out)
+        except e:
+            raise LmbError(GENERIC_OP_BUFFER_OPEN, GENERIC_DOMAIN_BRIDGE,
+                           ENOSYS, "unresolved lmb_buffer_open_v1")
+
+    def poll_buffer(
+        mut self, buffer: UInt64, destination: MutPointer[UInt8, _],
+        capacity: UInt64, timeout_ms: Int32, used: MutPointer[UInt64, _],
+        needed: MutPointer[UInt64, _],
+    ) raises LmbError -> Int32:
+        try:
+            var function = self._handle.get_function[Int32]("lmb_buffer_poll_v1")
+            return function(buffer, destination, capacity, timeout_ms, used, needed)
+        except e:
+            raise LmbError(GENERIC_OP_BUFFER_POLL, GENERIC_DOMAIN_BRIDGE,
+                           ENOSYS, "unresolved lmb_buffer_poll_v1")
+
+    def close_buffer(mut self, buffer: MutPointer[UInt64, _]) raises LmbError -> Int32:
+        try:
+            var function = self._handle.get_function[Int32]("lmb_buffer_close_v1")
+            return function(buffer)
+        except e:
+            raise LmbError(GENERIC_OP_BUFFER_CLOSE, GENERIC_DOMAIN_BRIDGE,
+                           ENOSYS, "unresolved lmb_buffer_close_v1")
+
     def configure_program(
         mut self, object_handle: UInt64, opts: ImmPointer[ProgramOptionsV1, _]
     ) raises LmbError -> Int32:

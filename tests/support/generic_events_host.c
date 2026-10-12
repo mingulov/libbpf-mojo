@@ -2,6 +2,7 @@
 /* Producer/mapping and finite syscall seams. libbpf owns the reader. */
 #include <dirent.h>
 #include <errno.h>
+#include <fcntl.h>
 #include <linux/bpf.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -13,9 +14,12 @@
 #include <bpf/libbpf.h>
 #include "generic_events_host.h"
 #include "generic_events.h"
+#ifdef LMB_EVENTS_SHARED_TEST
+#include "generic_internal.h"
+#endif
 
 static unsigned checks, failures;
-static uint64_t calls[GE_FAULT_HITS + 1];
+static uint64_t calls[GE_BUFFER_CLOSE_ENTRY + 1];
 static int ring_fd = -1, epoll_fd = -1, program_fd = 12345;
 static uint8_t *writer;
 static size_t page_size, writer_size;
@@ -40,6 +44,22 @@ int ge_last_timeout(void) { return last_timeout; }
 static unsigned alloc_ordinal, alloc_seen, mmap_ordinal, mmap_seen;
 static struct {void *address; size_t length;} mappings[32];
 static void *tokens[32];
+static int epoll_owned[32];
+#ifdef LMB_EVENTS_SHARED_TEST
+static struct lmb_buffer *live_buffers[32];
+static uint64_t retired_received, retired_delivered, retired_malformed, retired_dropped;
+#endif
+static unsigned baseline_fds;
+static void producer_begin(void);
+static void producer_end(void);
+static int resources_live(void) {
+    for (size_t i = 0; i < 32; i++)
+        if (tokens[i] || mappings[i].address || epoll_owned[i]) return 1;
+#ifdef LMB_EVENTS_SHARED_TEST
+    for (size_t i = 0; i < 32; i++) if (live_buffers[i]) return 1;
+#endif
+    return 0;
+}
 
 void ge_check(int condition, const char *expression, unsigned line) {
     checks++;
@@ -48,19 +68,77 @@ void ge_check(int condition, const char *expression, unsigned line) {
 static void stop(const char *text) {
     fprintf(stderr, "EVENT HOST GUARD: %s\n", text); _exit(99);
 }
-void lmb_events_reset(void) {
+static void reset_faults(void) {
     info_code = new_code = attach_code = destroy_code = 0;
     new_null = attach_null = epoll_create_code = register_code = wait_errno = consume_code = 0;
     wait_result = 1; overwrite = 0; map_fd_code = epoll_fd_code = 0; mmap_ordinal = mmap_seen = 0;
     alloc_active = 0; alloc_ordinal = alloc_seen = 0; program_fd = 12345;
 }
+void lmb_events_reset(void) {
+    if (resources_live()) stop("reset refused with live consumers");
+    if (failures) stop("prior host assertions failed");
+    if (writer) producer_end();
+    memset(calls, 0, sizeof(calls)); checks = 0;
+#ifdef LMB_EVENTS_SHARED_TEST
+    retired_received = retired_delivered = retired_malformed = retired_dropped = 0;
+#endif
+    reset_faults();
+}
 void lmb_events_scenario(uint32_t scenario) {
-    lmb_events_reset();
-    if (scenario == 1) ge_wait_result(-1, EINTR);
-    else if (scenario != 0) stop("unknown test scenario");
+    uint8_t bytes[16];
+    switch (scenario) {
+    case GE_DEFAULT: reset_faults(); break; /* Faults only; never reset ownership. */
+    case GE_EINTR: reset_faults(); ge_wait_result(-1, EINTR); break;
+    case GE_BEGIN:
+        if (writer || resources_live()) stop("begin refused with live producer or consumers");
+        producer_begin(); break;
+    case GE_PUBLISH_A: case GE_OVERWRITE_A:
+        if (!writer) stop("publication requires an owned producer");
+        if (scenario == GE_OVERWRITE_A) ge_overwrite_source(1);
+        ge_payload(bytes, UINT64_C(0x0102030405060708)); ge_publish(bytes, 16, 0); break;
+    case GE_PUBLISH_B:
+        if (!writer) stop("publication requires an owned producer");
+        ge_payload(bytes, UINT64_C(0xfedcba9876543210)); ge_publish(bytes, 16, 0); break;
+    case GE_CONSUME_ENOSPC: reset_faults(); ge_consume_fault(-ENOSPC); break;
+    case GE_ATTACH_EIO: reset_faults(); ge_attach_fault(-EIO, 0); break;
+    case GE_DESTROY_EIO: reset_faults(); ge_destroy_fault(-EIO); break;
+    case GE_NEW_ENOMEM: reset_faults(); ge_new_fault(-ENOMEM, 1); break;
+    case GE_END:
+        if (resources_live()) stop("end refused with live consumers");
+        if (!writer) stop("end requires an owned producer");
+        producer_end(); break;
+    default: stop("unknown test scenario");
+    }
 }
 uint64_t lmb_events_call_count(uint32_t query) {
-    return query && query <= GE_FAULT_HITS ? calls[query] : 0;
+    if (query == GE_CONSUMER_POSITION) return writer ? ge_consumer() : 0;
+    if (query == GE_PRODUCER_POSITION) return writer ? ge_producer() : 0;
+    if (query == GE_FAILURES) return failures;
+    if (query == GE_OWNED_FDS) {
+        uint64_t n = ring_fd >= 0;
+        for (size_t i = 0; i < 32; i++) if (epoll_owned[i]) n++;
+        return n;
+    }
+    if (query == GE_WRITER_ACTIVE) return writer != NULL;
+    if (query == GE_LIVE_LINKS) {
+        uint64_t n = 0; for (size_t i = 0; i < 32; i++) if (tokens[i]) n++; return n;
+    }
+#ifdef LMB_EVENTS_SHARED_TEST
+    if (query >= GE_RECEIVED && query <= GE_DROPPED) {
+        uint64_t n = query == GE_RECEIVED ? retired_received : query == GE_DELIVERED ? retired_delivered :
+            query == GE_MALFORMED ? retired_malformed : query == GE_DROPPED ? retired_dropped : 0;
+        for (size_t i = 0; i < 32; i++) if (live_buffers[i]) {
+            const struct lmb_buffer *b = live_buffers[i];
+            n += query == GE_RECEIVED ? b->received : query == GE_DELIVERED ? b->delivered :
+                query == GE_STAGED ? !!b->stage_len : query == GE_MALFORMED ? b->malformed : b->dropped;
+        }
+        return n;
+    }
+    if (query == GE_OPEN_READERS) {
+        uint64_t n = 0; for (size_t i = 0; i < 32; i++) if (live_buffers[i]) n++; return n;
+    }
+#endif
+    return query && query <= GE_BUFFER_CLOSE_ENTRY ? calls[query] : 0;
 }
 uint64_t lmb_events_close_count(void) { return calls[GE_OBJECT_CLOSE]; }
 void ge_alloc_fault(unsigned n) { alloc_active = 1; alloc_ordinal = n; alloc_seen = 0; }
@@ -177,10 +255,26 @@ int __wrap_munmap(void *p, size_t length) {
     return __real_munmap(p, length);
 }
 int __real_epoll_create1(int);
+int __real_close(int);
+int __wrap_close(int fd) {
+    int rc = __real_close(fd);
+    if (!rc) {
+        if (fd == ring_fd) ring_fd = -1;
+        for (size_t i = 0; i < 32; i++) if (epoll_owned[i] == fd + 1) epoll_owned[i] = 0;
+    }
+    return rc;
+}
 int __wrap_epoll_create1(int flags) {
     CHECK(flags == EPOLL_CLOEXEC);
     if (epoll_create_code) { errno = -epoll_create_code; return -1; }
-    epoll_fd = __real_epoll_create1(flags); return epoll_fd;
+    epoll_fd = __real_epoll_create1(flags);
+    if (epoll_fd >= 0) {
+        for (size_t i = 0; i < 32; i++) if (!epoll_owned[i]) {
+            epoll_owned[i] = epoll_fd + 1; return epoll_fd;
+        }
+        stop("epoll descriptor registry full");
+    }
+    return epoll_fd;
 }
 int __wrap_epoll_ctl(int epfd, int op, int fd, struct epoll_event *event) {
     if (fd != ring_fd || epfd != epoll_fd || !event || op != EPOLL_CTL_ADD)
@@ -207,6 +301,11 @@ struct ring_buffer *__wrap_ring_buffer__new(int fd, ring_buffer_sample_fn callba
     return __real_ring_buffer__new(fd, callback, ctx, opts);
 }
 int __real_ring_buffer__consume_n(struct ring_buffer *, size_t);
+void __real_ring_buffer__free(struct ring_buffer *);
+void __wrap_ring_buffer__free(struct ring_buffer *rb) {
+    if (rb) calls[GE_RING_FREE]++;
+    __real_ring_buffer__free(rb);
+}
 int __wrap_ring_buffer__consume_n(struct ring_buffer *rb, size_t n) {
     CHECK(n == 1); calls[GE_CONSUME]++;
     if (consume_code) { errno = ENOTTY; return consume_code; }
@@ -311,19 +410,70 @@ void ge_unbusy(void) {
     memcpy(writer + 2 * page_size + at, &header, 4);
     memcpy(writer + 2 * page_size + GENERIC_EVENTS_CAPACITY + at, &header, 4);
 }
-void ge_begin(const char *fixture) {
-    (void)fixture; lmb_events_reset(); page_size = (size_t)getpagesize();
+static void producer_begin(void) {
+    if (writer || resources_live()) stop("producer already owned");
+    baseline_fds = ge_fd_count(); reset_faults(); page_size = (size_t)getpagesize();
     writer_size = 2 * page_size + 2 * GENERIC_EVENTS_CAPACITY;
     ring_fd = memfd_create("lmb-events-host", MFD_CLOEXEC); CHECK(ring_fd >= 0);
     CHECK(ftruncate(ring_fd, (off_t)writer_size) == 0);
     writer = __real_mmap(NULL, writer_size, PROT_READ | PROT_WRITE, MAP_SHARED, ring_fd, 0);
     CHECK(writer != MAP_FAILED); if (writer == MAP_FAILED) exit(1);
 }
+static void producer_end(void) {
+    if (resources_live()) stop("producer teardown refused with live consumers");
+    CHECK(__real_munmap(writer, writer_size) == 0); CHECK(close(ring_fd) == 0);
+    writer = NULL; writer_size = 0; ring_fd = epoll_fd = -1;
+    for (size_t i = 0; i < 32; i++) CHECK(!epoll_owned[i]);
+    /* Parsed libbpf placeholder FDs can close with the final parent. */
+    CHECK(ge_fd_count() <= baseline_fds);
+}
+void ge_begin(const char *fixture) {
+    (void)fixture; lmb_events_reset(); producer_begin();
+}
 int ge_end(const char *suite) {
     CHECK(calls[GE_MAPS] == 0);
     for (size_t i = 0; i < 32; i++) CHECK(!tokens[i] && !mappings[i].address);
-    CHECK(__real_munmap(writer, writer_size) == 0); CHECK(close(ring_fd) == 0);
+    producer_end();
     printf("%s: %u checks, %u failures; real-reader calls=%llu, attach seams=%llu\n",
         suite, checks, failures, (unsigned long long)calls[GE_CONSUME], (unsigned long long)calls[GE_ATTACH]);
     return failures ? 1 : 0;
 }
+
+#ifdef LMB_EVENTS_SHARED_TEST
+/* Counting entry wrappers invoke the unchanged compiled bridge algorithms. */
+int32_t lmb_events_real_attach(struct lmb_object *, const struct lmb_attach_options_v1 *, struct lmb_link **);
+int32_t lmb_events_real_link_close(struct lmb_link **);
+int32_t lmb_events_real_buffer_open(struct lmb_object *, const struct lmb_buffer_options_v1 *, struct lmb_buffer **);
+int32_t lmb_events_real_buffer_poll(struct lmb_buffer *, uint8_t *, uint64_t, int32_t, uint64_t *, uint64_t *);
+int32_t lmb_events_real_buffer_close(struct lmb_buffer **);
+int32_t lmb_object_attach_v1(struct lmb_object *o, const struct lmb_attach_options_v1 *opts, struct lmb_link **out) {
+    calls[GE_ATTACH_ENTRY]++; return lmb_events_real_attach(o, opts, out);
+}
+int32_t lmb_link_close_v1(struct lmb_link **link) {
+    calls[GE_LINK_CLOSE_ENTRY]++; return lmb_events_real_link_close(link);
+}
+int32_t lmb_buffer_open_v1(struct lmb_object *o, const struct lmb_buffer_options_v1 *opts, struct lmb_buffer **out) {
+    calls[GE_BUFFER_OPEN_ENTRY]++;
+    int32_t rc = lmb_events_real_buffer_open(o, opts, out);
+    if (!rc && out && *out) {
+        for (size_t i = 0; i < 32; i++) if (!live_buffers[i]) { live_buffers[i] = *out; return rc; }
+        stop("buffer registry full");
+    }
+    return rc;
+}
+int32_t lmb_buffer_poll_v1(struct lmb_buffer *b, uint8_t *dst, uint64_t cap, int32_t timeout, uint64_t *used, uint64_t *needed) {
+    calls[GE_BUFFER_POLL_ENTRY]++; return lmb_events_real_buffer_poll(b, dst, cap, timeout, used, needed);
+}
+int32_t lmb_buffer_close_v1(struct lmb_buffer **cell) {
+    calls[GE_BUFFER_CLOSE_ENTRY]++;
+    if (cell && *cell) {
+        for (size_t i = 0; i < 32; i++) if (live_buffers[i] == *cell) {
+            const struct lmb_buffer *b = *cell;
+            retired_received += b->received; retired_delivered += b->delivered;
+            retired_malformed += b->malformed; retired_dropped += b->dropped;
+            live_buffers[i] = NULL; break;
+        }
+    }
+    return lmb_events_real_buffer_close(cell);
+}
+#endif

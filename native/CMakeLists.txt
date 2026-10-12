@@ -335,8 +335,8 @@ foreach(events_test generic_attach generic_ring)
   target_link_libraries(test_${events_test} PRIVATE lmb_static)
   foreach(seam bpf_object__load bpf_object__close bpf_program__fd bpf_map__fd
       bpf_program__attach_tracepoint bpf_link__destroy ring_buffer__epoll_fd ring_buffer__new
-      ring_buffer__consume_n malloc calloc realloc mmap mmap64 munmap epoll_create1
-      epoll_ctl epoll_wait syscall)
+      ring_buffer__consume_n ring_buffer__free malloc calloc realloc mmap mmap64 munmap epoll_create1
+      epoll_ctl epoll_wait close syscall)
     target_link_options(test_${events_test} PRIVATE "LINKER:--wrap=${seam}")
   endforeach()
   add_dependencies(test_${events_test} generic_events_fixture generic_fixtures)
@@ -452,6 +452,59 @@ foreach(variant generic_testfake generic_objectonly)
   add_test(NAME ${variant}_exports COMMAND sh
     ${LMB_ROOT}/tests/support/check_generic_testfake_exports.sh
     $<TARGET_FILE:lmb_${variant}> ${export_args})
+endforeach()
+
+# Same bridge and pinned reader with bounded, test-only entry counters.
+# Missing-symbol variants hide definitions; they never replace algorithms.
+add_library(lmb_events_test_objects OBJECT ${LMB_SOURCES})
+set_target_properties(lmb_events_test_objects PROPERTIES POSITION_INDEPENDENT_CODE ON)
+target_compile_definitions(lmb_events_test_objects PRIVATE
+  lmb_object_attach_v1=lmb_events_real_attach
+  lmb_link_close_v1=lmb_events_real_link_close
+  lmb_buffer_open_v1=lmb_events_real_buffer_open
+  lmb_buffer_poll_v1=lmb_events_real_buffer_poll
+  lmb_buffer_close_v1=lmb_events_real_buffer_close)
+target_include_directories(lmb_events_test_objects PRIVATE include ${LIBBPF_ROOT}/include)
+add_dependencies(lmb_events_test_objects libbpf_external)
+file(READ ${LMB_ROOT}/tests/support/lmb_events_testfake.map events_base_map)
+foreach(variant testfake no_events no_attach no_link_close no_buffer_open no_buffer_poll no_buffer_close)
+  set(events_map "${events_base_map}")
+  if(variant STREQUAL no_events)
+    foreach(symbol lmb_object_attach_v1 lmb_link_close_v1 lmb_buffer_open_v1 lmb_buffer_poll_v1 lmb_buffer_close_v1)
+      string(REPLACE "${symbol};" "" events_map "${events_map}")
+    endforeach()
+  elseif(NOT variant STREQUAL testfake)
+    set(missing_symbol "lmb_${variant}_v1")
+    if(variant STREQUAL no_attach)
+      set(missing_symbol lmb_object_attach_v1)
+    else()
+      string(REPLACE "lmb_no_" "lmb_" missing_symbol "${missing_symbol}")
+    endif()
+    string(REPLACE "${missing_symbol};" "" events_map "${events_map}")
+  endif()
+  set(events_map_path ${CMAKE_BINARY_DIR}/lmb_events_${variant}.map)
+  file(WRITE ${events_map_path} "${events_map}")
+  add_library(lmb_events_${variant} SHARED $<TARGET_OBJECTS:lmb_events_test_objects>
+    ${LMB_ROOT}/tests/support/generic_events_host.c
+    ${LMB_ROOT}/tests/support/generic_host_guard.c)
+  target_compile_definitions(lmb_events_${variant} PRIVATE LMB_EVENTS_SHARED_TEST)
+  target_include_directories(lmb_events_${variant} PRIVATE include src
+    ${LIBBPF_ROOT}/include ${LMB_ROOT}/tests/support ${LMB_ROOT}/tests/fixtures/bpf)
+  target_link_libraries(lmb_events_${variant} PRIVATE libbpf_static elf z)
+  set_target_properties(lmb_events_${variant} PROPERTIES
+    OUTPUT_NAME lmb_events_${variant} LINK_DEPENDS ${events_map_path})
+  target_link_options(lmb_events_${variant} PRIVATE
+    "LINKER:--version-script,${events_map_path}" "LINKER:-Bsymbolic-functions"
+    "LINKER:--wrap=bpf_prog_load")
+  foreach(seam bpf_object__load bpf_object__close bpf_program__fd bpf_map__fd
+      bpf_program__attach_tracepoint bpf_link__destroy ring_buffer__epoll_fd ring_buffer__new
+      ring_buffer__consume_n ring_buffer__free malloc calloc realloc mmap mmap64 munmap
+      epoll_create1 epoll_ctl epoll_wait close syscall)
+    target_link_options(lmb_events_${variant} PRIVATE "LINKER:--wrap=${seam}")
+  endforeach()
+  add_test(NAME events_${variant}_exports COMMAND sh
+    ${LMB_ROOT}/tests/support/check_events_testfake_exports.sh
+    $<TARGET_FILE:lmb_events_${variant}> ${variant})
 endforeach()
 
 # The guard belongs in native leaves, not the CTest process or its shell

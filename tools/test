@@ -10,7 +10,10 @@
 # optionally supplies its hash-checked local libbpf source archive.
 #
 # Implemented suites: native, mojo, live-tracepoint, cleanup, package,
-# package-consumer, source-export, runner, selftest, provenance. The runner suite
+# package-consumer, source-export, contracts, runner, selftest, provenance.
+# contracts requires explicit offline LMB_TEST_CONTRACT_BUNDLE data.
+# LMB_PACKAGE_CONSUMER_OUT optionally retains installed-consumer attempts.
+# The runner suite
 # drives the packaged demo
 # runner against fake doubles; selftest runs the unprivileged
 # stdlib-only Python probes. Neither needs privilege or docker.
@@ -54,7 +57,7 @@ run_native() {
         # orchestration do not inherit the syscall interposer. Select
         # each host check once, with the four read-only export checks.
         (cd "$ROOT/$BUILD_DIR" && ctest --output-on-failure \
-            -R '^(native_host_.*|exports|testfake_exports|generic_testfake_exports|generic_objectonly_exports)$')
+            -R '^(native_host_.*|exports|testfake_exports|generic_testfake_exports|generic_objectonly_exports|events_.*_exports)$')
     else
         (cd "$ROOT/$BUILD_DIR" && ctest --output-on-failure -E '^native_host_')
     fi
@@ -105,6 +108,17 @@ run_mojo() {
     export LMB_GENERIC_MAPS_FIXTURE="$ROOT/$BUILD_DIR/fixtures/generic_maps.bpf.o"
     export LMB_GENERIC_TESTFAKE_LIB="$generic_fake"
     export LMB_GENERIC_OBJECTONLY_LIB="$generic_older"
+    export LMB_GENERIC_EVENTS_FIXTURE="$ROOT/$BUILD_DIR/fixtures/generic_events.bpf.o"
+    for variant in testfake no_events no_attach no_link_close no_buffer_open no_buffer_poll no_buffer_close; do
+        path="$ROOT/$BUILD_DIR/liblmb_events_$variant.so"
+        if [ ! -f "$path" ]; then
+            echo "test: missing $path; run tools/build first" >&2
+            exit 2
+        fi
+        key="LMB_EVENTS_${variant^^}_LIB"
+        printf -v "$key" '%s' "$path"
+        export "$key"
+    done
     tmpdir="$(mktemp -d)"
     trap 'rm -rf "$tmpdir"' EXIT
     failed=0
@@ -114,6 +128,18 @@ run_mojo() {
         echo "+ mojo run $t" >&2
         mojo_case "$t" "$tmpdir/$(basename "$t" .mojo)" \
             || failed=1
+        if [ "$(basename "$t")" = test_generic_buffer.mojo ] && [ "${LMB_HOST_ONLY:-0}" = 1 ]; then
+            for negative in reset-live end-live begin-live; do
+                output="$tmpdir/$negative.log"
+                LD_PRELOAD="$host_guard" "$tmpdir/test_generic_buffer" "$negative" >"$output" 2>&1
+                rc=$?
+                if [ "$rc" -ne 99 ] || ! grep -qF 'refused with live' "$output"; then
+                    echo "test: wrong live-consumer refusal for $negative (exit $rc)" >&2
+                    cat "$output" >&2
+                    failed=1
+                fi
+            done
+        fi
     done
     if [ "$count" -eq 0 ]; then
         echo "test: no Mojo tests found" >&2
@@ -128,7 +154,7 @@ run_mojo() {
             continue
         fi
         echo "+ mojo build (must fail) $f" >&2
-        if out="$(cd "$ROOT" && "${MOJO[@]}" build -I src \
+        if out="$(cd "$ROOT" && "${MOJO[@]}" build --num-threads 2 --target-cpu x86-64-v2 -I src \
                 -I tests/mojo "$f" -o "$tmpdir/probe" 2>&1)"; then
             echo "test: compile-fail fixture compiled: $f" >&2
             failed=1
@@ -161,7 +187,7 @@ mojo_case() {
         sha256sum "$2" || return 1
         (cd "$ROOT" && LD_PRELOAD="$host_guard" "$2")
     else
-        (cd "$ROOT" && "${MOJO[@]}" run -I src -I tests/mojo "$1")
+        (cd "$ROOT" && "${MOJO[@]}" run --num-threads 2 -I src -I tests/mojo "$1")
     fi
 }
 
@@ -255,6 +281,14 @@ case "$1" in
             exit 77
         fi
         exit "$rc"
+        ;;
+    contracts)
+        if [ -z "${LMB_TEST_CONTRACT_BUNDLE:-}" ]; then
+            echo "NOT_RUN contracts: set LMB_TEST_CONTRACT_BUNDLE to explicit offline data" >&2
+            exit 1
+        fi
+        (cd "$ROOT" && python3 tests/contracts/test_schema_bundle.py)
+        exit "$?"
         ;;
     selftest)
         echo "+ python3 tests/selftest" >&2
