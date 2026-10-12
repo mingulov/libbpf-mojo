@@ -257,12 +257,25 @@ int32_t lmb_object_configure_program_v1(struct lmb_object *obj,
             return fail(op, 4, -EINVAL, "target disagrees with program section");
         target = copy_span(opts->attach_target.ptr, (size_t)opts->attach_target.len);
         if (!target) return fail(op, 1, -ENOMEM, "allocation failed");
-        code = bpf_program__set_attach_target(program, 0, target);
-        if (code) { free(target); return fail(op, 2, code, "cannot configure tracing target"); }
     }
+    /* Autoload applies before the attach target, which has no native
+     * getter for rollback: an autoload failure then leaves native
+     * state untouched, and a target failure restores autoload. */
+    int previous_autoload = 0;
+    if (opts->autoload)
+        previous_autoload = bpf_program__autoload(program) ? 1 : 0;
     if (opts->autoload) {
         code = bpf_program__set_autoload(program, opts->autoload == 1);
         if (code) { free(target); return fail(op, 2, code, "cannot configure autoload"); }
+    }
+    if (target) {
+        code = bpf_program__set_attach_target(program, 0, target);
+        if (code) {
+            if (opts->autoload)
+                bpf_program__set_autoload(program, previous_autoload);
+            free(target);
+            return fail(op, 2, code, "cannot configure tracing target");
+        }
     }
     if (target) { free(state->attach_target); state->attach_target = target; }
     obj->generation++;
