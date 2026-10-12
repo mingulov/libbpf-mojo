@@ -80,6 +80,43 @@ mojo_setup() {
     fi
 }
 
+# Checks one compile_fail fixture: $1 is the fixture path, $2 a scratch
+# directory. Uses $ROOT and the $MOJO array from mojo_setup. The
+# fixture's own path is stripped from the compiler output before
+# matching, so a filename can never satisfy its own CHECK. Fixtures
+# carrying '# MUST-REJECT' pass only when the stripped output lacks
+# the CHECK text, proving unrelated errors are rejected.
+check_compile_fail() {
+    f=$1
+    tmpdir=$2
+    want="$(grep -m1 '# CHECK: ' "$f" | sed 's/.*# CHECK: //')"
+    if [ -z "$want" ]; then
+        echo "test: no CHECK line in $f" >&2
+        return 1
+    fi
+    must_reject=0
+    if grep -q '# MUST-REJECT' "$f"; then
+        must_reject=1
+    fi
+    echo "+ mojo build (must fail) $f" >&2
+    if out="$(cd "$ROOT" && "${MOJO[@]}" build --num-threads 2 --target-cpu x86-64-v2 -I src \
+            -I tests/mojo "$f" -o "$tmpdir/probe" 2>&1)"; then
+        echo "test: compile-fail fixture compiled: $f" >&2
+        return 1
+    fi
+    evidence="${out//$f/}"
+    if [ "$must_reject" -eq 1 ]; then
+        if printf '%s\n' "$evidence" | grep -qF "$want"; then
+            echo "test: unrelated error wrongly matched for $f (want absent: $want)" >&2
+            return 1
+        fi
+    elif ! printf '%s\n' "$evidence" | grep -qF "$want"; then
+        echo "test: wrong rejection for $f (want: $want)" >&2
+        printf '%s\n' "$out" | head -5 >&2
+        return 1
+    fi
+}
+
 run_mojo() {
     if [ "${LMB_HOST_ONLY:-0}" = 1 ]; then
         echo "test: host-only scope; kernel qualification remains NOT_RUN" >&2
@@ -147,22 +184,7 @@ run_mojo() {
     fi
     for f in "$ROOT"/tests/mojo/compile_fail/*.mojo; do
         [ -e "$f" ] || continue
-        want="$(grep -m1 '# CHECK: ' "$f" | sed 's/.*# CHECK: //')"
-        if [ -z "$want" ]; then
-            echo "test: no CHECK line in $f" >&2
-            failed=1
-            continue
-        fi
-        echo "+ mojo build (must fail) $f" >&2
-        if out="$(cd "$ROOT" && "${MOJO[@]}" build --num-threads 2 --target-cpu x86-64-v2 -I src \
-                -I tests/mojo "$f" -o "$tmpdir/probe" 2>&1)"; then
-            echo "test: compile-fail fixture compiled: $f" >&2
-            failed=1
-        elif ! printf '%s\n' "$out" | grep -qF "$want"; then
-            echo "test: wrong rejection for $f (want: $want)" >&2
-            printf '%s\n' "$out" | head -5 >&2
-            failed=1
-        fi
+        check_compile_fail "$f" "$tmpdir" || failed=1
     done
     for f in "$ROOT"/tests/mojo/compile_pass/*.mojo; do
         [ -e "$f" ] || continue

@@ -2,7 +2,7 @@
 
 """Compile-fail fixture: poll needs a mutable destination.
 
-# CHECK: mutable
+# CHECK: value passed to mutable argument 'dst' must be mutable
 
 The native call writes the frame through the destination, so an
 immutable borrow must not reach it. This file must NOT compile.

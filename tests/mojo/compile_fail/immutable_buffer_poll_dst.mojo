@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-# CHECK: mutable
+# CHECK: cannot be converted from 'Span[UInt8, origin_of(data)]' to 'Span[UInt8, dst.origin]'
 from libbpf_mojo.buffer import Buffer, BufferPollResult
 
 
