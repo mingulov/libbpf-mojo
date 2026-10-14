@@ -8,8 +8,11 @@
  * Part A always runs: C layout smoke, v1 presence, hidden upstream
  * symbols, generic presence report. Part B (behavior battery)
  * runs only when all twenty generic symbols resolve; otherwise it
- * reports SKIP, never PASS. Live sections additionally need the
- * tracepoint fixture and collection privilege. The XDP test-run
+ * reports SKIP and exits 77, never PASS. Any skipped subcase in
+ * the default scope exits 77 so the suite runner treats the
+ * selection as incomplete. Live sections additionally need the
+ * tracepoint fixture and collection privilege; the host-only scope
+ * reports Part B NOT_RUN before selection instead. The XDP test-run
  * section requires its separate fixture when runtime is enabled;
  * a missing XDP fixture or declined positive is a failure.
  * LMB_GENERIC_LIB overrides the Part B dlopen path (differential
@@ -2654,5 +2657,5 @@ done:
     free(xdp_elf);
     if (bhdl != NULL)
         dlclose(bhdl);
-    return failures ? 1 : 0;
+    return failures ? 1 : skips ? 77 : 0;
 }

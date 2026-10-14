@@ -29,8 +29,8 @@ A complete source archive contains `native/`, `src/`, `examples/`,
 For example, create one from a clean revision with
 `git archive --prefix=libbpf-mojo-source/ HEAD | gzip -n > source.tar.gz`.
 Extract it into a new directory and run `./tools/build`, then
-`./tools/test native`, `./tools/test package-consumer`, and
-`./tools/package` there, using the
+`./tools/test native --host-only`, `./tools/test package-consumer`,
+and `./tools/package` there, using the
 prerequisites above. No Git metadata is required to build or package.
 From a checkout, `./tools/test source-export` builds fresh HEAD exports,
 including under an unrelated Git parent, and checks consumption, source
@@ -65,8 +65,10 @@ their own identities even when `.git` is a file.
 | `examples/` | Small owned C eBPF fixtures and Mojo consumers |
 
 Wrappers print their underlying pinned commands to the build log and return
-nonzero on failure. A skipped privileged test is reported as skipped, never
-as success evidence.
+nonzero on failure. A skipped selected test fails its suite, never
+success evidence: host-only lanes declare live omissions as `NOT_RUN`
+before selection, and privileged live suites report skip (exit 77),
+which blocks qualification instead of passing.
 
 ## Verified toolchain probes
 
@@ -93,16 +95,22 @@ disposable development checks, not shipped tests.
 ## Library behavior
 
 Implemented: the native bridge (`native/`, frozen in `docs/abi-v1.md`)
-is built with CMake plus Ninja through `tools/build`, and proven by
-`tools/test native` (framing, synthetic staging, live poll/attach/map
-suites plus owned C fixtures). Tests needing collection privileges
-report SKIP without them and prove behavior in a privileged isolated
-environment. Sanitizer evidence: `tools/build --sanitize` configures a
+is built with CMake plus Ninja through `tools/build`. The default
+`tools/test native` requires every selected test to pass: framing,
+synthetic staging, live poll/attach/map suites, owned C fixtures,
+and the generic ABI probe. A required live test that exits 77, or
+a probe subcase that skips, fails the suite even though CTest's own
+aggregate status stays zero, so the default scope needs collection
+privilege for its live selection. `tools/test native --host-only`
+runs the declared offline scope under the no-BPF guard and publishes
+the omitted live cases as named `NOT_RUN` lines; any skip inside
+that host selection means broken provisioning and fails the run.
+Sanitizer evidence: `tools/build --sanitize` configures a
 separate `build-san/` tree with AddressSanitizer and UBSan using the
 pinned gcc (this Ubuntu release ships no clang-21 compiler-rt);
-`LMB_BUILD_DIR=build-san tools/test native` runs the same suites
-there. CTest sets `ASAN_OPTIONS=allocator_may_return_null=1` for the
-framing suite (it intentionally passes a giant allocation size);
+`LMB_BUILD_DIR=build-san tools/test native --host-only` runs the
+host scope there. CTest sets `ASAN_OPTIONS=allocator_may_return_null=1`
+for the framing suite (it intentionally passes a giant allocation size);
 repeat that variable when running the sanitizer binaries by hand.
 Keep native sanitizer evidence separate from Mojo sanitizer evidence.
 
@@ -113,7 +121,8 @@ destruction, lazy native loading so import never requires
 collection privileges, and explicit checked helpers wherever
 external arithmetic applies. `tools/test mojo` proves it
 (layout/ownership/error/batch suites plus compile-fail/pass
-probes).
+probes); `tools/test mojo --host-only` runs the same files
+under the guard with the privilege branch declared `NOT_RUN`.
 
 Implemented: the tracepoint example (`examples/tracepoint/`,
 `tests/live/`, `tests/package/`, `tests/runner/`,

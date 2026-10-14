@@ -1,15 +1,20 @@
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-# Tier 1: unprivileged suites. Safe for pull requests from any
-# source: no privileges, no docker, no secrets. Every lane must
-# pass; a skip here means broken provisioning and fails the run.
+# Tier 1: unprivileged host-only suites. Safe for pull requests
+# from any source: no privileges, no docker, no secrets. The
+# native and Mojo lanes run with explicit --host-only: live
+# kernel cases are declared NOT_RUN omissions published by the
+# runners, never implied support. Every selected test must pass;
+# a skip inside the selection means broken provisioning and
+# fails the run. Live success is earned separately on the
+# privileged lanes.
 #
 # The lanes need the locked toolchain (toolchain.lock.json):
 # ubuntu-26.04 ships its generations, apt provisions the system
 # tools (including libelf/zlib headers for the libbpf source
 # build), and tools/build verifies the locked versions before
 # compiling. The sanitizer job rebuilds into build-san/ with
-# gcc ASan/UBSan and runs the same native suites there; those
-# binaries are test-only and never packaged.
+# gcc ASan/UBSan and runs the same native host-only scope there;
+# those binaries are test-only and never packaged.
 name: offline
 
 on:
@@ -40,7 +45,9 @@ jobs:
         run: ./tools/build
       - name: Offline suites
         run: |
-          for suite in native mojo runner selftest provenance \
+          ./tools/test native --host-only || exit 1
+          ./tools/test mojo --host-only || exit 1
+          for suite in runner selftest provenance \
               package-consumer; do
             ./tools/test "$suite" || exit 1
           done
@@ -63,4 +70,4 @@ jobs:
       - name: Sanitizer build
         run: ./tools/build --sanitize
       - name: Sanitizer native suites
-        run: LMB_BUILD_DIR=build-san ./tools/test native
+        run: LMB_BUILD_DIR=build-san ./tools/test native --host-only

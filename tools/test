@@ -24,10 +24,12 @@
 # pixi on PATH). When pixi is unavailable, the suite falls back to the
 # installed pixi environment directly and says so.
 #
-# A skipped privileged test is reported as skipped, never as success.
-# Exit 0 only when the suite passes; 77 when a privileged suite
-# skips for lack of privilege; 1 on test failure; 2 on invalid usage.
-# One suite per invocation; extra arguments are rejected.
+# A skipped selected test fails the suite, never success: the default
+# native scope requires its live selection, while the host-only scope
+# declares live cases NOT_RUN before selection. Exit 0 only when every
+# selected test passes; 77 when a privileged suite skips for lack of
+# privilege; 1 on test failure or an incomplete selection; 2 on usage
+# error. One suite per invocation; extra arguments are rejected.
 
 set -u
 
@@ -45,6 +47,8 @@ run_native() {
         exit 2
     fi
     echo "+ ctest in $BUILD_DIR" >&2
+    log="$(mktemp)"
+    trap 'rm -f "$log"' EXIT
     if [ "${LMB_HOST_ONLY:-0}" = 1 ]; then
         guard="$ROOT/$BUILD_DIR/liblmb_host_guard.so"
         if [ ! -f "$guard" ]; then
@@ -57,10 +61,35 @@ run_native() {
         # orchestration do not inherit the syscall interposer. Select
         # each host check once, with the four read-only export checks.
         (cd "$ROOT/$BUILD_DIR" && ctest --output-on-failure \
-            -R '^(native_host_.*|exports|testfake_exports|generic_testfake_exports|generic_objectonly_exports|events_.*_exports)$')
+            -R '^(native_host_.*|exports|testfake_exports|generic_testfake_exports|generic_objectonly_exports|events_.*_exports)$') >"$log" 2>&1
+        rc=$?
     else
-        (cd "$ROOT/$BUILD_DIR" && ctest --output-on-failure -E '^native_host_')
+        (cd "$ROOT/$BUILD_DIR" && ctest --output-on-failure -E '^native_host_') >"$log" 2>&1
+        rc=$?
     fi
+    cat "$log"
+    # CTest aggregates skipped tests to status 0. A skip inside the
+    # selected set is an incomplete qualification, never a pass.
+    skipped="$(sed -n 's/.*Test  *#[0-9][0-9]*: \([^ ][^ ]*\) .*[*][*][*]\(Skipped\|Not Run\|Timeout\|Exception\).*/\1/p' "$log" | sort -u | tr '\n' ' ')"
+    skipped="${skipped% }"
+    rm -f "$log"
+    trap - EXIT
+    if [ -n "$skipped" ]; then
+        if [ "${LMB_HOST_ONLY:-0}" = 1 ]; then
+            echo "test: host-only selection incomplete, skipped or not run: $skipped" >&2
+            echo "test: a skip among selected host tests means broken provisioning" >&2
+        else
+            echo "test: default native selection incomplete, skipped or not run: $skipped" >&2
+            echo "test: live kernel cases are required here; use 'tools/test native --host-only' for the declared offline scope" >&2
+        fi
+        # A genuine CTest failure keeps its exit code; only a zero
+        # aggregate with missing selections synthesizes exit 1.
+        if [ "$rc" -ne 0 ]; then
+            exit "$rc"
+        fi
+        exit 1
+    fi
+    exit "$rc"
 }
 
 # Sets the MOJO array to the pinned-compiler invocation. Builds the

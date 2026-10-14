@@ -352,8 +352,8 @@ add_test(NAME generic_ring COMMAND test_generic_ring
 # docs/generic-abi-v1.md. Takes the candidate shared library plus the
 # fixture object; Part A always runs. Host-only selection explicitly
 # omits Part B before any optional backend, privilege probe, or load.
-# In the default scope Part B SKIP-reports until the full generic
-# implementation lands.
+# In the default scope every Part B subcase is required: any subcase
+# skip exits 77 and the suite runner fails the incomplete selection.
 add_executable(test_generic_abi_probe
   ${LMB_ROOT}/tests/native/generic_abi_probe.c)
 target_include_directories(test_generic_abi_probe PRIVATE
@@ -368,7 +368,8 @@ add_test(NAME generic_abi_probe
     ${CMAKE_BINARY_DIR}/fixtures/ring_test.bpf.o
     ${CMAKE_BINARY_DIR}/fixtures/generic_maps.bpf.o)
 set_tests_properties(generic_abi_probe PROPERTIES
-  WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
+  WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+  SKIP_RETURN_CODE 77)
 
 # Old-header consumer fixture: exercises all eleven v1 operations
 # through the frozen header only, linked against the candidate

@@ -9,7 +9,8 @@
 # verification plus an explicit notice naming the missing targets.
 # --sanitize builds into build-san/ with AddressSanitizer and UBSan
 # using the pinned gcc (this Ubuntu release ships no clang-21
-# compiler-rt); run it via LMB_BUILD_DIR=build-san tools/test native.
+# compiler-rt); run it via LMB_BUILD_DIR=build-san tools/test native
+# --host-only.
 # Prints each underlying command before running it. Exit 0 only when every
 # step passes; exit 1 on build failure; exit 2 on invalid usage.
 # One action per invocation; extra arguments are rejected.

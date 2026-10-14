@@ -40,7 +40,9 @@ tracepoint attachment with an independent workload ledger,
 cleanup/FD stability, packaging (manifest hashes, standalone
 consumer, clean-room negatives), the demo runner, and
 unprivileged self-tests. A skipped privileged suite is
-reported as skipped, never as success.
+reported as skipped, never as success. The default native
+scope fails on any skipped selected test; offline lanes use
+`--host-only` with declared `NOT_RUN` omissions.
 
 ## Generic object checkpoint
 
