@@ -529,7 +529,11 @@ pointers-before-state position.
   CPU-count query reports `LIBBPF` with the original code,
   never disguised as overflow. Kernel misses report
   `KERNEL` with the signed code and leave the destination
-  untouched.
+  untouched. Bloom filters report `BRIDGE`/`-EOPNOTSUPP`
+  before extent math, allocation, or the native call, with
+  `needed` 0 and the destination untouched: a bloom value
+  is membership input, not an output value. Insertion keeps
+  the update path.
 - `map_update`: no outputs. Flags must carry low two bits
   of `0` (`ANY`), `1` (`NOEXIST`), or `2` (`EXIST`) with
   only bit 2 (`LOCK`, 4) additionally permitted; all other

@@ -179,6 +179,32 @@ def test_percpu_extent_and_padding() raises:
     obj.close()
 
 
+def test_bloom_lookup_refused() raises:
+    var obj = loaded()
+    var view = obj.map("bloom_filter")
+    var info = view.info()
+    assert_equal(info.key_size, UInt32(0))
+    assert_equal(info.value_size, UInt32(4))
+    var key = List[UInt8]()
+    var before = calls(view, UInt32(0))
+    var lookups = calls(view, UInt32(7))
+    var refused = False
+    try:
+        var absent = lookup(view, Span(key))
+        _ = absent^
+    except e:
+        assert_equal(e.operation, UInt32(7))
+        assert_equal(e.domain, UInt32(4))
+        assert_equal(e.code, Int32(-95))
+        assert_true(e.message.byte_length() > 0)
+        refused = True
+    assert_true(refused)
+    assert_equal(calls(view, UInt32(0)), before)
+    assert_equal(calls(view, UInt32(7)), lookups + 1)
+    view.close()
+    obj.close()
+
+
 def test_moves_parent_release_and_last_close() raises:
     var obj = loaded()
     var first = obj.map("counter")
@@ -280,6 +306,7 @@ def main() raises:
     suite.test[test_flags_and_signed_errors]()
     suite.test[test_scalar_key_width_and_invalid_value_extent]()
     suite.test[test_percpu_extent_and_padding]()
+    suite.test[test_bloom_lookup_refused]()
     suite.test[test_moves_parent_release_and_last_close]()
     suite.test[test_library_after_owner_scope]()
     suite.test[test_stale_closed_and_optional_symbols]()

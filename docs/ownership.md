@@ -183,7 +183,10 @@ They neither change generation nor acquire another resource owner. Keys
 match metadata exactly. Ordinary values match `value_size`; per-CPU values
 include every eight-byte padded slot for the possible-CPU count, including
 offline CPUs. The complete spread must fit u32. A sequence of reads is
-not an atomic snapshot.
+not an atomic snapshot. Bloom-filter lookup is refused with
+`BRIDGE`/`-EOPNOTSUPP` before allocation or the native call: the value
+is membership input, so there is no output value to stage. Insertion
+through update is unaffected.
 
 Lookup uses owned scratch of the required extent and copies exactly that
 extent only after the pinned native call succeeds. The destination and

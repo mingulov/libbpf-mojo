@@ -69,6 +69,14 @@ int32_t lmb_object_map_lookup_v1(struct lmb_object *object,
         *needed = 0;
         return fail(op, 4, -ENOENT, "map not found");
     }
+    /* A bloom value is membership input, not an output value: refuse
+     * before extent math, allocation, or the native call. Insertion
+     * keeps its input-value contract on the update path. */
+    if (bpf_map__type(map) == BPF_MAP_TYPE_BLOOM_FILTER) {
+        *needed = 0;
+        return fail(op, LMB_GENERIC_DOMAIN_BRIDGE, -EOPNOTSUPP,
+                    "bloom lookup needs membership input");
+    }
     code = map_extent(map, key_bytes, &extent, &domain);
     if (code) {
         if (domain == LMB_GENERIC_DOMAIN_LIBBPF) *needed = 0;

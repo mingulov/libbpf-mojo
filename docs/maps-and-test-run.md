@@ -47,7 +47,10 @@ contain `stride * num_cpus` bytes, including all slot padding; stride is
 rounded up to eight and the count describes possible CPUs, including
 offline CPUs. The complete spread must fit u32. Use metadata from
 `view.info()` to construct an update. Multiple reads are not an atomic
-snapshot.
+snapshot. Bloom-filter lookup is refused with
+`BRIDGE`/`-EOPNOTSUPP`: a bloom value carries the membership item
+inward, so there is no output value to read. Insertion through
+`update` keeps working; metadata from `view.info()` is unaffected.
 
 The scalar helpers take an exact `UInt32` key and `UInt64` value. They
 require an ordinary map with key size four and value size eight, and

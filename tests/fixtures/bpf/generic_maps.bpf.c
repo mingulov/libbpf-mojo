@@ -28,6 +28,11 @@ struct {
     __type(key, __u32);
     __type(value, struct odd_value);
 } percpu_hash SEC(".maps");
+struct {
+    __uint(type, BPF_MAP_TYPE_BLOOM_FILTER);
+    __uint(max_entries, 8);
+    __type(value, __u32);
+} bloom_filter SEC(".maps");
 
 SEC("xdp")
 int packet_control(struct xdp_md *ctx) {

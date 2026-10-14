@@ -31,6 +31,7 @@ static int allocation_fault;
 
 static struct {
     int armed, command, result;
+    int keyless;
     uint64_t flags;
     uint8_t key[4], bytes[144];
     size_t extent;
@@ -49,7 +50,8 @@ long lmb_test_bpf_dispatch(int command, void *raw_attr, unsigned int size) {
     CHECK(size == offsetof(union bpf_attr, flags) + sizeof(attr->flags));
     CHECK(attr->map_fd == (uint32_t)synthetic_fd);
     CHECK(attr->flags == script.flags);
-    CHECK(attr->key && !memcmp((const void *)(uintptr_t)attr->key, script.key, 4));
+    if (script.keyless) CHECK(attr->key == 0);
+    else CHECK(attr->key && !memcmp((const void *)(uintptr_t)attr->key, script.key, 4));
     CHECK(attr->value != 0);
     uint8_t *value = (void *)(uintptr_t)attr->value;
     if (command == BPF_MAP_LOOKUP_ELEM) {
@@ -127,7 +129,16 @@ static void arm(int command, const void *key, const void *value, size_t extent,
     CHECK(!script.armed && extent <= sizeof(script.bytes));
     script.armed = 1; script.command = command; script.result = result;
     script.flags = flags; script.extent = extent; script.caller_output = output;
+    script.keyless = 0;
     memcpy(script.key, key, 4); memcpy(script.bytes, value, extent);
+}
+static void arm_keyless(int command, const void *value, size_t extent,
+                        uint64_t flags, int result) {
+    CHECK(!script.armed && extent <= sizeof(script.bytes));
+    script.armed = 1; script.command = command; script.result = result;
+    script.flags = flags; script.extent = extent; script.caller_output = NULL;
+    script.keyless = 1;
+    memcpy(script.bytes, value, extent);
 }
 static void untouched(const uint8_t *bytes, size_t count, uint8_t value) {
     for (size_t i = 0; i < count; i++) CHECK(bytes[i] == value);
@@ -455,6 +466,40 @@ static void geometry_failures(struct lmb_object *object, struct bpf_object *pars
           output, sizeof(output), &needed) == 0 && !script.armed);
 }
 
+static void bloom_maps(struct lmb_object *object) {
+    struct lmb_name_v1 name = name_of("bloom_filter");
+    struct lmb_map_info_v1 info = {0};
+    _Alignas(8) uint8_t output[48];
+    uint8_t item[4] = {1, 2, 3, 4};
+    uint32_t key = 0;
+    uint64_t needed;
+    info.abi_version = 1; info.struct_size = sizeof(info);
+    /* Metadata inspection is preserved: bloom has no key extent. */
+    CHECK(lmb_object_map_info_v1(object, &name, &info) == 0);
+    CHECK(info.type == BPF_MAP_TYPE_BLOOM_FILTER && info.key_size == 0 && info.value_size == 4);
+    /* Lookup refuses before allocation or native call; output intact. */
+    needed = 123; memset(output, 0xa5, sizeof(output));
+    unsigned before = bpf_calls, cpus_before = cpu_queries, hits = allocation_hits;
+    allocation_fault = 1;
+    CHECK(lmb_object_map_lookup_v1(object, &name, NULL, 0, output + 16, 4, &needed) == -EOPNOTSUPP);
+    CHECK(needed == 0 && bpf_calls == before && cpu_queries == cpus_before);
+    CHECK(allocation_hits == hits && allocation_fault);
+    allocation_fault = 0;
+    untouched(output, sizeof(output), 0xa5); diagnostic(7, 4, -EOPNOTSUPP);
+    /* The operation is unsupported regardless of key bytes. */
+    needed = 123; memset(output, 0xa5, sizeof(output));
+    before = bpf_calls;
+    CHECK(lmb_object_map_lookup_v1(object, &name, (void *)&key, 4, output + 16, 4, &needed) == -EOPNOTSUPP);
+    CHECK(needed == 0 && bpf_calls == before);
+    untouched(output, sizeof(output), 0xa5); diagnostic(7, 4, -EOPNOTSUPP);
+    /* Insertion keeps its input-value contract through one native call. */
+    arm_keyless(BPF_MAP_UPDATE_ELEM, item, 4, 0, 0);
+    before = bpf_calls;
+    CHECK(lmb_object_map_update_v1(object, &name, NULL, 0, item, 4, 0) == 0 && !script.armed);
+    CHECK(bpf_calls == before + 1);
+    clear_diagnostic();
+}
+
 static void guard_controls(const char *executable) {
     const char *modes[] = {"--guard-positive", "--guard-trap", "--guard-unknown"};
     const int exits[] = {0, 99, 98};
@@ -518,10 +563,12 @@ int main(int argc, char **argv) {
     CHECK(bpf_map__type(bpf_object__find_map_by_name(parsed, "values")) == BPF_MAP_TYPE_HASH);
     CHECK(bpf_map__type(bpf_object__find_map_by_name(parsed, "percpu_values")) == BPF_MAP_TYPE_PERCPU_ARRAY);
     CHECK(bpf_map__type(bpf_object__find_map_by_name(parsed, "percpu_hash")) == BPF_MAP_TYPE_PERCPU_HASH);
+    CHECK(bpf_map__type(bpf_object__find_map_by_name(parsed, "bloom_filter")) == BPF_MAP_TYPE_BLOOM_FILTER);
     validation(object, unloaded);
     ordinary_maps(object);
     percpu_maps(object, parsed);
     geometry_failures(object, parsed);
+    bloom_maps(object);
     unsigned closes = native_closes;
     CHECK(lmb_object_close_v1(&object) == 0 && !object);
     CHECK(lmb_object_close_v1(&unloaded) == 0 && !unloaded);

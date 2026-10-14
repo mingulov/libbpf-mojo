@@ -66,6 +66,7 @@ Native map host tests parse a standard independent ELF/BTF control and
 run the actual pinned libbpf lookup/update wrappers against scripted
 syscall responses. They cover ARRAY/HASH values, all six permitted update
 flags, dirty scratch followed by signed kernel failure, allocation failure,
+bloom lookup refusal with insertion preserved,
 per-CPU values of 1/7/8/9/13 bytes, possible counts including offline CPUs,
 overflow, protected-page boundaries and stable owned FD counts. Synthetic
 FD accessors never install descriptors into libbpf owners. The permanent
@@ -96,7 +97,8 @@ tracing-target configuration and their target/platform evidence remain
 unqualified. Native generic map and XDP test-run calls have host contract
 evidence only. Typed Mojo map/test-run functions are implemented over the
 same retained views. Their scripted host tests cover full-width scalar
-values, raw per-CPU padding, exact flag/error forwarding, independent
+values, raw per-CPU padding, exact flag/error forwarding, bloom refusal
+forwarding, independent
 result fields, input snapshots, untouched failure buffers and last-release
 destruction. Optional operation symbols resolve only when called, preserving
 object-only libraries. Host tests compile Mojo without the interposer and
