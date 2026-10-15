@@ -145,7 +145,12 @@ Compile-fail tests require a nonzero compiler exit and complete supported
 text diagnostics: each located error or note has one source excerpt followed
 by renderer carets. Only primary error messages can satisfy a fixture's CHECK;
 notes, source excerpts, import context, final driver trailers and the fixture's
-exact path do not contribute. A MUST-REJECT control requires an admitted primary
+exact path do not contribute. The exact fixture path identifies its header
+boundary, preserving delimiter-shaped filenames and message text. For other
+paths, multiple header-shaped boundaries are ambiguous and refuse the whole
+invocation; the context-free Python extraction helper also refuses these
+without fixture identity. Invalid known-fixture headers never retry a later
+message delimiter. A MUST-REJECT control requires an admitted primary
 error whose messages all lack CHECK. Empty, truncated, unsupported or ambiguous
 rendering fails either kind of fixture, even after an earlier matching error.
 

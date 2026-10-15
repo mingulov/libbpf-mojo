@@ -126,10 +126,51 @@ class CompileFailMatcherTests(unittest.TestCase):
                 self.assert_modes(self.block("cannot be implicitly copied", path=path),
                                   0, 1, filename='a:"# odd.mojo')
 
-    def test_first_complete_location_delimiter_preserves_message(self):
+    def test_known_fixture_header_preserves_repeated_message_delimiters(self):
         self.assert_modes(self.block("detail:9:8: error: cannot be implicitly copied"), 0, 1)
         self.assert_modes(self.block("cannot be implicitly copied:9:8: error: detail"), 0, 1)
-        self.assert_modes(self.block("detail:9:8: error: unrelated", path="cannot be implicitly copied"), 1, 0)
+        self.assert_modes(self.block("detail:9:8: error: unrelated", path="cannot be implicitly copied"), 1, 1)
+
+    def test_exact_fixture_identity_disambiguates_delimiter_shaped_filename(self):
+        filename = "prefix:1:1: error: cannot be implicitly copied.mojo"
+        self.assert_modes(self.block("expected expression"), 1, 0, filename=filename)
+        self.assert_modes(self.block("cannot be implicitly copied"), 0, 1, filename=filename)
+        self.assert_modes(self.block("expected expression") +
+                          self.block("cannot be implicitly copied", severity="note"),
+                          1, 0, filename=filename)
+
+    def test_unknown_delimiter_shaped_paths_are_ambiguous(self):
+        for path in ("unknown:1:1: error: cannot be implicitly copied.mojo",
+                     "unknown:1:1: note: cannot be implicitly copied.mojo"):
+            with self.subTest(path=path):
+                self.assert_modes(self.block("expected expression", path=path), 1, 1)
+                self.assert_modes(self.block("cannot be implicitly copied") +
+                                  self.block("detail", path=path, severity="note"), 1, 1)
+        self.assert_modes(self.block("detail:9:8: error: cannot be implicitly copied",
+                                     path="unknown.mojo"), 1, 1)
+
+    def test_invalid_known_fixture_suffix_never_falls_back_to_message_delimiter(self):
+        for suffix in (":3:1: warning: detail:9:8: error: cannot be implicitly copied",
+                       ":0:1: error: detail:9:8: error: cannot be implicitly copied",
+                       ":1:0: note: detail:9:8: error: cannot be implicitly copied"):
+            with self.subTest(suffix=suffix):
+                self.assert_modes("<fixture>" + suffix + "\nbroken(\n^", 1, 1)
+
+    def test_unknown_invalid_header_cannot_hide_before_nested_valid_delimiter(self):
+        for header in ("unknown.mojo:3:1: warning: detail:9:8: error: cannot be implicitly copied",
+                       "unknown.mojo:0:1: error: detail:9:8: error: cannot be implicitly copied",
+                       "unknown.mojo:line:col: error: detail:9:8: error: cannot be implicitly copied"):
+            with self.subTest(header=header):
+                self.assert_modes(header + "\nbroken(\n^", 1, 1)
+
+    def test_context_free_extraction_refuses_ambiguous_headers(self):
+        import importlib.util
+        spec = importlib.util.spec_from_file_location(
+            "compile_fail_diagnostics", ROOT / "tools/compile_fail_diagnostics.py")
+        helper = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(helper)
+        with self.assertRaises(ValueError):
+            helper.extract_primary_errors(self.block("detail:9:8: error: cannot be implicitly copied"))
 
     def test_driver_trailer_never_supplies_check(self):
         trailer = "/bin/mojo: error: cannot be implicitly copied\n"
@@ -140,6 +181,11 @@ class CompileFailMatcherTests(unittest.TestCase):
         context = "Imported from cannot be implicitly copied.mojo:2:\n"
         self.assert_modes(context + self.block(), 1, 0)
         self.assert_modes(self.block() + context + self.block(severity="note"), 1, 0)
+
+    def test_import_path_with_delimiter_text_stays_opaque_context(self):
+        context = "Imported from unknown:1:1: error: cannot be implicitly copied.mojo:2:\n"
+        self.assert_modes(context + self.block(), 1, 0)
+        self.assert_modes(context + context + self.block(), 1, 1)
 
     def test_unusable_rendering_refuses_both_modes(self):
         for output in ("", "garbage", self.block(severity="note"),

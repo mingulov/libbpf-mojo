@@ -6,15 +6,37 @@ import re
 import sys
 
 
-_HEADER = re.compile(r"(.+?):[1-9][0-9]*:[1-9][0-9]*: (error|note): (.+)")
+_SUFFIX = re.compile(r":[1-9][0-9]*:[1-9][0-9]*: (error|note): (.+)")
+# Count invalid as well as valid header-shaped boundaries. Otherwise a later
+# valid delimiter could hide unsupported severity or coordinates in the path.
+_BOUNDARY = re.compile(r":[^:\n]+:[^:\n]+: [^: \n]+: ")
 _IMPORT = re.compile(r"Imported from .+:[1-9][0-9]*:")
 _CARET = re.compile(r"[ \t~^]*\^[ \t~^]*")
 _TRAILER = re.compile(r"(.+?): error: .+")
 _LOCATION_SUFFIX = re.compile(r":[^:]*:[^:]*$")
 
 
-def extract_primary_errors(output: str) -> list[str]:
-    """Return primary messages only after validating the complete rendering.
+def _located_header(line: str, fixture: str):
+    if fixture and line.startswith(fixture + ":"):
+        # Exact source identity fixes the boundary even when the filename or
+        # message contains another delimiter. Never retry an invalid suffix.
+        suffix = _SUFFIX.fullmatch(line[len(fixture):])
+        if not suffix:
+            raise ValueError("invalid header suffix after known fixture path")
+        return suffix.groups()
+    boundaries = list(_BOUNDARY.finditer(line))
+    if not boundaries:
+        return None
+    if len(boundaries) != 1 or boundaries[0].start() == 0:
+        raise ValueError("ambiguous diagnostic header boundary")
+    suffix = _SUFFIX.fullmatch(line[boundaries[0].start():])
+    if not suffix:
+        raise ValueError("invalid located diagnostic header")
+    return suffix.groups()
+
+
+def _extract_primary_errors(output: str, *, fixture: str) -> list[str]:
+    """Read the whole rendering with optional exact fixture-path context.
 
     A source excerpt is one opaque physical line, consumed before recognizing
     any carets or subsequent headers. Unknown and incomplete rendering raises
@@ -32,9 +54,15 @@ def extract_primary_errors(output: str) -> list[str]:
             continue
         if trailer:
             raise ValueError("content after final driver trailer")
-        header = _HEADER.fullmatch(line)
+        if _IMPORT.fullmatch(line):
+            if imported:
+                raise ValueError("import context without a following block")
+            imported = True
+            index += 1
+            continue
+        header = _located_header(line, fixture)
         if header:
-            _, severity, message = header.groups()
+            severity, message = header
             if severity == "note" and not primary:
                 raise ValueError("note without a preceding primary error")
             # Exactly one physical source line precedes the renderer. Its
@@ -47,9 +75,6 @@ def extract_primary_errors(output: str) -> list[str]:
             if severity == "error":
                 primary.append(message)
             imported = False
-        elif not imported and _IMPORT.fullmatch(line):
-            imported = True
-            index += 1
         elif not imported and primary and _TRAILER.fullmatch(line):
             # A location-shaped suffix with invalid coordinates is not an
             # unlocated driver path. Refuse ambiguous trailer interpretations.
@@ -65,13 +90,22 @@ def extract_primary_errors(output: str) -> list[str]:
     return primary
 
 
+def extract_primary_errors(output: str) -> list[str]:
+    """Extract unambiguous primary messages without source-identity context.
+
+    Multiple header-shaped boundaries raise ValueError; callers with the exact
+    fixture identity use matches_diagnostic to disambiguate that fixture's path.
+    """
+    return _extract_primary_errors(output, fixture="")
+
+
 def matches_diagnostic(output: str, *, fixture: str, expected: str,
                        must_reject: bool) -> bool:
     """Apply a CHECK to individual primary messages of an admitted rendering."""
     if not fixture or not expected:
         return False
     try:
-        messages = extract_primary_errors(output)
+        messages = _extract_primary_errors(output, fixture=fixture)
     except ValueError:
         return False
     matched = any(expected in message.replace(fixture, "") for message in messages)
