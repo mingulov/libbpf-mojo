@@ -34,13 +34,13 @@ def publish_bytes(directory: String, name: String, bytes: Span[mut=False, UInt8,
     var tmp = c_string(directory + "/" + name + ".tmp")
     var final = c_string(directory + "/" + name)
     # Owned output leaf, exclusive temporary creation, atomic publication.
-    var fd = external_call["open", Int32](Span(tmp).unsafe_ptr(), Int32(193), Int32(0o600))
+    var fd = external_call["open", Int32, num_fixed_args=2](Span(tmp).unsafe_ptr(), Int32(193), Int32(0o600))
     if fd < 0:
         raise Error("exclusive output open failed")
-    var count = external_call["write", Int64](fd, bytes.unsafe_ptr(), UInt64(len(bytes)))
+    var count = external_call["write", Int](Int(fd).__mlir_index__(), bytes.unsafe_ptr(), len(bytes).__mlir_index__())
     var synced = external_call["fsync", Int32](fd)
     var closed = external_call["close", Int32](fd)
-    if count != Int64(len(bytes)) or synced != 0 or closed != 0:
+    if count != len(bytes) or synced != 0 or closed != 0:
         raise Error("output write failed")
     if external_call["rename", Int32](Span(tmp).unsafe_ptr(), Span(final).unsafe_ptr()) != 0:
         raise Error("output publication failed")
