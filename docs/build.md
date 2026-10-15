@@ -139,6 +139,20 @@ teardown and the Python probes without privilege. The live
 suites need BPF privilege and `bpftool`, and report SKIP
 without them.
 
+## Compile-fail diagnostic checks
+
+Compile-fail tests require a nonzero compiler exit and complete supported
+text diagnostics: each located error or note has one source excerpt followed
+by renderer carets. Only primary error messages can satisfy a fixture's CHECK;
+notes, source excerpts, import context, final driver trailers and the fixture's
+exact path do not contribute. A MUST-REJECT control requires an admitted primary
+error whose messages all lack CHECK. Empty, truncated, unsupported or ambiguous
+rendering fails either kind of fixture, even after an earlier matching error.
+
+`./tools/test selftest` includes fake-compiler controls of the shipped matcher.
+These establish diagnostic interpretation separately from fresh compilation of
+all compile-fail fixtures with the pinned compiler in `./tools/test mojo`.
+
 ## Sanitizer and debugger support (Mojo 1.1.0)
 
 Evaluated with isolated deliberately faulty fixtures on x86-64, plus

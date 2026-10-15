@@ -110,11 +110,11 @@ mojo_setup() {
 }
 
 # Checks one compile_fail fixture: $1 is the fixture path, $2 a scratch
-# directory. Uses $ROOT and the $MOJO array from mojo_setup. The
-# fixture's own path is stripped from the compiler output before
-# matching, so a filename can never satisfy its own CHECK. Fixtures
-# carrying '# MUST-REJECT' pass only when the stripped output lacks
-# the CHECK text, proving unrelated errors are rejected.
+# directory. Uses $ROOT and the $MOJO array from mojo_setup. Only primary
+# messages in complete supported renderer blocks can satisfy CHECK; source
+# excerpts, notes, context, trailers and the fixture's own path cannot.
+# MUST-REJECT requires genuine primary evidence with no matching message.
+# Unknown or incomplete rendering refuses either kind of fixture.
 check_compile_fail() {
     f=$1
     tmpdir=$2
@@ -133,14 +133,9 @@ check_compile_fail() {
         echo "test: compile-fail fixture compiled: $f" >&2
         return 1
     fi
-    evidence="${out//$f/}"
-    if [ "$must_reject" -eq 1 ]; then
-        if printf '%s\n' "$evidence" | grep -qF "$want"; then
-            echo "test: unrelated error wrongly matched for $f (want absent: $want)" >&2
-            return 1
-        fi
-    elif ! printf '%s\n' "$evidence" | grep -qF "$want"; then
-        echo "test: wrong rejection for $f (want: $want)" >&2
+    if ! printf '%s\n' "$out" | python3 "$ROOT/tools/compile_fail_diagnostics.py" \
+            "$f" "$want" "$must_reject"; then
+        echo "test: wrong or unusable rejection for $f (CHECK: $want; MUST-REJECT: $must_reject)" >&2
         printf '%s\n' "$out" | head -5 >&2
         return 1
     fi
