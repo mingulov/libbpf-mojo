@@ -40,7 +40,7 @@ def publish_bytes(directory: String, name: String, bytes: Span[mut=False, UInt8,
     var count = external_call["write", Int64](fd, bytes.unsafe_ptr(), UInt64(len(bytes)))
     var synced = external_call["fsync", Int32](fd)
     var closed = external_call["close", Int32](fd)
-    if count != len(bytes) or synced != 0 or closed != 0:
+    if count != Int64(len(bytes)) or synced != 0 or closed != 0:
         raise Error("output write failed")
     if external_call["rename", Int32](Span(tmp).unsafe_ptr(), Span(final).unsafe_ptr()) != 0:
         raise Error("output publication failed")
@@ -103,7 +103,7 @@ def walk(mut view: MapView) raises -> Tuple[String, Int]:
         if calls >= 4:
             raise Error("bounded iteration exceeded")
         var bytes = current.take()
-        if len(output) != 0:
+        if output.byte_length() != 0:
             output += ","
         output += '"' + hex_key(bytes) + '"'
         current = next_key(view, Span(bytes))
@@ -215,11 +215,11 @@ def main() raises:
     if len(args) != 4:
         exit(2)
     # The controller supplies canonical owned paths and a shared absolute clock.
-    if args[3] != args[2] + "/result.json" or len(args[2]) == 0:
+    if args[3] != args[2] + "/result.json" or args[2].byte_length() == 0:
         exit(2)
     if not Path(args[2]).exists() or len(listdir(args[2])) != 0:
         exit(2)
-    var deadline = Int64(getenv("LMB_LIVE_DEADLINE_MONOTONIC_NS"))
+    var deadline = Int64(Int(getenv("LMB_LIVE_DEADLINE_MONOTONIC_NS")))
     if deadline <= now_ns():
         exit(2)
     try:
