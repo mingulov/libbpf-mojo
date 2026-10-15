@@ -168,3 +168,53 @@ meanings, correlation, accounting, formats, reporting) all
 belong elsewhere. Application correctness is outside these
 gates: library statistics never prove a consumer measured
 completely.
+
+## Candidate disposable-guest map workflow
+
+The portable requirements in
+[`tests/integration/target_profiles.json`](../tests/integration/target_profiles.json)
+describe a candidate x86-64 little-endian Linux >=7.0 TCG workflow with one CPU,
+x86-64-v2 packaged consumers and glibc >=2.38. Its ARRAY/HASH/XDP test-run
+requirements are capability requirements, not established support. Runtime
+qualification remains NOT_RUN.
+
+The explicit native build targets `first_live_map_fixtures` and `stock_map_live`
+prepare a two-map C control, an increment-two mutant and an independent consumer
+linked directly to the pinned libbpf archive. They register no live CTest tests.
+The BPF compile profile is `--target=bpfel -mcpu=v3 -O2 -g`; successful use
+qualifies only instructions actually exercised. The installed Mojo source is
+[`consumer_map_live.mojo`](../tests/package/consumer_map_live.mojo), compiled
+against extracted public modules with `--target-cpu x86-64-v2` before relocation.
+No compilation or kernel execution is implied by these sources.
+
+The finite controller is
+[`test_first_live_maps.py`](../tests/integration/standard_objects/test_first_live_maps.py).
+It takes explicit object, mutant, stock/Mojo consumer, bridge, bpftool, setpriv,
+externally admitted expected-profile and independent same-boot witness paths.
+Its normal host entry refuses before launching any native program. A designated
+disposable guest must supply the documented marker and an independently frozen
+expected-profile hash, fresh boot identity, raw notes/BTF/policy/CPU/module facts
+and exact runtime file closure. An observed witness never supplies expected
+hashes or admission authority. Candidate and witness-only inputs refuse.
+
+Both consumers accept `OBJECT CONTROL_DIR RESULT_FILE` with an empty owned
+control leaf and `RESULT_FILE=CONTROL_DIR/result.json`. The eight atomic phases
+are `loaded`, `initialized`, `executed`, `keys-seeded`, `key-deleted`,
+`keys-empty`, `owner-released`, `closed`; each of the first seven waits for its
+own acknowledgement for at most 15 seconds within the externally supplied
+deadline. The direct stock consumer retains its object at `owner-released`;
+the typed consumer releases its public owner and uses retained views.
+The controller independently binds child FD map/program IDs, observes raw
+41→42 bytes, HASH/key/error behavior, and polls only owned IDs to absence.
+The unchanged 42 oracle must reject independently observed mutant value 43
+while its views are alive. The separate stock mode
+`--permission-negative OBJECT` reports actual credentials and the signed load
+failure through stdout; it needs no writable output path after credentials drop.
+
+Pure standard-library rejection checks run with
+`python3 -I -B tests/integration/test_target_profiles.py`.
+They establish checker contracts only. Exact installed artifact closure,
+successful guest admission, kernel behavior and cleanup require separately
+accepted actual receipts. Existing API coverage and compatibility cells remain
+NOT_RUN; this finite C-produced control supplies no Mojo-authored kernel,
+broader map family, concurrency or performance qualification.

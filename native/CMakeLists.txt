@@ -569,3 +569,36 @@ lmb_guarded_host_test(generic_ring test_generic_ring
 # operation except lmb_close. Test-only; never installed.
 add_library(lmb_stub SHARED ${LMB_ROOT}/tests/support/stub_partial.c)
 set_target_properties(lmb_stub PROPERTIES OUTPUT_NAME lmb_stub)
+
+# Explicit live-artifact preparation only: no automatic build or CTest launch.
+# The selected CLANG_EXE and include closure are recorded by the build receipt.
+set(FIRST_LIVE_MAP_OBJECTS)
+foreach(variant generic_map_live generic_map_live_increment_two)
+  set(mutant_flags)
+  if(variant STREQUAL "generic_map_live_increment_two")
+    list(APPEND mutant_flags -DLMB_INCREMENT_TWO_MUTANT)
+  endif()
+  add_custom_command(
+    OUTPUT ${CMAKE_BINARY_DIR}/fixtures/${variant}.bpf.o
+    COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/fixtures
+    COMMAND ${CLANG_EXE} --target=bpfel -mcpu=v3 -O2 -g -Wall ${mutant_flags}
+      -I${LIBBPF_ROOT}/include
+      -I/usr/include/${CMAKE_SYSTEM_PROCESSOR}-linux-gnu
+      -c ${LMB_ROOT}/tests/fixtures/bpf/generic_map_live.bpf.c
+      -o ${CMAKE_BINARY_DIR}/fixtures/${variant}.bpf.o
+    DEPENDS ${LMB_ROOT}/tests/fixtures/bpf/generic_map_live.bpf.c
+    VERBATIM)
+  list(APPEND FIRST_LIVE_MAP_OBJECTS ${CMAKE_BINARY_DIR}/fixtures/${variant}.bpf.o)
+endforeach()
+add_custom_target(first_live_map_fixtures DEPENDS ${FIRST_LIVE_MAP_OBJECTS})
+add_dependencies(first_live_map_fixtures libbpf_external)
+
+# Direct upstream archive, without lmb_static or any --wrap/interposer seam.
+add_executable(stock_map_live EXCLUDE_FROM_ALL
+  ${LMB_ROOT}/tests/integration/standard_objects/stock_map_live.c)
+target_include_directories(stock_map_live PRIVATE ${LIBBPF_ROOT}/include)
+target_compile_options(stock_map_live PRIVATE -march=x86-64-v2)
+target_link_libraries(stock_map_live PRIVATE libbpf_static elf z)
+target_link_options(stock_map_live PRIVATE
+  "LINKER:-Map,${CMAKE_BINARY_DIR}/stock_map_live.link.map")
+add_dependencies(stock_map_live libbpf_external)
