@@ -1,0 +1,1039 @@
+{
+  "$defs": {
+    "abi_type": {
+      "additionalProperties": false,
+      "properties": {
+        "declaration": {
+          "$ref": "#/$defs/declaration"
+        },
+        "id": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "record",
+            "enum",
+            "member",
+            "enumerator",
+            "callback",
+            "typedef",
+            "macro",
+            "alias"
+          ]
+        },
+        "members": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "name": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "source_refs": {
+          "items": {
+            "$ref": "#/$defs/anchor"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "id",
+        "kind",
+        "name",
+        "declaration",
+        "members",
+        "source_refs"
+      ],
+      "type": "object"
+    },
+    "anchor": {
+      "additionalProperties": false,
+      "properties": {
+        "end_line": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "path": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "span_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "start_line": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "symbol": {
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "path",
+        "sha256",
+        "symbol",
+        "start_line",
+        "end_line",
+        "span_sha256"
+      ],
+      "type": "object"
+    },
+    "attributes": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "tokens": {
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "tokens"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "c_declarator": {
+      "additionalProperties": false,
+      "properties": {
+        "attributes": {
+          "$ref": "#/$defs/attributes"
+        },
+        "inner": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/c_declarator"
+            }
+          ]
+        },
+        "name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "pointers": {
+          "items": {
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "type": "array"
+        },
+        "suffixes": {
+          "items": {
+            "$ref": "#/$defs/c_suffix"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "name",
+        "pointers",
+        "inner",
+        "suffixes",
+        "attributes"
+      ],
+      "type": "object"
+    },
+    "c_parameter": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "requires": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "source_text": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "type": {
+          "$ref": "#/$defs/c_type"
+        }
+      },
+      "required": [
+        "name",
+        "type",
+        "source_text",
+        "requires"
+      ],
+      "type": "object"
+    },
+    "c_suffix": {
+      "anyOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "extent_tokens": {
+              "items": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "kind": {
+              "const": "array"
+            }
+          },
+          "required": [
+            "kind",
+            "extent_tokens"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "const": "function"
+            },
+            "parameters": {
+              "items": {
+                "$ref": "#/$defs/c_parameter"
+              },
+              "type": "array"
+            },
+            "variadic": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "kind",
+            "parameters",
+            "variadic"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "c_type": {
+      "additionalProperties": false,
+      "properties": {
+        "declarator": {
+          "$ref": "#/$defs/c_declarator"
+        },
+        "specifiers": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "specifiers",
+        "declarator"
+      ],
+      "type": "object"
+    },
+    "compatibility": {
+      "additionalProperties": false,
+      "properties": {
+        "bridge_abi": {
+          "const": 1
+        },
+        "evidence_refs": {
+          "items": {
+            "$ref": "#/$defs/anchor"
+          },
+          "type": "array"
+        },
+        "id": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "mojo_version": {
+          "const": "1.1.0"
+        },
+        "outcome": {
+          "enum": [
+            "NOT_RUN",
+            "PASS",
+            "FAIL",
+            "BLOCKED"
+          ]
+        },
+        "profile": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "requirement": {
+          "const": "required"
+        },
+        "upstream_version": {
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "bridge_abi",
+        "upstream_version",
+        "mojo_version",
+        "profile",
+        "requirement",
+        "outcome",
+        "evidence_refs"
+      ],
+      "type": "object"
+    },
+    "condition": {
+      "additionalProperties": false,
+      "properties": {
+        "branches": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "directive": {
+                "enum": [
+                  "if",
+                  "ifdef",
+                  "ifndef",
+                  "elif",
+                  "else"
+                ]
+              },
+              "tokens": {
+                "items": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "type": "array"
+              }
+            },
+            "required": [
+              "directive",
+              "tokens"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "selected_branch": {
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "branches",
+        "selected_branch"
+      ],
+      "type": "object"
+    },
+    "declaration": {
+      "additionalProperties": false,
+      "properties": {
+        "alternatives": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "conditions": {
+                "items": {
+                  "$ref": "#/$defs/condition"
+                },
+                "type": "array"
+              },
+              "parsed": {
+                "$ref": "#/$defs/parsed_abi_type"
+              },
+              "source_ref": {
+                "$ref": "#/$defs/source_ref"
+              },
+              "source_text": {
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "required": [
+              "source_ref",
+              "source_text",
+              "conditions",
+              "parsed"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "scope": {
+          "enum": [
+            "public",
+            "referenced_dependency"
+          ]
+        }
+      },
+      "required": [
+        "scope",
+        "alternatives"
+      ],
+      "type": "object"
+    },
+    "evidence": {
+      "additionalProperties": false,
+      "properties": {
+        "evidence_refs": {
+          "items": {
+            "$ref": "#/$defs/anchor"
+          },
+          "type": "array"
+        },
+        "id": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "layer": {
+          "enum": [
+            "source",
+            "native_host",
+            "mojo_host",
+            "installed_host",
+            "target_runtime",
+            "binary_abi"
+          ]
+        },
+        "outcome": {
+          "enum": [
+            "NOT_RUN",
+            "PASS",
+            "FAIL",
+            "BLOCKED"
+          ]
+        },
+        "target_profile": {
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "layer",
+        "target_profile",
+        "outcome",
+        "evidence_refs"
+      ],
+      "type": "object"
+    },
+    "export": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "signature": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "source_refs": {
+          "items": {
+            "$ref": "#/$defs/anchor"
+          },
+          "type": "array"
+        },
+        "version_node": {
+          "enum": [
+            "LIBBPF_MOJO_1",
+            "LIBBPF_MOJO_GENERIC_1"
+          ]
+        }
+      },
+      "required": [
+        "name",
+        "version_node",
+        "signature",
+        "source_refs"
+      ],
+      "type": "object"
+    },
+    "forward": {
+      "additionalProperties": false,
+      "properties": {
+        "bridge_symbols": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "option_members": {
+          "items": {
+            "$ref": "#/$defs/option_member"
+          },
+          "type": "array"
+        },
+        "refs": {
+          "items": {
+            "$ref": "#/$defs/anchor"
+          },
+          "type": "array"
+        },
+        "restrictions": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "status": {
+          "enum": [
+            "ABSENT",
+            "SOURCE_PRESENT_PARTIAL",
+            "SOURCE_PRESENT_COMPLETE",
+            "NOT_APPLICABLE"
+          ]
+        }
+      },
+      "required": [
+        "status",
+        "refs",
+        "bridge_symbols",
+        "restrictions",
+        "option_members"
+      ],
+      "type": "object"
+    },
+    "option_member": {
+      "additionalProperties": false,
+      "properties": {
+        "disposition": {
+          "enum": [
+            "FORWARDED",
+            "FIXED",
+            "REJECTED",
+            "NOT_EXPOSED"
+          ]
+        },
+        "id": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "refs": {
+          "items": {
+            "$ref": "#/$defs/anchor"
+          },
+          "type": "array"
+        },
+        "restriction": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "source_refs": {
+          "items": {
+            "$ref": "#/$defs/source_ref"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "id",
+        "disposition",
+        "source_refs",
+        "refs",
+        "restriction"
+      ],
+      "type": "object"
+    },
+    "parsed_abi_type": {
+      "anyOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "attributes": {
+              "$ref": "#/$defs/attributes"
+            },
+            "complete": {
+              "type": "boolean"
+            },
+            "tag_kind": {
+              "enum": [
+                "struct",
+                "union",
+                "enum"
+              ]
+            }
+          },
+          "required": [
+            "tag_kind",
+            "complete",
+            "attributes"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "anonymous": {
+              "type": "boolean"
+            },
+            "bitfield_tokens": {
+              "anyOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "items": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "type": "array"
+                }
+              ]
+            },
+            "record_members": {
+              "items": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "type": {
+              "$ref": "#/$defs/c_type"
+            }
+          },
+          "required": [
+            "type",
+            "bitfield_tokens",
+            "anonymous",
+            "record_members"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "classification": {
+              "enum": [
+                "value",
+                "sentinel"
+              ]
+            },
+            "expression_tokens": {
+              "items": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "implicit_successor_of": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "expression_tokens",
+            "implicit_successor_of",
+            "classification"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "raw": {
+      "additionalProperties": false,
+      "properties": {
+        "refs": {
+          "items": {
+            "$ref": "#/$defs/anchor"
+          },
+          "type": "array"
+        },
+        "status": {
+          "enum": [
+            "ABSENT",
+            "SOURCE_PRESENT",
+            "NOT_APPLICABLE"
+          ]
+        }
+      },
+      "required": [
+        "status",
+        "refs"
+      ],
+      "type": "object"
+    },
+    "row": {
+      "additionalProperties": false,
+      "properties": {
+        "applicability": {
+          "enum": [
+            "required",
+            "excluded"
+          ]
+        },
+        "blocker": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "next_action": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "reason": {
+                  "minLength": 1,
+                  "type": "string"
+                }
+              },
+              "required": [
+                "reason",
+                "next_action"
+              ],
+              "type": "object"
+            }
+          ]
+        },
+        "evidence_cells": {
+          "items": {
+            "$ref": "#/$defs/evidence"
+          },
+          "type": "array"
+        },
+        "forwarding_adapter": {
+          "$ref": "#/$defs/forward"
+        },
+        "id": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "raw_declaration": {
+          "$ref": "#/$defs/raw"
+        },
+        "tests": {
+          "additionalProperties": false,
+          "properties": {
+            "interaction_refs": {
+              "items": {
+                "$ref": "#/$defs/anchor"
+              },
+              "type": "array"
+            },
+            "negative_refs": {
+              "items": {
+                "$ref": "#/$defs/anchor"
+              },
+              "type": "array"
+            },
+            "positive_refs": {
+              "items": {
+                "$ref": "#/$defs/anchor"
+              },
+              "type": "array"
+            }
+          },
+          "required": [
+            "positive_refs",
+            "negative_refs",
+            "interaction_refs"
+          ],
+          "type": "object"
+        },
+        "typed_workflow": {
+          "$ref": "#/$defs/typed"
+        },
+        "workflow": {
+          "enum": [
+            "objects",
+            "maps",
+            "programs",
+            "links",
+            "buffers",
+            "btf",
+            "control",
+            "abi"
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "workflow",
+        "applicability",
+        "raw_declaration",
+        "forwarding_adapter",
+        "typed_workflow",
+        "tests",
+        "evidence_cells",
+        "blocker"
+      ],
+      "type": "object"
+    },
+    "source": {
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        }
+      },
+      "required": [
+        "path",
+        "sha256"
+      ],
+      "type": "object"
+    },
+    "source_ref": {
+      "additionalProperties": false,
+      "properties": {
+        "end_byte": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "end_line": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "file": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "span_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "start_byte": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "start_line": {
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "file",
+        "sha256",
+        "start_line",
+        "end_line",
+        "start_byte",
+        "end_byte",
+        "span_sha256"
+      ],
+      "type": "object"
+    },
+    "typed": {
+      "additionalProperties": false,
+      "properties": {
+        "bridge_symbols": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "refs": {
+          "items": {
+            "$ref": "#/$defs/anchor"
+          },
+          "type": "array"
+        },
+        "restrictions": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "status": {
+          "enum": [
+            "ABSENT",
+            "SOURCE_PRESENT_PARTIAL",
+            "SOURCE_PRESENT_COMPLETE",
+            "NOT_APPLICABLE"
+          ]
+        }
+      },
+      "required": [
+        "status",
+        "refs",
+        "bridge_symbols",
+        "restrictions"
+      ],
+      "type": "object"
+    }
+  },
+  "$id": "https://libbpf-mojo.invalid/schemas/api-coverage.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "bridge_abi": {
+      "additionalProperties": false,
+      "properties": {
+        "abi_major": {
+          "const": 1
+        },
+        "binary_outcome": {
+          "const": "NOT_RUN"
+        },
+        "constraints": {
+          "additionalProperties": false,
+          "properties": {
+            "generic_exports_optional_for_old_session": {
+              "const": true
+            },
+            "old_session_lazy_loading_preserved": {
+              "const": true
+            },
+            "original_exports_required": {
+              "const": true
+            },
+            "signed_native_errors_preserved": {
+              "const": true
+            },
+            "single_libbpf_instance_required": {
+              "const": true
+            },
+            "source_assertions_are_not_abi_probe_evidence": {
+              "const": true
+            }
+          },
+          "required": [
+            "original_exports_required",
+            "generic_exports_optional_for_old_session",
+            "old_session_lazy_loading_preserved",
+            "single_libbpf_instance_required",
+            "signed_native_errors_preserved",
+            "source_assertions_are_not_abi_probe_evidence"
+          ],
+          "type": "object"
+        },
+        "export_checker": {
+          "$ref": "#/$defs/anchor"
+        },
+        "exports": {
+          "items": {
+            "$ref": "#/$defs/export"
+          },
+          "type": "array"
+        },
+        "frozen_old_header": {
+          "$ref": "#/$defs/anchor"
+        },
+        "soname": {
+          "const": "libbpf_mojo.so.1"
+        },
+        "types": {
+          "items": {
+            "$ref": "#/$defs/abi_type"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "abi_major",
+        "soname",
+        "exports",
+        "types",
+        "constraints",
+        "frozen_old_header",
+        "export_checker",
+        "binary_outcome"
+      ],
+      "type": "object"
+    },
+    "compatibility_cells": {
+      "items": {
+        "$ref": "#/$defs/compatibility"
+      },
+      "type": "array"
+    },
+    "implementation_snapshot": {
+      "additionalProperties": false,
+      "properties": {
+        "base_revision": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "sources": {
+          "items": {
+            "$ref": "#/$defs/source"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "base_revision",
+        "sources"
+      ],
+      "type": "object"
+    },
+    "rows": {
+      "items": {
+        "$ref": "#/$defs/row"
+      },
+      "type": "array"
+    },
+    "schema_version": {
+      "const": 1
+    },
+    "upstream_snapshot": {
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "const": "tests/fixtures/api_inventory/libbpf-1.7.0.json"
+        },
+        "sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "version": {
+          "const": "1.7.0"
+        }
+      },
+      "required": [
+        "path",
+        "sha256",
+        "version"
+      ],
+      "type": "object"
+    }
+  },
+  "required": [
+    "schema_version",
+    "upstream_snapshot",
+    "implementation_snapshot",
+    "rows",
+    "bridge_abi",
+    "compatibility_cells"
+  ],
+  "title": "Source API coverage ledger; evidence layers are independent",
+  "type": "object"
+}
