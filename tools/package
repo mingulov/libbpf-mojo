@@ -43,6 +43,20 @@ log() {
     echo "+ $*" >&2
 }
 
+cancel_package() {
+    local signal_status="$1" child
+    # Bash defers traps for foreground commands, but interrupts the wait builtin
+    # immediately. Stop and reap our asynchronous archive jobs before EXIT
+    # cleanup removes paths they could otherwise still write or publish.
+    trap '' INT TERM
+    echo "package: cancellation received; stopping owned archive jobs" >&2
+    for child in $(jobs -p); do
+        kill -TERM "$child" 2>/dev/null || :
+        wait "$child" || :
+    done
+    exit "$signal_status"
+}
+
 cleanup_package() {
     status=$?
     if [ -n "$ARCHIVE" ]; then
@@ -125,8 +139,8 @@ sys.exit("no version in pixi.toml")
     mkdir -p "$OUT" || return 1
     STAGE="$(mktemp -d "$OUT/stage.XXXXXX")" || return 1
     trap cleanup_package EXIT
-    trap 'exit 130' INT
-    trap 'exit 143' TERM
+    trap 'cancel_package 130' INT
+    trap 'cancel_package 143' TERM
     stage="$STAGE/$name"
     log "stage $stage"
     mkdir -p "$stage/lib" "$stage/examples" "$stage/include" \
@@ -328,7 +342,7 @@ EOF
     # newly published archive.
     ARCHIVE="$(mktemp "$OUT/.$name.tar.gz.XXXXXX")" || return 1
     python3 - "$STAGE" "$name" "$OUT/$name.tar.gz" "$mtime" "$ARCHIVE" \
-        <<'EOF' || return 1
+        <<'EOF' &
 import gzip
 import os
 import signal
@@ -358,11 +372,24 @@ with open(temporary, "wb") as raw:
                     with open(full, "rb") as handle:
                         tar.addfile(info, handle)
 EOF
-    # Return to the shell before publication so a pending wrapper-only signal
-    # runs its exit trap even if the archive child completed successfully.
-    python3 - "$ARCHIVE" "$OUT/$name.tar.gz" <<'EOF' || return 1
+    archive_pid=$!
+    wait "$archive_pid" || return 1
+    # Supervise publication through an interruptible wait as well: wrapper-only
+    # cancellation must stop this child before cleanup, rather than waiting for
+    # its replace to finish. os.replace is the atomic commit point; signals
+    # processed by this supervisor before commit stop the owned publisher;
+    # simultaneous delivery/commit has no promised real-time ordering. A commit
+    # already completed when cancellation is processed retains the new archive.
+    python3 - "$ARCHIVE" "$OUT/$name.tar.gz" <<'EOF' &
 import os
+import signal
 import sys
+
+def interrupted(signum, frame):
+    raise InterruptedError("package: archive publication interrupted (%s)" % signum)
+
+signal.signal(signal.SIGINT, interrupted)
+signal.signal(signal.SIGTERM, interrupted)
 # mktemp starts private; publish with the same umask-derived permissions as
 # the previous direct open(..., "wb") archive creation.
 mask = os.umask(0o077)
@@ -370,6 +397,8 @@ os.umask(mask)
 os.chmod(sys.argv[1], 0o666 & ~mask)
 os.replace(sys.argv[1], sys.argv[2])
 EOF
+    archive_pid=$!
+    wait "$archive_pid" || return 1
     (cd "$OUT" && sha256sum "$name.tar.gz") || return 1
 }
 

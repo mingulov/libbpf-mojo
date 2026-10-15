@@ -12,6 +12,8 @@ import hashlib
 import io
 import json
 import os
+import signal
+import time
 from pathlib import Path
 import shutil
 import stat
@@ -85,6 +87,23 @@ elif mode == "raw-close":
     builtins.open = open_file
 elif mode == "replace":
     os.replace = lambda *args, **kwargs: fault()
+elif mode.startswith("publish-"):
+    import pathlib, time
+    original = os.replace
+    def replace(*args, **kwargs):
+        sync = pathlib.Path(os.environ["LMB_TRANSACTION_SYNC"])
+        if "after" in mode:
+            original(*args, **kwargs)
+        sync.with_suffix(".ready").write_text(str(os.getpid()))
+        print("INJECTED " + mode, file=__import__('sys').stderr, flush=True)
+        deadline = time.monotonic() + 5
+        while not sync.with_suffix(".release").exists():
+            if time.monotonic() > deadline:
+                raise RuntimeError("publication synchronization timed out")
+            time.sleep(0.005)
+        if "after" not in mode:
+            original(*args, **kwargs)
+    os.replace = replace
 '''
 
 
@@ -173,23 +192,71 @@ class PackageTransaction(unittest.TestCase):
         self.unrelated.write_bytes(b'leave alone')
 
     def run_package(self, mode='', label=None, shell_fault=''):
+        sync = self.base / ('sync-' + self.id().rsplit('.', 1)[-1] + '-' + mode)
         env = dict(os.environ, PATH=str(self.bin) + os.pathsep + os.environ['PATH'],
                    PYTHONPATH=str(self.inject), PYTHONDONTWRITEBYTECODE='1',
                    SOURCE_DATE_EPOCH='1234567890', LMB_CONDA_PKGS=str(self.cache),
                    LMB_TRANSACTION_FAULT=mode, LMB_BUILD_DIR='build',
-                   LMB_TRANSACTION_SHELL_FAULT=shell_fault)
+                   LMB_TRANSACTION_SHELL_FAULT=shell_fault, LMB_TRANSACTION_SYNC=str(sync))
         cmd = ['bash', str(self.tree / 'tools/package'), '--out', str(self.out)]
-        result = subprocess.run(cmd, cwd=self.tree, env=env, capture_output=True,
-                                text=True, start_new_session=True, timeout=30)
+        publication_pid = None
+        stopped_before_release = None
+        child_gone_before_release = None
+        if mode.startswith('publish-'):
+            proc = subprocess.Popen(cmd, cwd=self.tree, env=env, stdout=subprocess.PIPE,
+                                    stderr=subprocess.PIPE, text=True, start_new_session=True)
+            try:
+                deadline = time.monotonic() + 10
+                while not sync.with_suffix('.ready').exists():
+                    if proc.poll() is not None or time.monotonic() > deadline:
+                        self.fail('publication coordinator did not reach synchronization point')
+                    time.sleep(0.005)
+                publication_pid = int(sync.with_suffix('.ready').read_text())
+                signum = signal.SIGINT if 'int-' in mode else signal.SIGTERM
+                if mode.endswith('-group'):
+                    os.killpg(proc.pid, signum)
+                else:
+                    os.kill(proc.pid, signum)
+                # A cancellation-aware coordinator must stop while replacement
+                # is still blocked. Baseline eventually continues only when this
+                # test explicitly releases it, exposing deferred shell traps.
+                deadline = time.monotonic() + 0.5
+                while proc.poll() is None and time.monotonic() < deadline:
+                    time.sleep(0.005)
+                stopped_before_release = proc.poll() is not None
+                try:
+                    os.kill(publication_pid, 0)
+                except ProcessLookupError:
+                    child_gone_before_release = True
+                else:
+                    child_gone_before_release = False
+                sync.with_suffix('.release').touch()
+                stdout, stderr = proc.communicate(timeout=10)
+                result = subprocess.CompletedProcess(cmd, proc.returncode, stdout, stderr)
+            finally:
+                if proc.poll() is None:
+                    os.killpg(proc.pid, signal.SIGKILL)
+                    proc.communicate()
+        else:
+            result = subprocess.run(cmd, cwd=self.tree, env=env, capture_output=True,
+                                    text=True, start_new_session=True, timeout=30)
         paths = {str(p.relative_to(self.out)): (digest(p.read_bytes()) if p.is_file() else 'directory')
                  for p in sorted(self.out.rglob('*'))}
         record = {'argv': cmd, 'fault': mode, 'shell_fault': shell_fault, 'returncode': result.returncode,
                   'predecessor_sha256': digest(self.sentinel), 'output_paths': paths,
-                  'stdout': result.stdout, 'stderr': result.stderr}
+                  'stdout': result.stdout, 'stderr': result.stderr, 'publication_pid': publication_pid,
+                  'wrapper_stopped_before_release': stopped_before_release,
+                  'publication_child_gone_before_release': child_gone_before_release}
         if self.evidence:
             name = self.id().rsplit('.', 1)[-1] + (('-' + label) if label else ('-' + mode if mode else ''))
             write(Path(self.evidence) / (name + '.json'),
                   json.dumps(record, indent=2, sort_keys=True).encode())
+        if publication_pid is not None:
+            self.assertTrue(stopped_before_release, 'wrapper deferred cancellation until publication release')
+            self.assertTrue(child_gone_before_release, 'owned publisher still present before release')
+            self.assertIn('package: cancellation received; stopping owned archive jobs', result.stderr)
+            with self.assertRaises(ProcessLookupError, msg='publication child survived wrapper exit'):
+                os.kill(publication_pid, 0)
         return result
 
     def assert_failed_transaction(self, mode, predecessor=True):
@@ -206,6 +273,31 @@ class PackageTransaction(unittest.TestCase):
             self.assertFalse(self.final.exists(), 'failed attempt published final artifact')
         self.assertEqual(sorted(p.name for p in self.out.iterdir()),
                          sorted(['.unrelated.tmp'] + ([self.final.name] if predecessor else [])))
+
+    def test_publication_cancellation_preserves_predecessor(self):
+        for mode in ('publish-int-parent', 'publish-term-parent',
+                     'publish-int-group', 'publish-term-group'):
+            with self.subTest(fault=mode):
+                self.final.write_bytes(self.sentinel)
+                self.assert_failed_transaction(mode)
+
+    def test_publication_cancellation_without_predecessor(self):
+        for mode in ('publish-int-parent', 'publish-term-parent',
+                     'publish-int-group', 'publish-term-group'):
+            with self.subTest(fault=mode):
+                self.final.write_bytes(self.sentinel)
+                self.assert_failed_transaction(mode, False)
+
+    def test_cancellation_after_commit_retains_complete_new_archive(self):
+        for mode in ('publish-after-int-parent', 'publish-after-term-parent'):
+            with self.subTest(fault=mode):
+                result = self.run_package(mode)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn('INJECTED ' + mode, result.stderr)
+                self.assertNotEqual(self.final.read_bytes(), self.sentinel)
+                with tarfile.open(self.final) as archive:
+                    self.assertIn('libbpf-mojo-0.2.0/MANIFEST.json', archive.getnames())
+                self.assertEqual(sorted(p.name for p in self.out.iterdir()), ['.unrelated.tmp', self.final.name])
 
     def test_member_failure_preserves_predecessor(self):
         self.assert_failed_transaction('add')
