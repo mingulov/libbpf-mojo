@@ -12,7 +12,7 @@ generic = ('object_open object_configure_program object_load object_program_info
            'object_map_info object_close object_release generic_last_error '
            'object_ref object_unref object_gen object_gen_check').split()
 if len(sys.argv) == 2:
-    generic += ['object_map_lookup', 'object_map_update', 'program_test_run']
+    generic += ['object_map_lookup', 'object_map_update', 'program_test_run', 'object_map_delete', 'object_map_next_key']
 elif sys.argv[2] != 'object-only':
     sys.exit('invalid variant')
 controls = ['reset', 'scenario', 'call_count', 'close_count']

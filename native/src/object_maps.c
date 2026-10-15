@@ -124,3 +124,78 @@ int32_t lmb_object_map_update_v1(struct lmb_object *object,
     lmb_generic_clear();
     return 0;
 }
+
+int32_t lmb_object_map_delete_v1(struct lmb_object *object,
+    const struct lmb_name_v1 *name, const uint8_t *key, uint64_t key_bytes,
+    uint64_t flags) {
+    const uint32_t op = LMB_GENERIC_OP_MAP_DELETE;
+    if (!lmb_generic_check_span(name, sizeof(*name)) ||
+        !lmb_generic_check_name(name) || !lmb_generic_check_span(key, key_bytes))
+        return fail(op, LMB_GENERIC_DOMAIN_BRIDGE, -EINVAL, "invalid map delete arguments");
+    if (!lmb_object_need_loaded(object, op)) return -EINVAL;
+    struct bpf_map *map = find_map(object, name);
+    if (!map) return fail(op, LMB_GENERIC_DOMAIN_BRIDGE, -ENOENT, "map not found");
+    uint32_t key_size = bpf_map__key_size(map);
+    if (!key_size)
+        return fail(op, LMB_GENERIC_DOMAIN_BRIDGE, -EOPNOTSUPP, "map has no key");
+    if (key_bytes != key_size)
+        return fail(op, LMB_GENERIC_DOMAIN_BRIDGE, -EINVAL, "map key has the wrong extent");
+    int32_t code = bpf_map_delete_elem_flags(bpf_map__fd(map), key, flags);
+    if (code) return fail(op, LMB_GENERIC_DOMAIN_KERNEL, code, "map delete failed");
+    lmb_generic_clear();
+    return 0;
+}
+
+int32_t lmb_object_map_next_key_v1(struct lmb_object *object,
+    const struct lmb_name_v1 *name, uint32_t has_current,
+    const uint8_t *current, uint64_t current_bytes, uint8_t *next,
+    uint64_t capacity, uint64_t *needed) {
+    const uint32_t op = LMB_GENERIC_OP_MAP_NEXT_KEY;
+    if (!lmb_generic_check_span(name, sizeof(*name)) ||
+        !lmb_generic_check_span(needed, sizeof(*needed)) ||
+        !lmb_generic_check_name(name) || has_current > 1 ||
+        (!has_current && current_bytes) ||
+        (has_current && !lmb_generic_check_span(current, current_bytes)) ||
+        !lmb_generic_check_span(next, capacity))
+        return fail(op, LMB_GENERIC_DOMAIN_BRIDGE, -EINVAL, "invalid next-key arguments");
+    if (lmb_generic_ranges_overlap(needed, sizeof(*needed), name, sizeof(*name)) ||
+        lmb_generic_ranges_overlap(needed, sizeof(*needed), name->name.ptr, name->name.len) ||
+        lmb_generic_ranges_overlap(needed, sizeof(*needed), current, current_bytes) ||
+        lmb_generic_ranges_overlap(needed, sizeof(*needed), next, capacity))
+        return fail(op, LMB_GENERIC_DOMAIN_BRIDGE, -EINVAL, "size output aliases map storage");
+    if (!lmb_object_need_loaded(object, op)) return -EINVAL;
+    /* find_map copies the validated name before any caller output commit. */
+    struct bpf_map *map = find_map(object, name);
+    if (!map) return fail(op, LMB_GENERIC_DOMAIN_BRIDGE, -ENOENT, "map not found");
+    uint32_t key_size = bpf_map__key_size(map);
+    if (!key_size)
+        return fail(op, LMB_GENERIC_DOMAIN_BRIDGE, -EOPNOTSUPP, "map has no key");
+    if (has_current && current_bytes != key_size)
+        return fail(op, LMB_GENERIC_DOMAIN_BRIDGE, -EINVAL, "current key has the wrong extent");
+    if (capacity < key_size) {
+        *needed = key_size;
+        return fail(op, LMB_GENERIC_DOMAIN_BRIDGE, -ENOSPC, "key destination is too short");
+    }
+    uint8_t *snapshot = NULL;
+    if (has_current) {
+        snapshot = malloc(key_size);
+        if (!snapshot) return fail(op, LMB_GENERIC_DOMAIN_POSIX, -ENOMEM, "allocation failed");
+        memcpy(snapshot, current, key_size);
+    }
+    uint8_t *scratch = malloc(key_size);
+    if (!scratch) {
+        free(snapshot);
+        return fail(op, LMB_GENERIC_DOMAIN_POSIX, -ENOMEM, "allocation failed");
+    }
+    *needed = 0;
+    int32_t code = bpf_map_get_next_key(bpf_map__fd(map), snapshot, scratch);
+    if (!code) {
+        memcpy(next, scratch, key_size);
+        *needed = key_size;
+    }
+    free(scratch);
+    free(snapshot);
+    if (code) return fail(op, LMB_GENERIC_DOMAIN_KERNEL, code, "map next key failed");
+    lmb_generic_clear();
+    return 0;
+}

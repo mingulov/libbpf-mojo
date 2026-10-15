@@ -79,7 +79,7 @@ owns each handle; broader concurrency remains unqualified.
 The standalone runtime tarball includes both modules and this guide. Compile
 with the pinned Mojo compiler and `-I <package>/mojo`, then use the bundled
 runtime library closure and `LMB_NATIVE_LIB=<package>/lib/libbpf_mojo.so.1`.
-The installed-consumer test compiles six Mojo consumers and a C header consumer
+The installed-consumer test compiles the current Mojo consumer set and a C header consumer
 outside the source tree, removes source imports, and executes after relocation
 with an empty executable search path. `LMB_PACKAGE_CONSUMER_OUT` optionally
 retains each attempt's binaries, input identities, argv/environment and logs.

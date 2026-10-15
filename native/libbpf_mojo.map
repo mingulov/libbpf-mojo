@@ -33,6 +33,8 @@ LIBBPF_MOJO_GENERIC_1 {
         lmb_generic_last_error_v1;
         lmb_object_map_lookup_v1;
         lmb_object_map_update_v1;
+        lmb_object_map_delete_v1;
+        lmb_object_map_next_key_v1;
         lmb_program_test_run_v1;
         lmb_object_attach_v1;
         lmb_link_close_v1;

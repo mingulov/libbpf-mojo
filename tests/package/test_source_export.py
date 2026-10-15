@@ -5,7 +5,7 @@
 No borrowed build outputs or receipts. Test standalone and ignored exports
 under an unrelated clean/dirty Git parent. LMB_SOURCE_EXPORT_OUT optionally
 preserves source/runtime archives, receipts and full command logs.
---host-only uses six installed Mojo consumers and the C header consumer
+--host-only uses the current installed Mojo consumer set and the C header consumer
 with guarded native leaves, including separately selected external host mode.
 --cached-libbpf-archive PATH seeds verified source bytes before each build;
 an invalid supplied cache fails before any build and never falls back.
@@ -121,6 +121,15 @@ def main(argv=None):
                 print("cached libbpf source: %s sha256 %s" % (options.cached_libbpf_archive, digest), flush=True)
             env = dict(os.environ)
             env.pop("SOURCE_DATE_EPOCH", None)
+            # Provision only this owned prefix before activation: Modular's
+            # first-activation script otherwise invokes network telemetry even
+            # when pixi itself is offline. Never touch an ambient prefix.
+            env["PIXI_OFFLINE"] = "true"
+            run(tree, "pixi", "install", "--frozen", env=env,
+                label=case + "-offline-install")
+            marker = tree / ".pixi/envs/default/share/max/firstActivation"
+            marker.parent.mkdir(parents=True, exist_ok=True)
+            marker.touch(exist_ok=True)
             run(tree, "./tools/build", env=env, label=case + "-build")
             run(tree, "ninja", "-C", "build", "-t", "commands",
                 env=env, label=case + "-native-argv")

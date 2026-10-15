@@ -64,6 +64,41 @@ LOCK does not promise that a particular map supports a spin lock.
 Invalid flags fail before a syscall. A kernel refusal keeps its signed
 code and does not trigger a retry.
 
+## Delete and key traversal
+
+`delete(view, key, flags=0)` borrows immutable key bytes and forwards the full
+`UInt64` flags once. An absent key raises `LmbError`, including native ENOENT.
+No flag bits are invented, cleared or inferred to be supported by every map.
+
+`first_key(view)` and `next_key(view, current)` return
+`Optional[List[UInt8]]`: each successful result owns exactly the map's key
+bytes. First-key supplies a valid dummy byte to the FFI and the bridge supplies
+actual NULL to libbpf. A provided empty/wrong-sized current key raises EINVAL.
+Only matching operation-19 KERNEL/ENOENT diagnostics with native return ENOENT
+become `None`. Missing map BRIDGE/ENOENT, permission failures, missing symbols,
+stale/closed views, unknown errors and mismatched diagnostics raise errors.
+Diagnostics are copied immediately; captured errors survive later success.
+
+```mojo
+from libbpf_mojo.maps import delete, first_key, next_key
+
+var values = obj.map("values")
+var current = first_key(values)
+if current:
+    var key = current.take()
+    var following = next_key(values, Span(key))
+    delete(values, Span(key))
+```
+
+Each call checks retained generation before native entry or result allocation.
+These are keyed-map operations; zero-key channels return EOPNOTSUPP. Initial
+host controls cover HASH traversal/delete and ARRAY traversal/native delete
+refusal. Per-CPU metadata can require possible-CPU discovery; complete per-CPU,
+composed and special-map workflows remain separately qualified. Traversal has
+no stable order or snapshot guarantee, and a removed cursor may restart at the
+current first key. The library performs no loop, retry or duplicate filtering.
+Successful installed kernel delete/traversal remains unqualified.
+
 ## Test-run buffers and result
 
 `test_run(view, packet, context, packet_out, context_out, repeat=1)`

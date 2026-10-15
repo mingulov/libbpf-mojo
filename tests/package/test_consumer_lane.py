@@ -128,7 +128,7 @@ def object_consumer_check(tarball, version, host_only=False, retention_out=None,
         compiler = ["pixi", "run", "--frozen", "mojo", "build",
                     "--num-threads", "2", "--target-cpu", "x86-64-v2"]
         consumers = []
-        for name in ("main", "object", "maps", "testrun", "link", "buffer"):
+        for name in ("main", "object", "maps", "testrun", "link", "buffer", "map_keys"):
             source = os.path.join(isolated, "consumer_%s.mojo" % name)
             shutil.copyfile(os.path.join(HERE, "consumer_%s.mojo" % name), source)
             retained.source(source)
@@ -141,13 +141,14 @@ def object_consumer_check(tarball, version, host_only=False, retention_out=None,
                             cwd=tp.ROOT, timeout=600)
             if not result.returncode or "unable to locate module 'libbpf_mojo'" not in result.stdout:
                 raise tp.Fail("%s consumer missing-import control failed:\n%s" % (name, result.stdout))
-            if name in ("link", "buffer"):
+            if name in ("link", "buffer", "map_keys"):
                 incomplete = os.path.join(tmp, "missing-" + name)
                 shutil.copytree(os.path.join(top, "mojo"), incomplete)
-                os.remove(os.path.join(incomplete, "libbpf_mojo", name + ".mojo"))
+                module = "maps" if name == "map_keys" else name
+                os.remove(os.path.join(incomplete, "libbpf_mojo", module + ".mojo"))
                 result = retained.run(compiler + ["-I", incomplete, "-o", binary + ".slice-control", source],
                                       cwd=tp.ROOT, timeout=600)
-                if not result.returncode or "unable to locate module '%s'" % name not in result.stdout:
+                if not result.returncode or "unable to locate module '%s'" % module not in result.stdout:
                     raise tp.Fail("%s consumer missing-module control failed:\n%s" % (name, result.stdout))
             consumers.append((name, binary))
             print("compiled %s sha256 %s" % (name, tp.sha256_of(binary)))

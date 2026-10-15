@@ -56,7 +56,9 @@ lmb_buffer_close_v1@@LIBBPF_MOJO_GENERIC_1
 lmb_object_ref_v1@@LIBBPF_MOJO_GENERIC_1
 lmb_object_unref_v1@@LIBBPF_MOJO_GENERIC_1
 lmb_object_gen_v1@@LIBBPF_MOJO_GENERIC_1
-lmb_object_gen_check_v1@@LIBBPF_MOJO_GENERIC_1"
+lmb_object_gen_check_v1@@LIBBPF_MOJO_GENERIC_1
+lmb_object_map_delete_v1@@LIBBPF_MOJO_GENERIC_1
+lmb_object_map_next_key_v1@@LIBBPF_MOJO_GENERIC_1"
 # Every defined dynamic symbol is classified by its nm type letter:
 # text/weak/ifunc entries (upper- or lowercase) are functions and
 # must be allowlisted; anything else must be a linker version node.

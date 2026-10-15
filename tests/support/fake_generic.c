@@ -7,6 +7,7 @@
  * 3 test ENOSPC; 4 test EINTR; 5 test oversized success;
  * 6 omitted outputs (packet37/context0); 7 empty inputs/outputs;
  * 9 high u32 key; 99 deliberate unscripted BPF trap.
+ * Scenarios 10-20 add key/error/ABI controls; 18/19 count key entries.
  * Operation0 counts scripted syscalls; 7/8/9 count public entries. */
 #include <errno.h>
 #include <linux/bpf.h>
@@ -19,7 +20,7 @@
 #include "libbpf_mojo_generic.h"
 
 static uint32_t selected, active;
-static uint64_t calls[18], closes;
+static uint64_t calls[20], closes;
 static unsigned char values[4][48];
 
 static void require(int condition, const char *what) {
@@ -51,12 +52,12 @@ void lmb_test_generic_scenario(uint32_t number) {
         syscall(SYS_bpf, BPF_PROG_LOAD, &attr, (unsigned int)sizeof(attr));
         _exit(95);
     }
-    require(number <= 9 && number != 8, "known scenario ID");
+    require(number <= 20 && number != 8, "known scenario ID");
     selected = number;
 }
 
 uint64_t lmb_test_generic_call_count(uint32_t operation) {
-    require(operation < 18, "known operation ID");
+    require(operation < 20, "known operation ID");
     return calls[operation];
 }
 uint64_t lmb_test_generic_close_count(void) { return closes; }
@@ -125,16 +126,67 @@ int32_t lmb_program_test_run_v1(struct lmb_object *object, const struct lmb_name
     return rc;
 }
 
+/* Scenarios 10-20 extend the existing fixed host matrix without changing 0-9. */
+void lmb_generic_record(uint32_t, uint32_t, int32_t, const char *);
+int32_t lmb_test_real_map_delete(struct lmb_object *, const struct lmb_name_v1 *,
+    const uint8_t *, uint64_t, uint64_t);
+int32_t lmb_test_real_map_next_key(struct lmb_object *, const struct lmb_name_v1 *,
+    uint32_t, const uint8_t *, uint64_t, uint8_t *, uint64_t, uint64_t *);
+int32_t lmb_object_map_delete_v1(struct lmb_object *object, const struct lmb_name_v1 *name,
+    const uint8_t *key, uint64_t key_bytes, uint64_t flags) {
+    calls[18]++; active = 18;
+    int32_t rc = lmb_test_real_map_delete(object, name, key, key_bytes, flags);
+    active = 0; errno = ENOTTY;
+    return rc;
+}
+int32_t lmb_object_map_next_key_v1(struct lmb_object *object, const struct lmb_name_v1 *name,
+    uint32_t has_current, const uint8_t *current, uint64_t current_bytes,
+    uint8_t *next, uint64_t capacity, uint64_t *needed) {
+    calls[19]++; active = 19;
+    int32_t rc = lmb_test_real_map_next_key(object, name, has_current, current, current_bytes, next, capacity, needed);
+    if (rc == -ENOENT) {
+        if (selected == 14) lmb_generic_record(18, 3, rc, "wrong operation");
+        if (selected == 15) lmb_generic_record(19, 4, rc, "bridge missing map");
+        if (selected == 16) lmb_generic_record(19, 3, -EIO, "wrong code");
+        if (selected == 17) lmb_generic_record(0, 0, 0, "stale diagnostic");
+    }
+    active = 0; errno = ENOTTY;
+    return rc;
+}
+
 long lmb_test_bpf_dispatch(int command, void *raw, unsigned int size) {
     union bpf_attr *attr = raw;
     if (!attr || !active ||
         !((command == BPF_MAP_LOOKUP_ELEM && active == 7) ||
           (command == BPF_MAP_UPDATE_ELEM && active == 8) ||
-          (command == BPF_PROG_TEST_RUN && active == 9))) {
+          (command == BPF_PROG_TEST_RUN && active == 9) ||
+          (command == BPF_MAP_DELETE_ELEM && active == 18) ||
+          (command == BPF_MAP_GET_NEXT_KEY && active == 19))) {
         fputs("HOST GUARD: generic testfake stopped unscripted BPF before execution\n", stderr);
         _exit(99);
     }
     calls[0]++;
+    if (command == BPF_MAP_DELETE_ELEM || command == BPF_MAP_GET_NEXT_KEY) {
+        require(attr->map_fd == 6001 || attr->map_fd == 6002, "ordinary keyed map FD");
+        uint32_t key = 0;
+        if (attr->key) memcpy(&key, (const void *)(uintptr_t)attr->key, sizeof(key));
+        if (command == BPF_MAP_DELETE_ELEM) {
+            require(size == offsetof(union bpf_attr, flags) + sizeof(attr->flags), "delete attr size");
+            if (selected == 20) require(key == UINT32_C(0x89abcdef) && attr->flags == UINT64_C(0x80000000ffffffff), "full key and u64 flag sentinel");
+            else require(attr->flags == 0, "zero default delete flags");
+            if (selected == 11 || selected == 18 || selected == 19) { errno = selected == 11 ? ENOENT : selected == 18 ? 4093 : EPERM; return -1; }
+            return 0;
+        }
+        require(size == offsetof(union bpf_attr, next_key) + sizeof(attr->next_key), "next-key attr size");
+        require(attr->next_key != 0, "owned next key scratch");
+        uint32_t next = attr->key ? UINT32_C(0xffffffff) : UINT32_C(0x80000000);
+        memcpy((void *)(uintptr_t)attr->next_key, &next, sizeof(next));
+        if ((selected >= 10 && selected <= 17) || key == UINT32_C(0xffffffff)) {
+            errno = selected == 12 ? EPERM : selected == 13 ? 4093 : ENOENT;
+            return -1;
+        }
+        return 0;
+    }
     if (command == BPF_MAP_LOOKUP_ELEM || command == BPF_MAP_UPDATE_ELEM) {
         require(size == offsetof(union bpf_attr, flags) + sizeof(attr->flags), "map attr size");
         require(attr->map_fd >= 6001 && attr->map_fd <= 6004, "synthetic map FD");

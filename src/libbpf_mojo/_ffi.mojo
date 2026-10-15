@@ -420,6 +420,8 @@ comptime GENERIC_OP_MAP_INFO = UInt32(5)
 comptime GENERIC_OP_OBJECT_CLOSE = UInt32(6)
 comptime GENERIC_OP_MAP_LOOKUP = UInt32(7)
 comptime GENERIC_OP_MAP_UPDATE = UInt32(8)
+comptime GENERIC_OP_MAP_DELETE = UInt32(18)
+comptime GENERIC_OP_MAP_NEXT_KEY = UInt32(19)
 comptime GENERIC_OP_TEST_RUN = UInt32(9)
 comptime GENERIC_OP_ATTACH = UInt32(10)
 comptime GENERIC_OP_LINK_CLOSE = UInt32(11)
@@ -841,6 +843,30 @@ struct GenericLib(Movable):
         except e:
             raise LmbError(GENERIC_OP_MAP_UPDATE, GENERIC_DOMAIN_BRIDGE,
                            ENOSYS, "unresolved lmb_object_map_update_v1")
+
+    def object_map_delete(
+        mut self, object_handle: UInt64, name: ImmPointer[NameV1, _],
+        key: ImmPointer[UInt8, _], key_bytes: UInt64, flags: UInt64,
+    ) raises LmbError -> Int32:
+        try:
+            var f = self._handle.get_function[Int32]("lmb_object_map_delete_v1")
+            return f(object_handle, name, key, key_bytes, flags)
+        except e:
+            raise LmbError(GENERIC_OP_MAP_DELETE, GENERIC_DOMAIN_BRIDGE,
+                           ENOSYS, "unresolved lmb_object_map_delete_v1")
+
+    def object_map_next_key(
+        mut self, object_handle: UInt64, name: ImmPointer[NameV1, _],
+        has_current: UInt32, current: ImmPointer[UInt8, _], current_bytes: UInt64,
+        next: MutPointer[UInt8, _], capacity: UInt64, needed: MutPointer[UInt64, _],
+    ) raises LmbError -> Int32:
+        try:
+            var f = self._handle.get_function[Int32]("lmb_object_map_next_key_v1")
+            return f(object_handle, name, has_current, current, current_bytes,
+                     next, capacity, needed)
+        except e:
+            raise LmbError(GENERIC_OP_MAP_NEXT_KEY, GENERIC_DOMAIN_BRIDGE,
+                           ENOSYS, "unresolved lmb_object_map_next_key_v1")
 
     def program_test_run(
         mut self,

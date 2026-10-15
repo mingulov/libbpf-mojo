@@ -77,7 +77,9 @@ enum lmb_generic_op_v1 {
     LMB_GENERIC_OP_BUFFER_CLOSE = 14,
     LMB_GENERIC_OP_VIEW_REF = 15,
     LMB_GENERIC_OP_VIEW_GEN = 16,
-    LMB_GENERIC_OP_VIEW_CHECK = 17
+    LMB_GENERIC_OP_VIEW_CHECK = 17,
+    LMB_GENERIC_OP_MAP_DELETE = 18,
+    LMB_GENERIC_OP_MAP_NEXT_KEY = 19
 };
 
 enum lmb_generic_domain_v1 {
@@ -221,6 +223,13 @@ int32_t lmb_object_map_update_v1(struct lmb_object *object,
                                  const uint8_t *key, uint64_t key_bytes,
                                  const uint8_t *value, uint64_t value_bytes,
                                  uint64_t flags);
+int32_t lmb_object_map_delete_v1(
+    struct lmb_object *object, const struct lmb_name_v1 *name,
+    const uint8_t *key, uint64_t key_bytes, uint64_t flags);
+int32_t lmb_object_map_next_key_v1(
+    struct lmb_object *object, const struct lmb_name_v1 *name,
+    uint32_t has_current, const uint8_t *current, uint64_t current_bytes,
+    uint8_t *next, uint64_t capacity, uint64_t *needed);
 int32_t lmb_program_test_run_v1(
     struct lmb_object *object, const struct lmb_name_v1 *program,
     const struct lmb_program_test_options_v1 *opts,

@@ -79,6 +79,14 @@ int32_t lmb_object_map_update_v1(struct lmb_object *object,
     const struct lmb_name_v1 *name, const uint8_t *key,
     uint64_t key_bytes, const uint8_t *value, uint64_t value_bytes,
     uint64_t flags);
+/* Optional additions; the original twenty-name generic set is unchanged. */
+int32_t lmb_object_map_delete_v1(
+    struct lmb_object *object, const struct lmb_name_v1 *name,
+    const uint8_t *key, uint64_t key_bytes, uint64_t flags);
+int32_t lmb_object_map_next_key_v1(
+    struct lmb_object *object, const struct lmb_name_v1 *name,
+    uint32_t has_current, const uint8_t *current, uint64_t current_bytes,
+    uint8_t *next, uint64_t capacity, uint64_t *needed);
 int32_t lmb_program_test_run_v1(struct lmb_object *object,
     const struct lmb_name_v1 *program,
     const struct lmb_program_test_options_v1 *opts,
@@ -263,6 +271,8 @@ enum lmb_generic_op_v1 {
     LMB_GENERIC_OP_VIEW_REF = 15,
     LMB_GENERIC_OP_VIEW_GEN = 16,
     LMB_GENERIC_OP_VIEW_CHECK = 17,
+    LMB_GENERIC_OP_MAP_DELETE = 18,
+    LMB_GENERIC_OP_MAP_NEXT_KEY = 19,
 };
 
 enum lmb_generic_domain_v1 {
@@ -769,3 +779,43 @@ No path appears in more than one row. Retained shared files:
 `tests/mojo/test_generic_abi.mojo`,
 `tests/mojo/test_generic_layout.mojo`,
 `src/libbpf_mojo/_ffi.mojo`, and this document.
+
+## Optional keyed-map delete and traversal
+
+The original twenty generic operations retain their signatures and version
+nodes. Two optional symbols, `lmb_object_map_delete_v1` and
+`lmb_object_map_next_key_v1`, append at `LIBBPF_MOJO_GENERIC_1`; SONAME remains
+`libbpf_mojo.so.1`. They reuse the same retained object and calling thread.
+Each requires a loaded object, valid versioned name and positive map key size.
+Missing maps return `BRIDGE/-ENOENT`; zero-key channels return
+`BRIDGE/-EOPNOTSUPP`. Keys must have exactly the map's key size. Span wrap,
+null nonempty storage, invalid headers and unsupported `has_current` values
+return `BRIDGE/-EINVAL` before a native call.
+
+Delete forwards `bpf_map_delete_elem_flags` once with the exact key and full
+u64 flags, including unknown bits. The native map operation decides applicable
+flags. An absent key remains `KERNEL/-ENOENT`; it never becomes success.
+Every nonzero native return retains its exact signed code, independent of
+ambient errno. Neither operation retries, including on EINTR.
+
+For next-key, `has_current` is exactly zero or one. Zero requires
+`current_bytes == 0` and ignores the pointer; libbpf receives actual NULL.
+One requires a valid nonempty current span with the exact positive key size.
+An empty provided current is invalid. `needed` is a valid u64 output disjoint
+from the name record, name bytes, current bytes and the full destination span.
+All validation and name copying precede caller output commits. Short capacity
+sets only `*needed = key_size`, returns `BRIDGE/-ENOSPC` and leaves bytes
+untouched. Other pre-call failures preserve both outputs.
+
+With enough capacity the bridge snapshots current bytes and allocates separate
+key-size scratch. Current/destination aliases are allowed. Allocation failure
+returns `POSIX/-ENOMEM` with untouched outputs. Immediately before the sole
+`bpf_map_get_next_key`, `*needed` becomes zero. A nonzero native result, including
+terminal `KERNEL/-ENOENT`, preserves every destination byte. Native zero copies
+exactly key-size bytes, preserves destination tails, sets `*needed = key_size`
+and clears the generic diagnostic. All scratch is released on every path.
+Traversal has no order, uniqueness or snapshot guarantee: changing/deleting a
+cursor can cause a kernel first-key restart. The bridge neither hides restarts
+nor sorts, caches or filters keys. HASH/ARRAY host scripts establish forwarding
+contracts; actual map applicability and successful kernel operations require
+separate target qualification.

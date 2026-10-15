@@ -35,7 +35,7 @@ ExternalProject_Add(libbpf_external
   # Static objects link into our shared library, so they need -fPIC.
   BUILD_COMMAND ${CMAKE_COMMAND} -E env
     "CFLAGS=${LIBBPF_BUILD_FLAGS}"
-    make -C <SOURCE_DIR>/src -j
+    make -C <SOURCE_DIR>/src -j2
   INSTALL_COMMAND make -C <SOURCE_DIR>/src install PREFIX=<BINARY_DIR>/root
   BUILD_IN_SOURCE TRUE
 )
@@ -308,6 +308,20 @@ add_test(NAME generic_maps COMMAND test_generic_maps
 set_tests_properties(generic_maps PROPERTIES
   WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
 
+add_executable(test_generic_map_keys ${LMB_ROOT}/tests/native/generic_map_keys.c
+  ${LMB_ROOT}/tests/support/generic_host_guard.c)
+target_include_directories(test_generic_map_keys PRIVATE
+  ${CMAKE_CURRENT_SOURCE_DIR}/include ${LIBBPF_ROOT}/include)
+target_link_libraries(test_generic_map_keys PRIVATE lmb_static ${CMAKE_DL_LIBS})
+foreach(seam bpf_object__load bpf_object__close bpf_object__open_mem bpf_map__fd
+    bpf_map_delete_elem_flags bpf_map_get_next_key malloc syscall)
+  target_link_options(test_generic_map_keys PRIVATE "LINKER:--wrap=${seam}")
+endforeach()
+add_dependencies(test_generic_map_keys generic_maps_fixture lmb)
+add_test(NAME generic_map_keys COMMAND test_generic_map_keys
+  ${CMAKE_BINARY_DIR}/fixtures/generic_maps.bpf.o $<TARGET_FILE:lmb>)
+set_tests_properties(generic_map_keys PROPERTIES WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
+
 add_executable(test_generic_testrun ${LMB_ROOT}/tests/native/generic_testrun.c
   ${LMB_ROOT}/tests/support/generic_host_guard.c)
 target_include_directories(test_generic_testrun PRIVATE
@@ -423,11 +437,14 @@ set_target_properties(lmb_generic_test_objects PROPERTIES POSITION_INDEPENDENT_C
 target_compile_definitions(lmb_generic_test_objects PRIVATE
   lmb_object_map_lookup_v1=lmb_test_real_map_lookup
   lmb_object_map_update_v1=lmb_test_real_map_update
+  lmb_object_map_delete_v1=lmb_test_real_map_delete
+  lmb_object_map_next_key_v1=lmb_test_real_map_next_key
   lmb_program_test_run_v1=lmb_test_real_program_test)
 target_include_directories(lmb_generic_test_objects PRIVATE include ${LIBBPF_ROOT}/include)
 add_dependencies(lmb_generic_test_objects libbpf_external)
 file(READ ${LMB_ROOT}/tests/support/lmb_generic_testfake.map objectonly_map)
-foreach(symbol lmb_object_map_lookup_v1 lmb_object_map_update_v1 lmb_program_test_run_v1)
+foreach(symbol lmb_object_map_lookup_v1 lmb_object_map_update_v1 lmb_program_test_run_v1
+    lmb_object_map_delete_v1 lmb_object_map_next_key_v1)
   string(REPLACE "${symbol};" "" objectonly_map "${objectonly_map}")
 endforeach()
 file(WRITE ${CMAKE_BINARY_DIR}/lmb_generic_objectonly.map "${objectonly_map}")
@@ -532,6 +549,8 @@ lmb_guarded_host_test(generic_object test_generic_object
   ${CMAKE_BINARY_DIR}/fixtures/generic_tracing.bpf.o)
 lmb_guarded_host_test(generic_maps test_generic_maps
   ${CMAKE_BINARY_DIR}/fixtures/generic_maps.bpf.o)
+lmb_guarded_host_test(generic_map_keys test_generic_map_keys
+  ${CMAKE_BINARY_DIR}/fixtures/generic_maps.bpf.o $<TARGET_FILE:lmb>)
 lmb_guarded_host_test(generic_host_guard test_generic_host_guard)
 lmb_guarded_host_test(generic_testrun test_generic_testrun
   ${CMAKE_BINARY_DIR}/fixtures/generic_maps.bpf.o

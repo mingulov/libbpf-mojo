@@ -17,7 +17,11 @@ require target qualification. Native generic map lookup/update are
 implemented with checked ordinary/per-CPU extents, exact update flags,
 signed diagnostics and lookup copyback only on success. Guarded host
 tests exercise parsed BTF objects and the pinned libbpf wrappers without
-executing BPF syscalls. Native generic program test-run supports the
+executing BPF syscalls. Optional retained-map delete and first/next-key calls
+preserve exact native errors, full delete flags and owned key results; only matching terminal kernel
+ENOENT becomes a typed end marker. Host scripts cover the new ABI and ownership
+boundary; successful kernel deletion/traversal remains unqualified.
+Native generic program test-run supports the
 initial XDP profile with independent packet/context spans, input snapshots
 and output copyback only after success and extent checks. Signed native
 failures preserve caller outputs and never trigger a retry. Typed Mojo

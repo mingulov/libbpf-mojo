@@ -92,7 +92,7 @@ for the explicit host scope. Omitted runtime cases are reported
 keep their runtime checks. The native host scope runs guarded framing
 checks and omits the valid-fixture dual-load case and its privilege
 probe; that regression fails if the boundary is crossed. The native host
-runner selects ten guarded CTest twins and eleven export checks, without
+runner selects the registered guarded CTest twins and export checks, without
 double-counting the ordinary tests. The guard runs only in native test
 executables, including the shared bridge's bundled libbpf. Successful generic load, loaded map geometry,
 tracing-target configuration and their target/platform evidence remain
@@ -146,6 +146,18 @@ epoll creation and registration, with references, mappings and owned FDs
 returning to baseline. No test BPF or perf-event request reaches the
 kernel. Successful tracepoint attachment, real signals/blocking, kernel
 ring production and target resource cleanup remain unqualified.
+
+Optional retained-map delete and key traversal append two operations to the
+original twenty-name generic ABI. Guarded native scripts use real pinned libbpf
+FD wrappers, exact high-bit keys/flags, first NULL, independent output scratch,
+short capacities, protected pages, alias/allocation failures, signed diagnostic
+preservation and controlled 1/13-byte pre-load key geometry. Typed Mojo tests
+cover owned results, exact terminal ENOENT discrimination, optional symbols,
+generation and retained parent/library lifetime. Installed consumers establish
+extracted imports, relocated unloaded/closed refusals and missing-library
+behavior. Successful kernel map deletion/traversal, target applicability,
+concurrency and installed kernel execution remain unqualified. Coverage source
+mappings stay partial and conservative evidence cells remain NOT_RUN.
 
 ## Out of scope
 
