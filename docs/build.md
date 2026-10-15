@@ -147,9 +147,12 @@ by renderer carets. Only primary error messages can satisfy a fixture's CHECK;
 notes, source excerpts, import context, final driver trailers and the fixture's
 exact path do not contribute. The exact fixture path identifies its header
 boundary, preserving delimiter-shaped filenames and message text. For other
-paths, multiple header-shaped boundaries are ambiguous and refuse the whole
-invocation; the context-free Python extraction helper also refuses these
-without fixture identity. Invalid known-fixture headers never retry a later
+paths, the supported text language reserves `: ` as a renderer separator:
+unknown paths containing it require exact fixture identity. Boundary detection
+includes empty or malformed coordinate/severity fields and overlapping
+interpretations; multiple candidates refuse the whole invocation. Ordinary
+colon punctuation in paths remains supported. The context-free Python
+extraction helper also refuses these ambiguities without fixture identity. Invalid known-fixture headers never retry a later
 message delimiter. A MUST-REJECT control requires an admitted primary
 error whose messages all lack CHECK. Empty, truncated, unsupported or ambiguous
 rendering fails either kind of fixture, even after an earlier matching error.

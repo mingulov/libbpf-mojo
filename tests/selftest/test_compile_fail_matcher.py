@@ -163,6 +163,36 @@ class CompileFailMatcherTests(unittest.TestCase):
             with self.subTest(header=header):
                 self.assert_modes(header + "\nbroken(\n^", 1, 1)
 
+    def test_unknown_malformed_outer_fields_cannot_hide_a_later_delimiter(self):
+        headers = (
+            "unknown.mojo::1: error: detail:9:8: error: cannot be implicitly copied",
+            "unknown.mojo:1:: error: detail:9:8: error: cannot be implicitly copied",
+            "unknown.mojo:3:1: fatal error: detail:9:8: error: cannot be implicitly copied",
+            "unknown.mojo::: error: detail:9:8: error: cannot be implicitly copied",
+            "unknown.mojo:3:1: : detail:9:8: error: cannot be implicitly copied",
+            "unknown.mojo:3:1:  : detail:9:8: error: cannot be implicitly copied",
+            "unknown.mojo:3:1: \t: detail:9:8: error: cannot be implicitly copied",
+            "unknown.mojo:3:1: warning: detail:9:8: error: cannot be implicitly copied",
+            "unknown.mojo:3:1: fatal:error: detail:9:8: error: cannot be implicitly copied",
+            "unknown.mojo:3:1:error: detail:9:8: error: cannot be implicitly copied",
+        )
+        for header in headers:
+            with self.subTest(header=header):
+                self.assert_modes(header + "\nbroken(\n^", 1, 1)
+
+    def test_unknown_overlapping_boundary_candidates_refuse(self):
+        self.assert_modes(self.block("detail: error: cannot be implicitly copied",
+                                     path="unknown.mojo"), 1, 1)
+        self.assert_modes(self.block("detail: error: cannot be implicitly copied"), 0, 1)
+        self.assert_modes(self.block("detail: note: cannot be implicitly copied",
+                                     path="unknown.mojo"), 1, 1)
+
+    def test_reserved_separator_in_unknown_path_requires_identity(self):
+        self.assert_modes(self.block("cannot be implicitly copied", path="unknown: path.mojo"), 1, 1)
+        self.assert_modes(self.block("cannot be implicitly copied"), 0, 1,
+                          filename="known: path.mojo")
+        self.assert_modes(self.block("cannot be implicitly copied", path="unknown:odd.mojo"), 0, 1)
+
     def test_context_free_extraction_refuses_ambiguous_headers(self):
         import importlib.util
         spec = importlib.util.spec_from_file_location(

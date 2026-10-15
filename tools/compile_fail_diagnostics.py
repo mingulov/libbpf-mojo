@@ -7,9 +7,6 @@ import sys
 
 
 _SUFFIX = re.compile(r":[1-9][0-9]*:[1-9][0-9]*: (error|note): (.+)")
-# Count invalid as well as valid header-shaped boundaries. Otherwise a later
-# valid delimiter could hide unsupported severity or coordinates in the path.
-_BOUNDARY = re.compile(r":[^:\n]+:[^:\n]+: [^: \n]+: ")
 _IMPORT = re.compile(r"Imported from .+:[1-9][0-9]*:")
 _CARET = re.compile(r"[ \t~^]*\^[ \t~^]*")
 _TRAILER = re.compile(r"(.+?): error: .+")
@@ -24,12 +21,30 @@ def _located_header(line: str, fixture: str):
         if not suffix:
             raise ValueError("invalid header suffix after known fixture path")
         return suffix.groups()
-    boundaries = list(_BOUNDARY.finditer(line))
+    # Unknown headers have a deliberately conservative language. Scan every
+    # colon, including overlapping interpretations. The three fields may be
+    # empty or malformed; only the renderer's space separators identify a
+    # candidate. Validate coordinates and severity after ambiguity detection.
+    boundaries = []
+    for start, character in enumerate(line):
+        if character != ":":
+            continue
+        fields = line[start + 1:].split(":", 3)
+        if (len(fields) == 4 and fields[2].startswith(" ")
+                and fields[3].startswith(" ")):
+            boundaries.append(start)
     if not boundaries:
         return None
-    if len(boundaries) != 1 or boundaries[0].start() == 0:
+    if len(boundaries) != 1 or boundaries[0] == 0:
         raise ValueError("ambiguous diagnostic header boundary")
-    suffix = _SUFFIX.fullmatch(line[boundaries[0].start():])
+    boundary = boundaries[0]
+    # Reserve the renderer separator in unknown paths. Otherwise malformed
+    # outer headers could be absorbed into a path before a later valid one.
+    # Ordinary colon punctuation remains valid; exact fixture identity above
+    # also permits filenames containing the reserved separator itself.
+    if ": " in line[:boundary]:
+        raise ValueError("unknown path contains a reserved renderer separator")
+    suffix = _SUFFIX.fullmatch(line[boundary:])
     if not suffix:
         raise ValueError("invalid located diagnostic header")
     return suffix.groups()
