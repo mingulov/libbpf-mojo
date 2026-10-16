@@ -31,9 +31,13 @@ PROBES = [
     ("pixi", ["pixi", "--version"]),
     ("mojo", ["pixi", "run", "--frozen", "mojo", "--version"]),
     ("clang", ["clang", "--version"]),
+    ("bpftool", ["bpftool", "--version"]),
     ("cmake", ["cmake", "--version"]),
     ("ninja", ["ninja", "--version"]),
+    ("make", ["make", "--version"]),
     ("gcc", ["gcc", "--version"]),
+    ("pkg-config", ["pkg-config", "--version"]),
+    ("zlib", ["pkg-config", "--modversion", "zlib"]),
     ("python", ["python3", "--version"]),
 ]
 
@@ -53,6 +57,17 @@ def sha256_of(path):
         for chunk in iter(lambda: handle.read(65536), b""):
             digest.update(chunk)
     return digest.hexdigest()
+
+
+def dependency_identities(root):
+    """Pinned dependency bytes the build consumed."""
+    lock_path = os.path.join(root, "toolchain.lock.json")
+    with open(lock_path, "r", encoding="utf-8") as handle:
+        lock = json.load(handle)
+    return {
+        "libbpf_tarball_sha256": lock["toolchain"][
+            "libbpf_source"]["tarball_sha256"],
+    }
 
 
 def git_sha(root):
@@ -114,6 +129,7 @@ def main(argv):
         "mojo_target_cpu": "x86-64-v2",
         "cmake_cache_sha256": cache_hash,
         "toolchain_observed": toolchain,
+        "dependencies": dependency_identities(root),
         "artifacts": artifacts,
     }
     path = os.path.join(root, build_dir, "build-receipt.json")

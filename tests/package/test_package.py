@@ -332,9 +332,37 @@ def remove_owned_container(name):
                % (name, inspect.stdout.strip()[-300:]))
 
 
+def clean_base_digest():
+    """Pinned clean-room base digest from Dockerfile.clean.
+
+    The FROM line carries the ubuntu:26.04 manifest digest;
+    docker resolves it to the pinned manifest at build time,
+    so a republished tag keeps building on the pinned bytes
+    until the pin is refreshed deliberately. Fails closed
+    when the pin is absent or malformed, or when the pinned
+    manifest itself is unavailable.
+    """
+    path = os.path.join(HERE, "Dockerfile.clean")
+    with open(path, "r", encoding="utf-8") as handle:
+        froms = [line.split("#", 1)[0].strip()
+                 for line in handle]
+    froms = [line for line in froms
+             if line.startswith("FROM ")]
+    if len(froms) != 1:
+        raise Fail("Dockerfile.clean must pin exactly one FROM")
+    match = re.fullmatch(
+        r"FROM ubuntu:26\.04@sha256:([0-9a-f]{64})", froms[0])
+    if not match:
+        raise Fail("Dockerfile.clean FROM is not a digest pin: %s"
+                   % froms[0][:100])
+    return match.group(1)
+
+
 def clean_room(tarball, version):
     if shutil.which("docker") is None:
         raise Skip("no docker; cannot run the clean-room check")
+    print("clean base: ubuntu:26.04@sha256:%s"
+          % clean_base_digest())
     proc = run(["docker", "build", "-f", "Dockerfile.clean",
                 "-t", IMAGE, "."],
                cwd=HERE, timeout=600)

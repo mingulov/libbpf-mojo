@@ -142,9 +142,83 @@ def main():
           and libbpf.get("tarball_sha256") == msha.group(1),
           "lock %.12s / cmake %.12s"
           % (libbpf.get("tarball_sha256", ""), msha.group(1)))
-    dumped = json.dumps(lock).lower()
+    # The pixi release pin names the upstream x86-64 musl asset,
+    # whose target triple legitimately contains "unknown" as the
+    # vendor field; redact the authenticated pin before scanning
+    # for placeholder text so the gate keeps its meaning.
+    redacted = json.dumps(lock)
+    for key in ("release_url", "release_asset"):
+        redacted = redacted.replace(
+            lock["toolchain"]["pixi"].get(key, ""), "")
+    dumped = redacted.lower()
     check("lock-no-unknown",
           "unknown" not in dumped and "tbd" not in dumped)
+
+    pixi_pin = lock["toolchain"]["pixi"]
+    pixi_asset_ok = (
+        pixi_pin.get("release_asset", "").startswith("pixi-")
+        and pixi_pin.get("release_asset", "").endswith(".tar.gz"))
+    pixi_url_ok = (pixi_pin.get("release_url")
+                   == "https://github.com/prefix-dev/pixi/releases/"
+                   "download/v%s/%s"
+                   % (pixi_pin.get("version", ""),
+                      pixi_pin.get("release_asset", "")))
+    check("lock-pixi-release-pin",
+          bool(pixi_pin.get("version"))
+          and pixi_asset_ok and pixi_url_ok
+          and HEX64.match(pixi_pin.get("release_sha256", "")),
+          json.dumps(pixi_pin, sort_keys=True)[:160])
+
+    workflows = sorted(glob.glob(os.path.join(
+        ROOT, ".github", "workflows", "*.yml")))
+    check("ci-workflows-present", len(workflows) >= 1,
+          "found %d" % len(workflows))
+    uses_pattern = re.compile(
+        r"^\s*(?:-\s*)?uses:\s*(\S+)(?:\s+#\s*(.*?))?\s*$")
+    ref_pattern = re.compile(r"^[\w.-]+/[\w.-]+@[0-9a-f]{40}$")
+    tag_pattern = re.compile(r"^v\d+\.\d+\.\d+$")
+    for path in workflows:
+        base = os.path.basename(path)
+        with open(path) as handle:
+            text = handle.read()
+        refs = []
+        for lineno, line in enumerate(text.splitlines(), 1):
+            match = uses_pattern.match(line)
+            if match:
+                refs.append((lineno, match.group(1),
+                             (match.group(2) or "").strip()))
+        check("ci-actions-pinned-%s" % base,
+              len(refs) >= 1
+              and all(ref_pattern.match(ref) for _, ref, _ in refs)
+              and all(tag_pattern.match(tag) for _, _, tag in refs),
+              "; ".join("line %d: %s%s" % (lineno, ref,
+                                           " #%s" % tag if tag else "")
+                        for lineno, ref, tag in refs)[:200])
+        piped_shell = re.search(r"\|\s*(bash|sh)(\s|$|;|&)", text)
+        check("ci-no-piped-installers-%s" % base,
+              not piped_shell
+              and "pixi.sh/install.sh" not in text,
+              piped_shell.group(0).strip() if piped_shell else "")
+        check("ci-pixi-bootstrap-%s" % base,
+              "tools/install-pixi" in text)
+        runners = re.findall(r"^\s*runs-on:\s*(.+?)\s*$",
+                             text, re.M)
+        check("ci-runners-known-%s" % base,
+              len(runners) >= 1
+              and all(run == "ubuntu-26.04" for run in runners),
+              "; ".join(runners)[:120])
+
+    with open(os.path.join(
+            ROOT, "tests", "package", "Dockerfile.clean")) as handle:
+        docker_from = [line.split("#", 1)[0].strip()
+                       for line in handle
+                       if line.split("#", 1)[0].strip().startswith(
+                           "FROM ")]
+    check("clean-image-pinned",
+          len(docker_from) == 1 and re.fullmatch(
+              r"FROM ubuntu:26\.04@sha256:[0-9a-f]{64}",
+              docker_from[0]) is not None,
+          "; ".join(docker_from)[:120])
 
     with open(os.path.join(ROOT, "pixi.toml")) as handle:
         pixi = handle.read()
