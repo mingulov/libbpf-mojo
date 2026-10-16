@@ -13398,11 +13398,11 @@
       },
       {
         "path": "docs/support.md",
-        "sha256": "6d0407a0ea1df91153026b4929f7db06c8774d51b09f0df51ccfb28ef6386b25"
+        "sha256": "967b718eee53baf6cf899071d39f34e0b820cea3c56cd16657a42c4408c5d9ef"
       },
       {
         "path": "native/CMakeLists.txt",
-        "sha256": "2dde6c4fced0e8a661a9d5481b24dbfbf39cf4aebac8d660fbe7c6fc496263bf"
+        "sha256": "e1ab62fea0c1c5ded7239b694da1fe203f3cf0e5ff10ff6e11c741c681fc143c"
       },
       {
         "path": "native/include/libbpf_mojo.h",
