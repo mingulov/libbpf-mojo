@@ -10,6 +10,10 @@
 #include <bpf/libbpf.h>
 
 #include "internal.h"
+#include "ring_stage.h"
+
+_Static_assert(LMB_FRAME_HEADER_SIZE == LMB_STAGE_HEADER_SIZE,
+               "session framing shares the staged header size");
 
 int lmb_ring_sample(void *ctx, void *data, size_t size) {
     struct lmb_session *s = ctx;
@@ -20,29 +24,19 @@ int lmb_ring_sample(void *ctx, void *data, size_t size) {
      * staged because a zero stage length reads back as no record, so
      * it is declared malformed to keep the conservation identity
      * exact. */
-    if (size == 0 || size > s->max_raw_bytes) {
+    switch (lmb_classify_record(size, s->max_raw_bytes, s->stage_len)) {
+    case LMB_STAGE_MALFORMED:
         s->malformed++;
         return 0;
-    }
-    if (s->stage_len != 0) {
+    case LMB_STAGE_DROPPED:
         s->dropped++;
         return 0;
+    default:
+        break;
     }
     memcpy(s->stage, data, size);
     s->stage_len = (uint32_t)size;
     return 0;
-}
-
-static void put_le32(uint8_t *p, uint32_t v) {
-    p[0] = (uint8_t)v;
-    p[1] = (uint8_t)(v >> 8);
-    p[2] = (uint8_t)(v >> 16);
-    p[3] = (uint8_t)(v >> 24);
-}
-
-static void put_le16(uint8_t *p, uint16_t v) {
-    p[0] = (uint8_t)v;
-    p[1] = (uint8_t)(v >> 8);
 }
 
 /* Bounded malformed skip per call: consume until one record stages,
@@ -122,18 +116,15 @@ int32_t lmb_poll(struct lmb_session *session, uint8_t *dst,
     }
     if (session->stage_len == 0)
         return 0;
-    frame_len = LMB_FRAME_HEADER_SIZE + session->stage_len;
+    frame_len = lmb_frame_total(session->stage_len);
     if (capacity < frame_len) {
         *required = frame_len;
         lmb_record(LMB_OP_POLL, LMB_DOMAIN_BRIDGE, -ENOSPC,
                    "lmb_poll: destination too short, record retained");
         return -ENOSPC;
     }
-    put_le32(dst, session->stage_len);
-    put_le16(dst + 4, LMB_FRAME_VERSION);
-    put_le16(dst + 6, 0);
-    memcpy(dst + LMB_FRAME_HEADER_SIZE, session->stage,
-           session->stage_len);
+    lmb_encode_frame(dst, session->stage, session->stage_len,
+                     LMB_FRAME_VERSION);
     *written = frame_len;
     session->stage_len = 0;
     session->delivered++;

@@ -11,10 +11,10 @@
       "source_assertions_are_not_abi_probe_evidence": true
     },
     "export_checker": {
-      "end_line": 120,
+      "end_line": 121,
       "path": "tests/native/check_exports.sh",
-      "sha256": "7a32ad7857ffb6d09b8d386182614041ac5a9e74b3ae86e46baae71818216136",
-      "span_sha256": "7a32ad7857ffb6d09b8d386182614041ac5a9e74b3ae86e46baae71818216136",
+      "sha256": "adb93ba0f7ef16c7a44187dc556ed8773940ca4f6fda464b44426b93873650fc",
+      "span_sha256": "adb93ba0f7ef16c7a44187dc556ed8773940ca4f6fda464b44426b93873650fc",
       "start_line": 1,
       "symbol": "original required / generic permitted export allowlists"
     },
@@ -39,11 +39,11 @@
         "signature": "int32_t lmb_buffer_close_v1(struct lmb_buffer **buffer);",
         "source_refs": [
           {
-            "end_line": 247,
+            "end_line": 262,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "c1c56aa5f89ee5a845cf8ad2822f061a9303c92c65dd93e492e72a0bb450b2bf",
-            "start_line": 247,
+            "start_line": 262,
             "symbol": "lmb_buffer_close_v1"
           }
         ],
@@ -54,11 +54,11 @@
         "signature": "int32_t lmb_buffer_open_v1(struct lmb_object *object,\n                           const struct lmb_buffer_options_v1 *opts,\n                           struct lmb_buffer **out);",
         "source_refs": [
           {
-            "end_line": 243,
+            "end_line": 258,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "11ef90648e39872742f57d2a55bfba7dbb1c61546a7aed5492188c22d7c528fa",
-            "start_line": 241,
+            "start_line": 256,
             "symbol": "lmb_buffer_open_v1"
           }
         ],
@@ -69,11 +69,11 @@
         "signature": "int32_t lmb_buffer_poll_v1(struct lmb_buffer *buffer, uint8_t *dst,\n                           uint64_t capacity, int32_t timeout_ms,\n                           uint64_t *used, uint64_t *needed);",
         "source_refs": [
           {
-            "end_line": 246,
+            "end_line": 261,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "f7109dfc5ff298bf3deff0780d6e90dd4900b274c7bbee3f27b44b81bc9274bf",
-            "start_line": 244,
+            "start_line": 259,
             "symbol": "lmb_buffer_poll_v1"
           }
         ],
@@ -114,11 +114,11 @@
         "signature": "int32_t lmb_generic_last_error_v1(struct lmb_generic_error_v1 *out);",
         "source_refs": [
           {
-            "end_line": 215,
+            "end_line": 230,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "da25f3caa29ead2e46625cb8189ffc0f4713232769e73bb3c429a3a9fc184fd4",
-            "start_line": 215,
+            "start_line": 230,
             "symbol": "lmb_generic_last_error_v1"
           }
         ],
@@ -144,11 +144,11 @@
         "signature": "int32_t lmb_link_close_v1(struct lmb_link **link);",
         "source_refs": [
           {
-            "end_line": 240,
+            "end_line": 255,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "e5b6ce79b6f9b23a57ffc710d1de8588dd283715fbb5ec57ded087ac90435eb3",
-            "start_line": 240,
+            "start_line": 255,
             "symbol": "lmb_link_close_v1"
           }
         ],
@@ -219,11 +219,11 @@
         "signature": "int32_t lmb_object_attach_v1(struct lmb_object *object,\n                             const struct lmb_attach_options_v1 *opts,\n                             struct lmb_link **out);",
         "source_refs": [
           {
-            "end_line": 239,
+            "end_line": 254,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "bd990f20dae219c9372aae1f5f7d3c8774304569234c91f036908278f4ad994b",
-            "start_line": 237,
+            "start_line": 252,
             "symbol": "lmb_object_attach_v1"
           }
         ],
@@ -234,11 +234,11 @@
         "signature": "int32_t lmb_object_close_v1(struct lmb_object **object);",
         "source_refs": [
           {
-            "end_line": 213,
+            "end_line": 228,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "3d40de5bbb2745104355aa4171220fa8bdea3d0e559a989a6799a0d6de4c2171",
-            "start_line": 213,
+            "start_line": 228,
             "symbol": "lmb_object_close_v1"
           }
         ],
@@ -249,11 +249,11 @@
         "signature": "int32_t lmb_object_configure_program_v1(\n    struct lmb_object *object, const struct lmb_program_options_v1 *opts);",
         "source_refs": [
           {
-            "end_line": 205,
+            "end_line": 220,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "abb084f880549049f0165b99df7d005ba11b4e886de1901300d6709a93b5096e",
-            "start_line": 204,
+            "start_line": 219,
             "symbol": "lmb_object_configure_program_v1"
           }
         ],
@@ -264,11 +264,11 @@
         "signature": "int32_t lmb_object_gen_check_v1(const struct lmb_object *object,\n                                uint64_t expected);",
         "source_refs": [
           {
-            "end_line": 260,
+            "end_line": 277,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "53f2c45ea17e8269e22794e2938f9040b9cd600d219b58079ac26e400bbfab77",
-            "start_line": 259,
+            "start_line": 276,
             "symbol": "lmb_object_gen_check_v1"
           }
         ],
@@ -279,11 +279,11 @@
         "signature": "int32_t lmb_object_gen_v1(const struct lmb_object *object,\n                          uint64_t *generation);",
         "source_refs": [
           {
-            "end_line": 258,
+            "end_line": 275,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "19dad7df8b736a334ab7739490f604ea591c90af6c6bbffc21f4f272ec414b3e",
-            "start_line": 257,
+            "start_line": 274,
             "symbol": "lmb_object_gen_v1"
           }
         ],
@@ -294,11 +294,11 @@
         "signature": "int32_t lmb_object_load_v1(struct lmb_object *object);",
         "source_refs": [
           {
-            "end_line": 206,
+            "end_line": 221,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "9896243ea5ce8f0d24ad5d2188a41e2134c97eb7b4c53e0208a316bacc4e0fe1",
-            "start_line": 206,
+            "start_line": 221,
             "symbol": "lmb_object_load_v1"
           }
         ],
@@ -309,11 +309,11 @@
         "signature": "int32_t lmb_object_map_delete_v1(\n    struct lmb_object *object, const struct lmb_name_v1 *name,\n    const uint8_t *key, uint64_t key_bytes, uint64_t flags);",
         "source_refs": [
           {
-            "end_line": 228,
+            "end_line": 243,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "93fb39a433cc550c830a6d9f13ebecc884c01570f32475ea9dd430c770252416",
-            "start_line": 226,
+            "start_line": 241,
             "symbol": "lmb_object_map_delete_v1"
           }
         ],
@@ -324,11 +324,11 @@
         "signature": "int32_t lmb_object_map_info_v1(struct lmb_object *object,\n                               const struct lmb_name_v1 *name,\n                               struct lmb_map_info_v1 *out);",
         "source_refs": [
           {
-            "end_line": 212,
+            "end_line": 227,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "4d8b8170f333361775c6f6c7c6efb44315f5c1347290ac93887271f841ebd6a3",
-            "start_line": 210,
+            "start_line": 225,
             "symbol": "lmb_object_map_info_v1"
           }
         ],
@@ -339,11 +339,11 @@
         "signature": "int32_t lmb_object_map_lookup_v1(struct lmb_object *object,\n                                 const struct lmb_name_v1 *name,\n                                 const uint8_t *key, uint64_t key_bytes,\n                                 uint8_t *value, uint64_t capacity,\n                                 uint64_t *needed);",
         "source_refs": [
           {
-            "end_line": 220,
+            "end_line": 235,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "f0d1b44f0b150fa2602444e60c24e165200804a8ccd2ee8ace6dbaf23470ba9d",
-            "start_line": 216,
+            "start_line": 231,
             "symbol": "lmb_object_map_lookup_v1"
           }
         ],
@@ -354,11 +354,11 @@
         "signature": "int32_t lmb_object_map_next_key_v1(\n    struct lmb_object *object, const struct lmb_name_v1 *name,\n    uint32_t has_current, const uint8_t *current, uint64_t current_bytes,\n    uint8_t *next, uint64_t capacity, uint64_t *needed);",
         "source_refs": [
           {
-            "end_line": 232,
+            "end_line": 247,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "957aa8f26302ac71e8d088564ad372c46337df3cc36004e988c5438c7947fa83",
-            "start_line": 229,
+            "start_line": 244,
             "symbol": "lmb_object_map_next_key_v1"
           }
         ],
@@ -369,11 +369,11 @@
         "signature": "int32_t lmb_object_map_update_v1(struct lmb_object *object,\n                                 const struct lmb_name_v1 *name,\n                                 const uint8_t *key, uint64_t key_bytes,\n                                 const uint8_t *value, uint64_t value_bytes,\n                                 uint64_t flags);",
         "source_refs": [
           {
-            "end_line": 225,
+            "end_line": 240,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "642ed3ae128fdaf1006ffb5cddb1c070d656794c4298fcbb20fb57f3820f525c",
-            "start_line": 221,
+            "start_line": 236,
             "symbol": "lmb_object_map_update_v1"
           }
         ],
@@ -384,11 +384,11 @@
         "signature": "int32_t lmb_object_open_v1(const uint8_t *elf, uint64_t elf_bytes,\n                           const struct lmb_object_options_v1 *opts,\n                           struct lmb_object **out);",
         "source_refs": [
           {
-            "end_line": 203,
+            "end_line": 218,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "ed8b9e51acee1c01e26c0d5a7d3cb264e24b7111555ff70f2fcf2017a1677105",
-            "start_line": 201,
+            "start_line": 216,
             "symbol": "lmb_object_open_v1"
           }
         ],
@@ -399,11 +399,11 @@
         "signature": "int32_t lmb_object_program_info_v1(struct lmb_object *object,\n                                   const struct lmb_name_v1 *name,\n                                   struct lmb_program_info_v1 *out);",
         "source_refs": [
           {
-            "end_line": 209,
+            "end_line": 224,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "874cf97a425770024fe778c8448d2496859d66f9feb3a34b5d8ee06dc93e0444",
-            "start_line": 207,
+            "start_line": 222,
             "symbol": "lmb_object_program_info_v1"
           }
         ],
@@ -414,11 +414,11 @@
         "signature": "int32_t lmb_object_ref_v1(struct lmb_object *object);",
         "source_refs": [
           {
-            "end_line": 255,
+            "end_line": 272,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "fb01120b4d39294a0d699218f4177d654eb91fb201ce700d45c8f8d24cad16ba",
-            "start_line": 255,
+            "start_line": 272,
             "symbol": "lmb_object_ref_v1"
           }
         ],
@@ -429,11 +429,11 @@
         "signature": "void lmb_object_release_v1(struct lmb_object **object);",
         "source_refs": [
           {
-            "end_line": 214,
+            "end_line": 229,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "da848893ab42f952892d9f1726315b37457a98626710c822632f3d624d591d5b",
-            "start_line": 214,
+            "start_line": 229,
             "symbol": "lmb_object_release_v1"
           }
         ],
@@ -444,11 +444,11 @@
         "signature": "void lmb_object_unref_v1(struct lmb_object *object);",
         "source_refs": [
           {
-            "end_line": 256,
+            "end_line": 273,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "041dca0dab3784a6c1b35bd1436b1d8d36516c6b278e54bfe08a12b18d897982",
-            "start_line": 256,
+            "start_line": 273,
             "symbol": "lmb_object_unref_v1"
           }
         ],
@@ -489,11 +489,11 @@
         "signature": "int32_t lmb_program_test_run_v1(\n    struct lmb_object *object, const struct lmb_name_v1 *program,\n    const struct lmb_program_test_options_v1 *opts,\n    struct lmb_program_test_result_v1 *out);",
         "source_refs": [
           {
-            "end_line": 236,
+            "end_line": 251,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "d6f1e4ed1d08d2273760697f4374d741899df11a5fd48f7df6b7d27715097503",
-            "start_line": 233,
+            "start_line": 248,
             "symbol": "lmb_program_test_run_v1"
           }
         ],
@@ -513,6 +513,21 @@
           }
         ],
         "version_node": "LIBBPF_MOJO_1"
+      },
+      {
+        "name": "lmb_buffer_stats_v1",
+        "signature": "int32_t lmb_buffer_stats_v1(struct lmb_buffer *buffer,\n                            struct lmb_buffer_stats_v1 *out);",
+        "source_refs": [
+          {
+            "end_line": 264,
+            "path": "native/include/libbpf_mojo_generic.h",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
+            "span_sha256": "4630c898db8a1d8a5da1e5c38ca9f9f1a91fe2256146320ed9c974cc29b1f082",
+            "start_line": 263,
+            "symbol": "lmb_buffer_stats_v1"
+          }
+        ],
+        "version_node": "LIBBPF_MOJO_GENERIC_1"
       }
     ],
     "frozen_old_header": {
@@ -616,7 +631,7 @@
           {
             "end_line": 41,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "0ce35aafef84346b6facbf0e5a4df239bd5d1046e8db1d555ec76a1817faada4",
             "start_line": 29,
             "symbol": "@enum1"
@@ -671,7 +686,7 @@
           {
             "end_line": 47,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "8a7ef901b1a2e56e1d13a3a62e1a350678f6fdea83baf3ddaac9329f91315e34",
             "start_line": 43,
             "symbol": "@enum2"
@@ -726,7 +741,7 @@
           {
             "end_line": 53,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "d2d0051e60f13d83938a1477bbb81b8e99d7b8dbf181f2556aeeca11dbdadb13",
             "start_line": 49,
             "symbol": "@enum3"
@@ -782,7 +797,7 @@
           {
             "end_line": 60,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "61cd6d0e62dcedb990a3c2050f13c8a650d63a74c7ceb125361dda9858a9b567",
             "start_line": 55,
             "symbol": "@enum4"
@@ -833,11 +848,11 @@
         "name": "lmb_attach_family_v1",
         "source_refs": [
           {
-            "end_line": 95,
+            "end_line": 96,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "9b743a3b1d0996d424cb2c92eb78a5439c19301ae64296c53f507f9c2dc9221e",
-            "start_line": 93,
+            "start_line": 94,
             "symbol": "lmb_attach_family_v1"
           }
         ]
@@ -1001,11 +1016,11 @@
         "name": "lmb_generic_domain_v1",
         "source_refs": [
           {
-            "end_line": 91,
+            "end_line": 92,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "707d5e7a7c411fead8a15de0ac816f634a7f1bcb43fd42c3284b53643e6a5f65",
-            "start_line": 85,
+            "start_line": 86,
             "symbol": "lmb_generic_domain_v1"
           }
         ]
@@ -1071,10 +1086,10 @@
         "name": "lmb_generic_op_v1",
         "source_refs": [
           {
-            "end_line": 83,
+            "end_line": 84,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
-            "span_sha256": "2d305e7f9b0c86339db35661f06ae838d1ba1abb4dbc3464dd38f7dfdc68ddf1",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
+            "span_sha256": "9ddfa91b061f17bda869a1ef03aa9a606ffd203214fec6847c5c676f3d964914",
             "start_line": 62,
             "symbol": "lmb_generic_op_v1"
           }
@@ -1401,7 +1416,7 @@
           {
             "end_line": 30,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "477a0feb5eaffc97282c00a94595807bd9a57715b188e69597c3fae946c754e8",
             "start_line": 30,
             "symbol": "enum:@enum1.LMB_GENERIC_ABI_VERSION"
@@ -1454,7 +1469,7 @@
           {
             "end_line": 33,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "8a4da3b9f23bf5114cbbb9a3d9887b42ba80755ca17daade989942d79a8b18d7",
             "start_line": 33,
             "symbol": "enum:@enum1.LMB_GENERIC_ERROR_MSG_CAP"
@@ -1507,7 +1522,7 @@
           {
             "end_line": 37,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "2f95ef8d7225e00852f802ac4416df706bdeea86e83094e04173a987e2a84cff",
             "start_line": 37,
             "symbol": "enum:@enum1.LMB_GENERIC_FRAME_HEADER_SIZE"
@@ -1560,7 +1575,7 @@
           {
             "end_line": 38,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "14163089cf31db372116e130426cb2bdd1238897e2b0f182aba479b9b4f8952f",
             "start_line": 38,
             "symbol": "enum:@enum1.LMB_GENERIC_FRAME_VERSION"
@@ -1613,7 +1628,7 @@
           {
             "end_line": 36,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "cef22ba5e6998d8e2c7502ab80f7f33e764bbba24618d5b2d90882db5cf48abe",
             "start_line": 36,
             "symbol": "enum:@enum1.LMB_GENERIC_MAX_FRAME_BYTES"
@@ -1666,7 +1681,7 @@
           {
             "end_line": 39,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "f7ac80dc176d60b7636b1219b3214d63082be05830df6be61e6d0964322ddb27",
             "start_line": 39,
             "symbol": "enum:@enum1.LMB_GENERIC_MAX_LOG_BYTES"
@@ -1719,7 +1734,7 @@
           {
             "end_line": 34,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "25c2a9a689849e328f5fe0e1d8f09516dbb3f0a04419b654ab324b86a4c6e395",
             "start_line": 34,
             "symbol": "enum:@enum1.LMB_GENERIC_MAX_MSG_LEN"
@@ -1772,7 +1787,7 @@
           {
             "end_line": 31,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "3ff6d5fdcd0f4aa5f5680afed920c1e5ab06ac63afef7f00b3e077d738434e49",
             "start_line": 31,
             "symbol": "enum:@enum1.LMB_GENERIC_MAX_NAME_BYTES"
@@ -1825,7 +1840,7 @@
           {
             "end_line": 32,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "7c38789443c0f2bd6a91e07c7eb01c4033dc525a883308ef07b43beefebfb41a",
             "start_line": 32,
             "symbol": "enum:@enum1.LMB_GENERIC_MAX_PATH_BYTES"
@@ -1878,7 +1893,7 @@
           {
             "end_line": 35,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "cae4bc3260ec028d3f8e15941403741d0a988c06bd96aff6153896eaaafb3709",
             "start_line": 35,
             "symbol": "enum:@enum1.LMB_GENERIC_MAX_RAW_BYTES"
@@ -1931,7 +1946,7 @@
           {
             "end_line": 40,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "ddaeb6d06e33313df1481d18502fc27a70f5c48d88d50ba31ec25f15043675dd",
             "start_line": 40,
             "symbol": "enum:@enum1.LMB_GENERIC_MAX_TEST_BYTES"
@@ -2196,7 +2211,7 @@
           {
             "end_line": 46,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "8a0ec746befee59d71baa79deac5e4ece8e6ea1ed2a1f745c94d956dae311c3a",
             "start_line": 46,
             "symbol": "enum:@enum2.LMB_AUTOLOAD_DISABLE"
@@ -2249,7 +2264,7 @@
           {
             "end_line": 45,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "81a38f79f33aeac56d7d68ff19798a891f25923697aebe2c744a346439ad4e1f",
             "start_line": 45,
             "symbol": "enum:@enum2.LMB_AUTOLOAD_ENABLE"
@@ -2302,7 +2317,7 @@
           {
             "end_line": 44,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "ede38555947bad827483f34d6bd493187600da96235a129458bc5902a8d7e1af",
             "start_line": 44,
             "symbol": "enum:@enum2.LMB_AUTOLOAD_UNCHANGED"
@@ -2355,7 +2370,7 @@
           {
             "end_line": 52,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "5796d1508c3f8b2657809aaf00e97c527f524de11bf37770f24e423c516197bf",
             "start_line": 52,
             "symbol": "enum:@enum3.LMB_LOG_ALWAYS"
@@ -2408,7 +2423,7 @@
           {
             "end_line": 50,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "965e9dd4eae5f6924f943fe32e44e00917186fee601ccbc302fdcaa1ae365e59",
             "start_line": 50,
             "symbol": "enum:@enum3.LMB_LOG_DISCARD"
@@ -2461,7 +2476,7 @@
           {
             "end_line": 51,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "80ddebf7dad57dc83cfe8ccb39c4d341fd688f4b8ee8ff5f0d16fcb84bd3e7cc",
             "start_line": 51,
             "symbol": "enum:@enum3.LMB_LOG_ON_FAILURE"
@@ -2514,7 +2529,7 @@
           {
             "end_line": 56,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "a0891084f2c0ac51ae9ec7f7c5cf76ec1e47c9838b6f9673c4d3f1b7b8b12540",
             "start_line": 56,
             "symbol": "enum:@enum4.LMB_MAP_UPDATE_ANY"
@@ -2567,7 +2582,7 @@
           {
             "end_line": 58,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "121d942b56e8578a02b86d0c4b7048ad839c10f6592a098c0366cb41e2811e8a",
             "start_line": 58,
             "symbol": "enum:@enum4.LMB_MAP_UPDATE_EXIST"
@@ -2620,7 +2635,7 @@
           {
             "end_line": 59,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "182617d0cf7d12ba9ab5c335cdee538618c1fda0f4c69c17ced562a8462341dd",
             "start_line": 59,
             "symbol": "enum:@enum4.LMB_MAP_UPDATE_LOCK"
@@ -2673,7 +2688,7 @@
           {
             "end_line": 57,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "47290d3e08c7fc54a40a59cd1fef31e22db1b1e3f3618f87437feb36ecf949b7",
             "start_line": 57,
             "symbol": "enum:@enum4.LMB_MAP_UPDATE_NOEXIST"
@@ -2724,11 +2739,11 @@
         "name": "enum:lmb_attach_family_v1.LMB_ATTACH_FAMILY_TRACEPOINT",
         "source_refs": [
           {
-            "end_line": 94,
+            "end_line": 95,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "d6557a8d87641df777a34d5ba9ff632b62407843533d95c8e53899a55b61f02b",
-            "start_line": 94,
+            "start_line": 95,
             "symbol": "enum:lmb_attach_family_v1.LMB_ATTACH_FAMILY_TRACEPOINT"
           }
         ]
@@ -3148,11 +3163,11 @@
         "name": "enum:lmb_generic_domain_v1.LMB_GENERIC_DOMAIN_BRIDGE",
         "source_refs": [
           {
-            "end_line": 90,
+            "end_line": 91,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "886a2df92cbfd073e0abd80ba10898d40b214dbf9c57e3aaa800e14f85db7813",
-            "start_line": 90,
+            "start_line": 91,
             "symbol": "enum:lmb_generic_domain_v1.LMB_GENERIC_DOMAIN_BRIDGE"
           }
         ]
@@ -3201,11 +3216,11 @@
         "name": "enum:lmb_generic_domain_v1.LMB_GENERIC_DOMAIN_KERNEL",
         "source_refs": [
           {
-            "end_line": 89,
+            "end_line": 90,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "51abd99b60b81d7ccbb1000ab1c5cc46a23839d4dde769bbc6f8afaedbc50a6d",
-            "start_line": 89,
+            "start_line": 90,
             "symbol": "enum:lmb_generic_domain_v1.LMB_GENERIC_DOMAIN_KERNEL"
           }
         ]
@@ -3254,11 +3269,11 @@
         "name": "enum:lmb_generic_domain_v1.LMB_GENERIC_DOMAIN_LIBBPF",
         "source_refs": [
           {
-            "end_line": 88,
+            "end_line": 89,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "9a77f8d4d529d4902f893b5a8954e1d32c23af5b037bcddf3f82f91275181f04",
-            "start_line": 88,
+            "start_line": 89,
             "symbol": "enum:lmb_generic_domain_v1.LMB_GENERIC_DOMAIN_LIBBPF"
           }
         ]
@@ -3307,11 +3322,11 @@
         "name": "enum:lmb_generic_domain_v1.LMB_GENERIC_DOMAIN_NONE",
         "source_refs": [
           {
-            "end_line": 86,
+            "end_line": 87,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "75daf5022aebf579755224d0e0094321ab581ab7b4bc45f2452dab1a2d306c5c",
-            "start_line": 86,
+            "start_line": 87,
             "symbol": "enum:lmb_generic_domain_v1.LMB_GENERIC_DOMAIN_NONE"
           }
         ]
@@ -3360,11 +3375,11 @@
         "name": "enum:lmb_generic_domain_v1.LMB_GENERIC_DOMAIN_POSIX",
         "source_refs": [
           {
-            "end_line": 87,
+            "end_line": 88,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "4257dcf29ab0fc8494cb301498390b013eed4ce31b1b4b926f8e61aee3d71e10",
-            "start_line": 87,
+            "start_line": 88,
             "symbol": "enum:lmb_generic_domain_v1.LMB_GENERIC_DOMAIN_POSIX"
           }
         ]
@@ -3415,7 +3430,7 @@
           {
             "end_line": 73,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "71f9e44035f5adc73b72f3c741316b28dc60752f2511e6fc1fbfc1e4de237637",
             "start_line": 73,
             "symbol": "enum:lmb_generic_op_v1.LMB_GENERIC_OP_ATTACH"
@@ -3468,7 +3483,7 @@
           {
             "end_line": 77,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "5c545fa92c9caa5ab5f6751c5911947e9e1ba7d9106f5071d819c08a509efb4b",
             "start_line": 77,
             "symbol": "enum:lmb_generic_op_v1.LMB_GENERIC_OP_BUFFER_CLOSE"
@@ -3521,7 +3536,7 @@
           {
             "end_line": 75,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "0675bbba61a9f09761288c1619212cbc2a5f14dc231362501eb5d2286625dc47",
             "start_line": 75,
             "symbol": "enum:lmb_generic_op_v1.LMB_GENERIC_OP_BUFFER_OPEN"
@@ -3574,7 +3589,7 @@
           {
             "end_line": 76,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "2fdda1c4461a8553f3f48bbf60d8a1331cb439fb3f85abeb12d3d8b4bfae5fbd",
             "start_line": 76,
             "symbol": "enum:lmb_generic_op_v1.LMB_GENERIC_OP_BUFFER_POLL"
@@ -3627,7 +3642,7 @@
           {
             "end_line": 74,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "802641cce86cf4546602082f83bedd78073e1db1eca16a8622584c9d29a036b7",
             "start_line": 74,
             "symbol": "enum:lmb_generic_op_v1.LMB_GENERIC_OP_LINK_CLOSE"
@@ -3680,7 +3695,7 @@
           {
             "end_line": 68,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "7dd988ba6868e06a9edfe91a8c400e4d3d53bc3625f75e953f7444b49c862fa7",
             "start_line": 68,
             "symbol": "enum:lmb_generic_op_v1.LMB_GENERIC_OP_MAP_INFO"
@@ -3733,7 +3748,7 @@
           {
             "end_line": 70,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "6ff6ee3cfefb88fbe035dd21443ca4ec6909f994176964f6a6c895be2470e32b",
             "start_line": 70,
             "symbol": "enum:lmb_generic_op_v1.LMB_GENERIC_OP_MAP_LOOKUP"
@@ -3786,7 +3801,7 @@
           {
             "end_line": 71,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "75e3f56bdfcdbe0a012199744aa31b2f32935a1d3a3349c30b7caf2e9d68050b",
             "start_line": 71,
             "symbol": "enum:lmb_generic_op_v1.LMB_GENERIC_OP_MAP_UPDATE"
@@ -3839,7 +3854,7 @@
           {
             "end_line": 63,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "b2cebd33648a3c9cfff207087e1dc67712716c2ecd9b48ea957f17aba288228a",
             "start_line": 63,
             "symbol": "enum:lmb_generic_op_v1.LMB_GENERIC_OP_NONE"
@@ -3892,7 +3907,7 @@
           {
             "end_line": 69,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "28197105ce3764bdefb32289b242eefd79250ef22b1983ec51d97f5152d0b838",
             "start_line": 69,
             "symbol": "enum:lmb_generic_op_v1.LMB_GENERIC_OP_OBJECT_CLOSE"
@@ -3945,7 +3960,7 @@
           {
             "end_line": 66,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "a2512c75f6e8bb6cead2e7a03f5e66cd807a2082bafa06d21a5c1377f4f84ccf",
             "start_line": 66,
             "symbol": "enum:lmb_generic_op_v1.LMB_GENERIC_OP_OBJECT_LOAD"
@@ -3998,7 +4013,7 @@
           {
             "end_line": 64,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "40e804e723ad0af268d6918c2be8e2c63f771fb1a388f8343662279f63c61869",
             "start_line": 64,
             "symbol": "enum:lmb_generic_op_v1.LMB_GENERIC_OP_OBJECT_OPEN"
@@ -4051,7 +4066,7 @@
           {
             "end_line": 65,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "c0f748243220516aa4852606e4a4f09a4f5773161c761cdd2c0250474d296956",
             "start_line": 65,
             "symbol": "enum:lmb_generic_op_v1.LMB_GENERIC_OP_PROGRAM_CONFIGURE"
@@ -4104,7 +4119,7 @@
           {
             "end_line": 67,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "b571712f881222697874545a8a8138f7203535870e3dc5b126149954692996c4",
             "start_line": 67,
             "symbol": "enum:lmb_generic_op_v1.LMB_GENERIC_OP_PROGRAM_INFO"
@@ -4157,7 +4172,7 @@
           {
             "end_line": 72,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "91f3bf70c82a6f6c2b43662578da62c04e6e1b5313cc475e9c9d365fe0975919",
             "start_line": 72,
             "symbol": "enum:lmb_generic_op_v1.LMB_GENERIC_OP_TEST_RUN"
@@ -4210,7 +4225,7 @@
           {
             "end_line": 80,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "8f6e6cb0619a94e250f0130fb38dffc26e4af4bbef73f852ff4c082a4d33b3e3",
             "start_line": 80,
             "symbol": "enum:lmb_generic_op_v1.LMB_GENERIC_OP_VIEW_CHECK"
@@ -4263,7 +4278,7 @@
           {
             "end_line": 79,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "9e7b9e84efee2b3370c05fbecf7f45c9df845896854ab648f68955ef2e3a8597",
             "start_line": 79,
             "symbol": "enum:lmb_generic_op_v1.LMB_GENERIC_OP_VIEW_GEN"
@@ -4316,7 +4331,7 @@
           {
             "end_line": 78,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "350f4197084c69a2d3833fc3db0e78fc5cc3f5fa0e28fd0a628efff0696b3b2f",
             "start_line": 78,
             "symbol": "enum:lmb_generic_op_v1.LMB_GENERIC_OP_VIEW_REF"
@@ -4960,11 +4975,11 @@
         "name": "lmb_attach_options_v1._reserved",
         "source_refs": [
           {
-            "end_line": 118,
+            "end_line": 119,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "34d1b91afb6d2196edbcb319e087f95a314fe94c59d50b0ae5ef9058c4285340",
-            "start_line": 118,
+            "start_line": 119,
             "symbol": "lmb_attach_options_v1._reserved"
           }
         ]
@@ -5023,11 +5038,11 @@
         "name": "lmb_attach_options_v1.abi_version",
         "source_refs": [
           {
-            "end_line": 111,
+            "end_line": 112,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "161ee8f9a332e820221f7e89f3788f5bda37f8cf30d72e6893a60b58592dd9cc",
-            "start_line": 111,
+            "start_line": 112,
             "symbol": "lmb_attach_options_v1.abi_version"
           }
         ]
@@ -5086,11 +5101,11 @@
         "name": "lmb_attach_options_v1.family",
         "source_refs": [
           {
-            "end_line": 180,
+            "end_line": 181,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "bb33acd6a6529cd235e6038ad8e2d4e5e9697f572aae8b2ef4944ae8db8a32e5",
-            "start_line": 180,
+            "start_line": 181,
             "symbol": "lmb_attach_options_v1.family"
           }
         ]
@@ -5149,11 +5164,11 @@
         "name": "lmb_attach_options_v1.flags",
         "source_refs": [
           {
-            "end_line": 116,
+            "end_line": 117,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "3b154c5263314bbc2e737c3b626b755665935b74af50b0665578ebec109a1346",
-            "start_line": 116,
+            "start_line": 117,
             "symbol": "lmb_attach_options_v1.flags"
           }
         ]
@@ -5213,11 +5228,11 @@
         "name": "lmb_attach_options_v1.program",
         "source_refs": [
           {
-            "end_line": 124,
+            "end_line": 125,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "77828aba853da2b328a8b50523f5960342a2c8041fa14a08aaf4fab92525052b",
-            "start_line": 124,
+            "start_line": 125,
             "symbol": "lmb_attach_options_v1.program"
           }
         ]
@@ -5276,11 +5291,11 @@
         "name": "lmb_attach_options_v1.struct_size",
         "source_refs": [
           {
-            "end_line": 112,
+            "end_line": 113,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "862799a00f9d17c527ea76ab57f05997b738d7214e660a54e364a26c1bf77019",
-            "start_line": 112,
+            "start_line": 113,
             "symbol": "lmb_attach_options_v1.struct_size"
           }
         ]
@@ -5340,11 +5355,11 @@
         "name": "lmb_attach_options_v1.target_a",
         "source_refs": [
           {
-            "end_line": 182,
+            "end_line": 183,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "26cb9d0bddc36b8455286aed0d2ebbede530238723839966330ea3cf326692cc",
-            "start_line": 182,
+            "start_line": 183,
             "symbol": "lmb_attach_options_v1.target_a"
           }
         ]
@@ -5404,11 +5419,11 @@
         "name": "lmb_attach_options_v1.target_b",
         "source_refs": [
           {
-            "end_line": 183,
+            "end_line": 184,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "4a065fa43ef313479d36f5a834ae7bbdc172e06186d14d77011bd785cd0d173b",
-            "start_line": 183,
+            "start_line": 184,
             "symbol": "lmb_attach_options_v1.target_b"
           }
         ]
@@ -5911,11 +5926,11 @@
         "name": "lmb_buffer_options_v1._reserved",
         "source_refs": [
           {
-            "end_line": 142,
+            "end_line": 143,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "1bc25049e45bd214d60a032f7d0acbe2a5d7d6adb9269b30e2e54e51cc043bea",
-            "start_line": 142,
+            "start_line": 143,
             "symbol": "lmb_buffer_options_v1._reserved"
           }
         ]
@@ -5974,11 +5989,11 @@
         "name": "lmb_buffer_options_v1.abi_version",
         "source_refs": [
           {
-            "end_line": 111,
+            "end_line": 112,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "161ee8f9a332e820221f7e89f3788f5bda37f8cf30d72e6893a60b58592dd9cc",
-            "start_line": 111,
+            "start_line": 112,
             "symbol": "lmb_buffer_options_v1.abi_version"
           }
         ]
@@ -6037,11 +6052,11 @@
         "name": "lmb_buffer_options_v1.flags",
         "source_refs": [
           {
-            "end_line": 116,
+            "end_line": 117,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "3b154c5263314bbc2e737c3b626b755665935b74af50b0665578ebec109a1346",
-            "start_line": 116,
+            "start_line": 117,
             "symbol": "lmb_buffer_options_v1.flags"
           }
         ]
@@ -6100,11 +6115,11 @@
         "name": "lmb_buffer_options_v1.max_raw_bytes",
         "source_refs": [
           {
-            "end_line": 191,
+            "end_line": 192,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "de60af07dfa5306ec6f5e73be6d5c3f60a2c8384c327bedfe8ede7178c67dcb7",
-            "start_line": 191,
+            "start_line": 192,
             "symbol": "lmb_buffer_options_v1.max_raw_bytes"
           }
         ]
@@ -6164,11 +6179,11 @@
         "name": "lmb_buffer_options_v1.ring",
         "source_refs": [
           {
-            "end_line": 190,
+            "end_line": 191,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "943a3caedffaf7cbce7aeabca8444db47c055d2fb13e63d6029fa6f7514bb611",
-            "start_line": 190,
+            "start_line": 191,
             "symbol": "lmb_buffer_options_v1.ring"
           }
         ]
@@ -6227,11 +6242,11 @@
         "name": "lmb_buffer_options_v1.stage_slots",
         "source_refs": [
           {
-            "end_line": 192,
+            "end_line": 193,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "cf134aef4f93ec613a631619b172d89862f630b575bdb473e16319311edd9bc7",
-            "start_line": 192,
+            "start_line": 193,
             "symbol": "lmb_buffer_options_v1.stage_slots"
           }
         ]
@@ -6290,11 +6305,11 @@
         "name": "lmb_buffer_options_v1.struct_size",
         "source_refs": [
           {
-            "end_line": 112,
+            "end_line": 113,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "862799a00f9d17c527ea76ab57f05997b738d7214e660a54e364a26c1bf77019",
-            "start_line": 112,
+            "start_line": 113,
             "symbol": "lmb_buffer_options_v1.struct_size"
           }
         ]
@@ -6993,11 +7008,11 @@
         "name": "lmb_generic_error_v1.abi_version",
         "source_refs": [
           {
-            "end_line": 111,
+            "end_line": 112,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "161ee8f9a332e820221f7e89f3788f5bda37f8cf30d72e6893a60b58592dd9cc",
-            "start_line": 111,
+            "start_line": 112,
             "symbol": "lmb_generic_error_v1.abi_version"
           }
         ]
@@ -7056,11 +7071,11 @@
         "name": "lmb_generic_error_v1.code",
         "source_refs": [
           {
-            "end_line": 150,
+            "end_line": 151,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "f30df1af4d484711a3b24a5b6f9052a5ce1f2adc14e69c748f8c0980e3dc3694",
-            "start_line": 150,
+            "start_line": 151,
             "symbol": "lmb_generic_error_v1.code"
           }
         ]
@@ -7119,11 +7134,11 @@
         "name": "lmb_generic_error_v1.domain",
         "source_refs": [
           {
-            "end_line": 149,
+            "end_line": 150,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "1264f086027d2bab4e56ff6cb539c10f6f31ae88cde648aa519b391d949761f2",
-            "start_line": 149,
+            "start_line": 150,
             "symbol": "lmb_generic_error_v1.domain"
           }
         ]
@@ -7189,11 +7204,11 @@
         "name": "lmb_generic_error_v1.message",
         "source_refs": [
           {
-            "end_line": 152,
+            "end_line": 153,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "a7f08e67342bd6857287e730b80bdf5eaabee23851b615a6f887a2da12b3b739",
-            "start_line": 152,
+            "start_line": 153,
             "symbol": "lmb_generic_error_v1.message"
           }
         ]
@@ -7252,11 +7267,11 @@
         "name": "lmb_generic_error_v1.msg_len",
         "source_refs": [
           {
-            "end_line": 151,
+            "end_line": 152,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "c86cba03e9a02086cbbc85139d212938604b2a1f5f150a6662c4ba559ff117aa",
-            "start_line": 151,
+            "start_line": 152,
             "symbol": "lmb_generic_error_v1.msg_len"
           }
         ]
@@ -7315,11 +7330,11 @@
         "name": "lmb_generic_error_v1.operation",
         "source_refs": [
           {
-            "end_line": 148,
+            "end_line": 149,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "fc87927fc6698a94463214df7a2c01231cbde154c35e4362be9ad8be20f55790",
-            "start_line": 148,
+            "start_line": 149,
             "symbol": "lmb_generic_error_v1.operation"
           }
         ]
@@ -7378,11 +7393,11 @@
         "name": "lmb_generic_error_v1.struct_size",
         "source_refs": [
           {
-            "end_line": 112,
+            "end_line": 113,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "862799a00f9d17c527ea76ab57f05997b738d7214e660a54e364a26c1bf77019",
-            "start_line": 112,
+            "start_line": 113,
             "symbol": "lmb_generic_error_v1.struct_size"
           }
         ]
@@ -8261,11 +8276,11 @@
         "name": "lmb_object_options_v1._reserved",
         "source_refs": [
           {
-            "end_line": 118,
+            "end_line": 119,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "34d1b91afb6d2196edbcb319e087f95a314fe94c59d50b0ae5ef9058c4285340",
-            "start_line": 118,
+            "start_line": 119,
             "symbol": "lmb_object_options_v1._reserved"
           }
         ]
@@ -8324,11 +8339,11 @@
         "name": "lmb_object_options_v1.abi_version",
         "source_refs": [
           {
-            "end_line": 111,
+            "end_line": 112,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "161ee8f9a332e820221f7e89f3788f5bda37f8cf30d72e6893a60b58592dd9cc",
-            "start_line": 111,
+            "start_line": 112,
             "symbol": "lmb_object_options_v1.abi_version"
           }
         ]
@@ -8388,11 +8403,11 @@
         "name": "lmb_object_options_v1.custom_btf",
         "source_refs": [
           {
-            "end_line": 114,
+            "end_line": 115,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "fee529d55f901cf349ed110c3957929e3bc7a1ba74810b599299d46f3029624c",
-            "start_line": 114,
+            "start_line": 115,
             "symbol": "lmb_object_options_v1.custom_btf"
           }
         ]
@@ -8451,11 +8466,11 @@
         "name": "lmb_object_options_v1.flags",
         "source_refs": [
           {
-            "end_line": 116,
+            "end_line": 117,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "3b154c5263314bbc2e737c3b626b755665935b74af50b0665578ebec109a1346",
-            "start_line": 116,
+            "start_line": 117,
             "symbol": "lmb_object_options_v1.flags"
           }
         ]
@@ -8514,11 +8529,11 @@
         "name": "lmb_object_options_v1.log_capacity",
         "source_refs": [
           {
-            "end_line": 117,
+            "end_line": 118,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "67548b9d28be5ac0347daf0ab108a0161fe3499f222f55fbb644e4ce789f2fa5",
-            "start_line": 117,
+            "start_line": 118,
             "symbol": "lmb_object_options_v1.log_capacity"
           }
         ]
@@ -8577,11 +8592,11 @@
         "name": "lmb_object_options_v1.log_level",
         "source_refs": [
           {
-            "end_line": 115,
+            "end_line": 116,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "d4c5e78e8f0ccc83627471ce5ab1804af802b5e7befb737e5371bd25f39efabb",
-            "start_line": 115,
+            "start_line": 116,
             "symbol": "lmb_object_options_v1.log_level"
           }
         ]
@@ -8641,11 +8656,11 @@
         "name": "lmb_object_options_v1.name",
         "source_refs": [
           {
-            "end_line": 113,
+            "end_line": 114,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "8255b7f7a7a5e6d523af06bd554a23cdefc7219f59c2f29d7c565864b9194fcd",
-            "start_line": 113,
+            "start_line": 114,
             "symbol": "lmb_object_options_v1.name"
           }
         ]
@@ -8704,11 +8719,11 @@
         "name": "lmb_object_options_v1.struct_size",
         "source_refs": [
           {
-            "end_line": 112,
+            "end_line": 113,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "862799a00f9d17c527ea76ab57f05997b738d7214e660a54e364a26c1bf77019",
-            "start_line": 112,
+            "start_line": 113,
             "symbol": "lmb_object_options_v1.struct_size"
           }
         ]
@@ -9209,11 +9224,11 @@
         "name": "lmb_out_span_v1.len",
         "source_refs": [
           {
-            "end_line": 102,
+            "end_line": 103,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "3662f72eba35e60431832b2a16cf6547331002f02a88dd1aee1b42cb74799d11",
-            "start_line": 102,
+            "start_line": 103,
             "symbol": "lmb_out_span_v1.len"
           }
         ]
@@ -9274,11 +9289,11 @@
         "name": "lmb_out_span_v1.ptr",
         "source_refs": [
           {
-            "end_line": 106,
+            "end_line": 107,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "212d5cb02721c015ddefc0e0b1e1ab2fc94a4bb74da0b38a3f966bedad2ec423",
-            "start_line": 106,
+            "start_line": 107,
             "symbol": "lmb_out_span_v1.ptr"
           }
         ]
@@ -9337,11 +9352,11 @@
         "name": "lmb_program_info_v1._pad0",
         "source_refs": [
           {
-            "end_line": 138,
+            "end_line": 139,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "2e3036814e9745957198c067812314eaf5608a9a422e7cbc799866ee214c3d46",
-            "start_line": 138,
+            "start_line": 139,
             "symbol": "lmb_program_info_v1._pad0"
           }
         ]
@@ -9400,11 +9415,11 @@
         "name": "lmb_program_info_v1._reserved",
         "source_refs": [
           {
-            "end_line": 142,
+            "end_line": 143,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "1bc25049e45bd214d60a032f7d0acbe2a5d7d6adb9269b30e2e54e51cc043bea",
-            "start_line": 142,
+            "start_line": 143,
             "symbol": "lmb_program_info_v1._reserved"
           }
         ]
@@ -9463,11 +9478,11 @@
         "name": "lmb_program_info_v1.abi_version",
         "source_refs": [
           {
-            "end_line": 111,
+            "end_line": 112,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "161ee8f9a332e820221f7e89f3788f5bda37f8cf30d72e6893a60b58592dd9cc",
-            "start_line": 111,
+            "start_line": 112,
             "symbol": "lmb_program_info_v1.abi_version"
           }
         ]
@@ -9526,11 +9541,11 @@
         "name": "lmb_program_info_v1.attach_type",
         "source_refs": [
           {
-            "end_line": 134,
+            "end_line": 135,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "bea33d8d8e37095b11f679efd74f1b6a0640b80866980cf3001a99f455448312",
-            "start_line": 134,
+            "start_line": 135,
             "symbol": "lmb_program_info_v1.attach_type"
           }
         ]
@@ -9589,11 +9604,11 @@
         "name": "lmb_program_info_v1.autoload",
         "source_refs": [
           {
-            "end_line": 126,
+            "end_line": 127,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "234df0c4697ce52161da2faf545e65e5b4b3a4ae4e9e3a4d8677e2e4bd88ff81",
-            "start_line": 126,
+            "start_line": 127,
             "symbol": "lmb_program_info_v1.autoload"
           }
         ]
@@ -9652,11 +9667,11 @@
         "name": "lmb_program_info_v1.generation",
         "source_refs": [
           {
-            "end_line": 136,
+            "end_line": 137,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "8a033e647306f24ced550171d35f45861ecfd47f8c6967e958922514b91f9cf0",
-            "start_line": 136,
+            "start_line": 137,
             "symbol": "lmb_program_info_v1.generation"
           }
         ]
@@ -9715,11 +9730,11 @@
         "name": "lmb_program_info_v1.insn_count",
         "source_refs": [
           {
-            "end_line": 135,
+            "end_line": 136,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "5c0571904b64990371744603b7e7c2c84e46393e498769dd6451a75fb8a6688b",
-            "start_line": 135,
+            "start_line": 136,
             "symbol": "lmb_program_info_v1.insn_count"
           }
         ]
@@ -9779,11 +9794,11 @@
         "name": "lmb_program_info_v1.log",
         "source_refs": [
           {
-            "end_line": 139,
+            "end_line": 140,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "cd19e5dff29b93a9ef9e726bbb85070a61d0a819c89955a29db5c490840e072b",
-            "start_line": 139,
+            "start_line": 140,
             "symbol": "lmb_program_info_v1.log"
           }
         ]
@@ -9842,11 +9857,11 @@
         "name": "lmb_program_info_v1.log_actual",
         "source_refs": [
           {
-            "end_line": 140,
+            "end_line": 141,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "ef356105653f758e89785f3a847091ca86217d4beaceb8b2f315509588bd7553",
-            "start_line": 140,
+            "start_line": 141,
             "symbol": "lmb_program_info_v1.log_actual"
           }
         ]
@@ -9905,11 +9920,11 @@
         "name": "lmb_program_info_v1.log_truncated",
         "source_refs": [
           {
-            "end_line": 141,
+            "end_line": 142,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "2df4b23b8995c745d374e00a2560688a618e11e9dfa7051124061c7a933d8c01",
-            "start_line": 141,
+            "start_line": 142,
             "symbol": "lmb_program_info_v1.log_truncated"
           }
         ]
@@ -9968,11 +9983,11 @@
         "name": "lmb_program_info_v1.prog_type",
         "source_refs": [
           {
-            "end_line": 133,
+            "end_line": 134,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "92db304f7bc2982f275c8edf8958f9f50fcdce6cd6d929dbfa8a791c84a951c0",
-            "start_line": 133,
+            "start_line": 134,
             "symbol": "lmb_program_info_v1.prog_type"
           }
         ]
@@ -10031,11 +10046,11 @@
         "name": "lmb_program_info_v1.struct_size",
         "source_refs": [
           {
-            "end_line": 112,
+            "end_line": 113,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "862799a00f9d17c527ea76ab57f05997b738d7214e660a54e364a26c1bf77019",
-            "start_line": 112,
+            "start_line": 113,
             "symbol": "lmb_program_info_v1.struct_size"
           }
         ]
@@ -10094,11 +10109,11 @@
         "name": "lmb_program_options_v1.abi_version",
         "source_refs": [
           {
-            "end_line": 111,
+            "end_line": 112,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "161ee8f9a332e820221f7e89f3788f5bda37f8cf30d72e6893a60b58592dd9cc",
-            "start_line": 111,
+            "start_line": 112,
             "symbol": "lmb_program_options_v1.abi_version"
           }
         ]
@@ -10158,11 +10173,11 @@
         "name": "lmb_program_options_v1.attach_target",
         "source_refs": [
           {
-            "end_line": 125,
+            "end_line": 126,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "83707f09e6f1b1bb105046aa95b3e7b8e5c7662cafce535bd83c41b77a0e8c8a",
-            "start_line": 125,
+            "start_line": 126,
             "symbol": "lmb_program_options_v1.attach_target"
           }
         ]
@@ -10221,11 +10236,11 @@
         "name": "lmb_program_options_v1.autoload",
         "source_refs": [
           {
-            "end_line": 126,
+            "end_line": 127,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "234df0c4697ce52161da2faf545e65e5b4b3a4ae4e9e3a4d8677e2e4bd88ff81",
-            "start_line": 126,
+            "start_line": 127,
             "symbol": "lmb_program_options_v1.autoload"
           }
         ]
@@ -10284,11 +10299,11 @@
         "name": "lmb_program_options_v1.flags",
         "source_refs": [
           {
-            "end_line": 116,
+            "end_line": 117,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "3b154c5263314bbc2e737c3b626b755665935b74af50b0665578ebec109a1346",
-            "start_line": 116,
+            "start_line": 117,
             "symbol": "lmb_program_options_v1.flags"
           }
         ]
@@ -10348,11 +10363,11 @@
         "name": "lmb_program_options_v1.program",
         "source_refs": [
           {
-            "end_line": 124,
+            "end_line": 125,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "77828aba853da2b328a8b50523f5960342a2c8041fa14a08aaf4fab92525052b",
-            "start_line": 124,
+            "start_line": 125,
             "symbol": "lmb_program_options_v1.program"
           }
         ]
@@ -10411,11 +10426,11 @@
         "name": "lmb_program_options_v1.struct_size",
         "source_refs": [
           {
-            "end_line": 112,
+            "end_line": 113,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "862799a00f9d17c527ea76ab57f05997b738d7214e660a54e364a26c1bf77019",
-            "start_line": 112,
+            "start_line": 113,
             "symbol": "lmb_program_options_v1.struct_size"
           }
         ]
@@ -10474,11 +10489,11 @@
         "name": "lmb_program_test_options_v1.abi_version",
         "source_refs": [
           {
-            "end_line": 111,
+            "end_line": 112,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "161ee8f9a332e820221f7e89f3788f5bda37f8cf30d72e6893a60b58592dd9cc",
-            "start_line": 111,
+            "start_line": 112,
             "symbol": "lmb_program_test_options_v1.abi_version"
           }
         ]
@@ -10538,11 +10553,11 @@
         "name": "lmb_program_test_options_v1.ctx_in",
         "source_refs": [
           {
-            "end_line": 160,
+            "end_line": 161,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "38432062078f89e54d84251843b1987c0ccb1227bc9935c06de9fb9b9c52df13",
-            "start_line": 160,
+            "start_line": 161,
             "symbol": "lmb_program_test_options_v1.ctx_in"
           }
         ]
@@ -10602,11 +10617,11 @@
         "name": "lmb_program_test_options_v1.ctx_out",
         "source_refs": [
           {
-            "end_line": 161,
+            "end_line": 162,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "04d7d9b336baad4960b260528e7b1910fc0d414e553ee34ebcfffd2b0b09d5f0",
-            "start_line": 161,
+            "start_line": 162,
             "symbol": "lmb_program_test_options_v1.ctx_out"
           }
         ]
@@ -10666,11 +10681,11 @@
         "name": "lmb_program_test_options_v1.data_in",
         "source_refs": [
           {
-            "end_line": 158,
+            "end_line": 159,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "d648d442834c3fa46369af890127bb849acdca4674c64836486f235a00b906c5",
-            "start_line": 158,
+            "start_line": 159,
             "symbol": "lmb_program_test_options_v1.data_in"
           }
         ]
@@ -10730,11 +10745,11 @@
         "name": "lmb_program_test_options_v1.data_out",
         "source_refs": [
           {
-            "end_line": 159,
+            "end_line": 160,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "3f08d9d1a2ebdf6b7ec50c64ad43bd6fdf0664e91c11141fc48851ab442c2183",
-            "start_line": 159,
+            "start_line": 160,
             "symbol": "lmb_program_test_options_v1.data_out"
           }
         ]
@@ -10793,11 +10808,11 @@
         "name": "lmb_program_test_options_v1.flags",
         "source_refs": [
           {
-            "end_line": 163,
+            "end_line": 164,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "d22ba2cda05794e8a7ef4de072ca3d83538d12761c8cbf271b1df0feb8464418",
-            "start_line": 163,
+            "start_line": 164,
             "symbol": "lmb_program_test_options_v1.flags"
           }
         ]
@@ -10856,11 +10871,11 @@
         "name": "lmb_program_test_options_v1.repeat",
         "source_refs": [
           {
-            "end_line": 162,
+            "end_line": 163,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "fcb75d391470c7568aec5b3a0b48e8eea1d20c97ea57acf74acf23f8273556b9",
-            "start_line": 162,
+            "start_line": 163,
             "symbol": "lmb_program_test_options_v1.repeat"
           }
         ]
@@ -10919,11 +10934,11 @@
         "name": "lmb_program_test_options_v1.struct_size",
         "source_refs": [
           {
-            "end_line": 112,
+            "end_line": 113,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "862799a00f9d17c527ea76ab57f05997b738d7214e660a54e364a26c1bf77019",
-            "start_line": 112,
+            "start_line": 113,
             "symbol": "lmb_program_test_options_v1.struct_size"
           }
         ]
@@ -10982,11 +10997,11 @@
         "name": "lmb_program_test_result_v1._pad",
         "source_refs": [
           {
-            "end_line": 170,
+            "end_line": 171,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "f3709352fbd0ea572eb9d55fc5a1703ec75ea9eb35260a58f4477b1ab388fad9",
-            "start_line": 170,
+            "start_line": 171,
             "symbol": "lmb_program_test_result_v1._pad"
           }
         ]
@@ -11045,11 +11060,11 @@
         "name": "lmb_program_test_result_v1.abi_version",
         "source_refs": [
           {
-            "end_line": 111,
+            "end_line": 112,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "161ee8f9a332e820221f7e89f3788f5bda37f8cf30d72e6893a60b58592dd9cc",
-            "start_line": 111,
+            "start_line": 112,
             "symbol": "lmb_program_test_result_v1.abi_version"
           }
         ]
@@ -11108,11 +11123,11 @@
         "name": "lmb_program_test_result_v1.ctx_actual",
         "source_refs": [
           {
-            "end_line": 172,
+            "end_line": 173,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "255f317f8d9aa4f74ce834d0f2e812f79478ab6a63db0df8da23024cca09755a",
-            "start_line": 172,
+            "start_line": 173,
             "symbol": "lmb_program_test_result_v1.ctx_actual"
           }
         ]
@@ -11171,11 +11186,11 @@
         "name": "lmb_program_test_result_v1.data_actual",
         "source_refs": [
           {
-            "end_line": 171,
+            "end_line": 172,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "2587795b89de34f7201c5299f62c03056ce7fcc725d5217641842a4566fe9453",
-            "start_line": 171,
+            "start_line": 172,
             "symbol": "lmb_program_test_result_v1.data_actual"
           }
         ]
@@ -11234,11 +11249,11 @@
         "name": "lmb_program_test_result_v1.duration_ns",
         "source_refs": [
           {
-            "end_line": 173,
+            "end_line": 174,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "9b067c9109550a23f84079c87752dc1537e8ad24cee3cab2a7f21a9268eee505",
-            "start_line": 173,
+            "start_line": 174,
             "symbol": "lmb_program_test_result_v1.duration_ns"
           }
         ]
@@ -11297,11 +11312,11 @@
         "name": "lmb_program_test_result_v1.retval",
         "source_refs": [
           {
-            "end_line": 169,
+            "end_line": 170,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "b33f5fb001cf099fa701e262f3405dfd524c8bb3db5cc064ac7d1c712783cf07",
-            "start_line": 169,
+            "start_line": 170,
             "symbol": "lmb_program_test_result_v1.retval"
           }
         ]
@@ -11360,11 +11375,11 @@
         "name": "lmb_program_test_result_v1.struct_size",
         "source_refs": [
           {
-            "end_line": 112,
+            "end_line": 113,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "862799a00f9d17c527ea76ab57f05997b738d7214e660a54e364a26c1bf77019",
-            "start_line": 112,
+            "start_line": 113,
             "symbol": "lmb_program_test_result_v1.struct_size"
           }
         ]
@@ -11423,11 +11438,11 @@
         "name": "lmb_span_v1.len",
         "source_refs": [
           {
-            "end_line": 102,
+            "end_line": 103,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "3662f72eba35e60431832b2a16cf6547331002f02a88dd1aee1b42cb74799d11",
-            "start_line": 102,
+            "start_line": 103,
             "symbol": "lmb_span_v1.len"
           }
         ]
@@ -11489,11 +11504,11 @@
         "name": "lmb_span_v1.ptr",
         "source_refs": [
           {
-            "end_line": 101,
+            "end_line": 102,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "6d1ba917bb83f81ece0aa747df7446245d8e29ba52099aa137dc803927ceecef",
-            "start_line": 101,
+            "start_line": 102,
             "symbol": "lmb_span_v1.ptr"
           }
         ]
@@ -12116,11 +12131,11 @@
         "name": "lmb_attach_options_v1",
         "source_refs": [
           {
-            "end_line": 185,
+            "end_line": 186,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "06dee34cf8cff0c1ab8c8a2b7d08f125251e29d007c67a4344639376c7c97882",
-            "start_line": 176,
+            "start_line": 177,
             "symbol": "lmb_attach_options_v1"
           }
         ]
@@ -12226,11 +12241,11 @@
         "name": "lmb_buffer",
         "source_refs": [
           {
-            "end_line": 199,
+            "end_line": 214,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "a52684a0243a7d743deb6caf48c4678db16c33a52f2bb057583703f98404d4cd",
-            "start_line": 199,
+            "start_line": 214,
             "symbol": "lmb_buffer"
           }
         ]
@@ -12285,11 +12300,11 @@
         "name": "lmb_buffer_options_v1",
         "source_refs": [
           {
-            "end_line": 195,
+            "end_line": 196,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "e0d5f2ccd560f40dea1a94f6a4b81906d5e49313b9ce2b931a9e0069f35b2582",
-            "start_line": 187,
+            "start_line": 188,
             "symbol": "lmb_buffer_options_v1"
           }
         ]
@@ -12458,11 +12473,11 @@
         "name": "lmb_generic_error_v1",
         "source_refs": [
           {
-            "end_line": 153,
+            "end_line": 154,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "3d18f64b2985f2ac47973433d64dd2aee4e7a6302c7844797389a740698c8fd0",
-            "start_line": 145,
+            "start_line": 146,
             "symbol": "lmb_generic_error_v1"
           }
         ]
@@ -12509,11 +12524,11 @@
         "name": "lmb_link",
         "source_refs": [
           {
-            "end_line": 198,
+            "end_line": 213,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "ab63536a6f64341815aa3c4efde56851880b86bc8e8c9316763fd2468b39fb2f",
-            "start_line": 198,
+            "start_line": 213,
             "symbol": "lmb_link"
           }
         ]
@@ -12677,11 +12692,11 @@
         "name": "lmb_object",
         "source_refs": [
           {
-            "end_line": 197,
+            "end_line": 212,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "93cc8eece006da6bee6979dedaa6fa2379e752a35178409737abf9d5c7f76085",
-            "start_line": 197,
+            "start_line": 212,
             "symbol": "lmb_object"
           }
         ]
@@ -12737,11 +12752,11 @@
         "name": "lmb_object_options_v1",
         "source_refs": [
           {
-            "end_line": 119,
+            "end_line": 120,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "c089471773f76d3a41fddd2bfa98a1c7c0cdd1ddd3c0c307ececfe91049ca220",
-            "start_line": 110,
+            "start_line": 111,
             "symbol": "lmb_object_options_v1"
           }
         ]
@@ -12850,11 +12865,11 @@
         "name": "lmb_out_span_v1",
         "source_refs": [
           {
-            "end_line": 108,
+            "end_line": 109,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "34d33b59c0839ee88df309823f96bdb84e0f20f5b8260d7a215a37eaa988a95b",
-            "start_line": 105,
+            "start_line": 106,
             "symbol": "lmb_out_span_v1"
           }
         ]
@@ -12914,11 +12929,11 @@
         "name": "lmb_program_info_v1",
         "source_refs": [
           {
-            "end_line": 143,
+            "end_line": 144,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "a3cd8301b5b55b033939e6aa2e6111608568b568482a43b22e094cf9045a7b45",
-            "start_line": 130,
+            "start_line": 131,
             "symbol": "lmb_program_info_v1"
           }
         ]
@@ -12972,11 +12987,11 @@
         "name": "lmb_program_options_v1",
         "source_refs": [
           {
-            "end_line": 128,
+            "end_line": 129,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "2626f4080c18d339a276144992d5df0a04fca2f8a6a76893a12cc85bc6948192",
-            "start_line": 121,
+            "start_line": 122,
             "symbol": "lmb_program_options_v1"
           }
         ]
@@ -13032,11 +13047,11 @@
         "name": "lmb_program_test_options_v1",
         "source_refs": [
           {
-            "end_line": 164,
+            "end_line": 165,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "01bd6f4c4a5429acc2eb74b2dab708d53f9e851b9bec1fbf1a1b4d3c71f0eed0",
-            "start_line": 155,
+            "start_line": 156,
             "symbol": "lmb_program_test_options_v1"
           }
         ]
@@ -13091,11 +13106,11 @@
         "name": "lmb_program_test_result_v1",
         "source_refs": [
           {
-            "end_line": 174,
+            "end_line": 175,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "861692a6d14d310b4e46bbec44ad9af34d6071d486b3937b31f2f72879dcd386",
-            "start_line": 166,
+            "start_line": 167,
             "symbol": "lmb_program_test_result_v1"
           }
         ]
@@ -13196,11 +13211,11 @@
         "name": "lmb_span_v1",
         "source_refs": [
           {
-            "end_line": 103,
+            "end_line": 104,
             "path": "native/include/libbpf_mojo_generic.h",
-            "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
             "span_sha256": "c6653e1e0d94f91608fefccea0d7f398b6327c36abb9cdcc751d9c930ca76442",
-            "start_line": 100,
+            "start_line": 101,
             "symbol": "lmb_span_v1"
           }
         ]
@@ -13355,7 +13370,7 @@
     "sources": [
       {
         "path": "README.md",
-        "sha256": "01db9fc448d3d2cf5bf9c39036358e7de474f433584b06f0a9034f2545daa176"
+        "sha256": "21532e47fe11d7f86c876938de7f310015e085c6c53b69de1e4f0c54b48950cd"
       },
       {
         "path": "docs/abi-v1.md",
@@ -13367,11 +13382,11 @@
       },
       {
         "path": "docs/generic-abi-v1.md",
-        "sha256": "3de285db2ded3f28266f4c75ec80323b186d5623d6d14408e3676527a8876111"
+        "sha256": "13dcd8e33a093ca9bc949102168a25d83043cd703473436a626a3cced398be86"
       },
       {
         "path": "docs/links-and-ring.md",
-        "sha256": "5c75ee0bf09b9bf044d2b09c749d10d9507cd0f6dbac307716e762d5dc9e36e9"
+        "sha256": "eda7d8ca305171c72325e3f838811c6403f78a127bf079365c1f2da9198b05c5"
       },
       {
         "path": "docs/maps-and-test-run.md",
@@ -13383,11 +13398,11 @@
       },
       {
         "path": "docs/support.md",
-        "sha256": "b42ddde4b4e7157b9d25dbf96680cf5e0d1da2caa5848db8379e75d371086bdb"
+        "sha256": "6d0407a0ea1df91153026b4929f7db06c8774d51b09f0df51ccfb28ef6386b25"
       },
       {
         "path": "native/CMakeLists.txt",
-        "sha256": "2527fb8562eb051ecf3d1f7f82ad2050db82fd0077b9c0ccd72556e17d5e8494"
+        "sha256": "2dde6c4fced0e8a661a9d5481b24dbfbf39cf4aebac8d660fbe7c6fc496263bf"
       },
       {
         "path": "native/include/libbpf_mojo.h",
@@ -13395,11 +13410,11 @@
       },
       {
         "path": "native/include/libbpf_mojo_generic.h",
-        "sha256": "395d206b3fc3a4745ce83a251c26150b8f3da85996d37495a45b6420d624a7bf"
+        "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca"
       },
       {
         "path": "native/libbpf_mojo.map",
-        "sha256": "1f004b70c5a3d32542eed72177f206fab792b69eae4767f0365a9fe3a99b3909"
+        "sha256": "047640c474b7723060bfc54fbbd4610d12a6f1cc11ef043403b8eb68b5787bb7"
       },
       {
         "path": "native/src/attach.c",
@@ -13419,7 +13434,7 @@
       },
       {
         "path": "native/src/generic_ring.c",
-        "sha256": "e6048c6525a4c48187a25f47d950a471a442e4aa348fbd8950b7dd06bbb69ef8"
+        "sha256": "6da7630a2b3944df9abf4c0d4a57c9ffaf085fd67189b6f54932d636e5a7e5c2"
       },
       {
         "path": "native/src/internal.h",
@@ -13439,7 +13454,11 @@
       },
       {
         "path": "native/src/ring.c",
-        "sha256": "6924b9e122a49f62328089b15c0db2d8ececf4dbbfb1fe70273cbe914c83d9dd"
+        "sha256": "09e79e3c9aec987dbd32b0d79ee5587829ea8c827eed9ef35f5f6f8dfb0580a3"
+      },
+      {
+        "path": "native/src/ring_stage.h",
+        "sha256": "93afa30ae54224e3fa7e3e73f118d271a17b8b278da865d751acdc77ab6c30f5"
       },
       {
         "path": "native/src/session.c",
@@ -13451,7 +13470,7 @@
       },
       {
         "path": "src/libbpf_mojo/_ffi.mojo",
-        "sha256": "83fec546dac376d3359dc4d93c431731f90a34898a1975e93b70fc19b3c49e52"
+        "sha256": "884e253eb26282566255da8cab0679c840e6c1ec744d4f273216a0a60abe9deb"
       },
       {
         "path": "src/libbpf_mojo/batch.mojo",
@@ -13459,7 +13478,7 @@
       },
       {
         "path": "src/libbpf_mojo/buffer.mojo",
-        "sha256": "72928efe54bf863538f86a5fecb330ca06fd1bdb339ea5e3c50d63fd840aba5f"
+        "sha256": "b931cb7a7665d0a698ac451c4003db0750041b48b480cbe3953246557c96a24a"
       },
       {
         "path": "src/libbpf_mojo/error.mojo",
@@ -13499,11 +13518,11 @@
       },
       {
         "path": "tests/native/check_exports.sh",
-        "sha256": "7a32ad7857ffb6d09b8d386182614041ac5a9e74b3ae86e46baae71818216136"
+        "sha256": "adb93ba0f7ef16c7a44187dc556ed8773940ca4f6fda464b44426b93873650fc"
       },
       {
         "path": "tests/native/generic_map_keys.c",
-        "sha256": "3a288772cb77e920edf32af18a9144619145d4c3fa9e4be0d5448627df648161"
+        "sha256": "ed894c7d8727110b5750bbf1d0891724645fca1440b329d36d47b6ce279bc8d0"
       },
       {
         "path": "tests/native/old_consumer_v1.c",
@@ -14765,12 +14784,20 @@
         "option_members": [],
         "refs": [
           {
-            "end_line": 122,
+            "end_line": 141,
             "path": "native/src/generic_ring.c",
-            "sha256": "e6048c6525a4c48187a25f47d950a471a442e4aa348fbd8950b7dd06bbb69ef8",
-            "span_sha256": "e6048c6525a4c48187a25f47d950a471a442e4aa348fbd8950b7dd06bbb69ef8",
+            "sha256": "6da7630a2b3944df9abf4c0d4a57c9ffaf085fd67189b6f54932d636e5a7e5c2",
+            "span_sha256": "6da7630a2b3944df9abf4c0d4a57c9ffaf085fd67189b6f54932d636e5a7e5c2",
             "start_line": 1,
             "symbol": "lmb_buffer_open_v1,lmb_buffer_poll_v1"
+          },
+          {
+            "end_line": 70,
+            "path": "native/src/ring_stage.h",
+            "sha256": "93afa30ae54224e3fa7e3e73f118d271a17b8b278da865d751acdc77ab6c30f5",
+            "span_sha256": "93afa30ae54224e3fa7e3e73f118d271a17b8b278da865d751acdc77ab6c30f5",
+            "start_line": 1,
+            "symbol": "lmb_classify_record,lmb_frame_total,lmb_encode_frame"
           }
         ],
         "restrictions": [
@@ -14795,10 +14822,10 @@
         ],
         "refs": [
           {
-            "end_line": 137,
+            "end_line": 177,
             "path": "src/libbpf_mojo/buffer.mojo",
-            "sha256": "72928efe54bf863538f86a5fecb330ca06fd1bdb339ea5e3c50d63fd840aba5f",
-            "span_sha256": "72928efe54bf863538f86a5fecb330ca06fd1bdb339ea5e3c50d63fd840aba5f",
+            "sha256": "b931cb7a7665d0a698ac451c4003db0750041b48b480cbe3953246557c96a24a",
+            "span_sha256": "b931cb7a7665d0a698ac451c4003db0750041b48b480cbe3953246557c96a24a",
             "start_line": 1,
             "symbol": "buffer"
           }
@@ -55275,11 +55302,11 @@
         "option_members": [],
         "refs": [
           {
-            "end_line": 51,
+            "end_line": 57,
             "path": "native/src/generic_ring.c",
-            "sha256": "e6048c6525a4c48187a25f47d950a471a442e4aa348fbd8950b7dd06bbb69ef8",
+            "sha256": "6da7630a2b3944df9abf4c0d4a57c9ffaf085fd67189b6f54932d636e5a7e5c2",
             "span_sha256": "f2762b62cf731a243aa5b9a0ff5db27a7469250ec48573ca32321d93f5500072",
-            "start_line": 51,
+            "start_line": 57,
             "symbol": "bpf_map__fd"
           },
           {
@@ -55349,10 +55376,10 @@
         ],
         "refs": [
           {
-            "end_line": 137,
+            "end_line": 177,
             "path": "src/libbpf_mojo/buffer.mojo",
-            "sha256": "72928efe54bf863538f86a5fecb330ca06fd1bdb339ea5e3c50d63fd840aba5f",
-            "span_sha256": "72928efe54bf863538f86a5fecb330ca06fd1bdb339ea5e3c50d63fd840aba5f",
+            "sha256": "b931cb7a7665d0a698ac451c4003db0750041b48b480cbe3953246557c96a24a",
+            "span_sha256": "b931cb7a7665d0a698ac451c4003db0750041b48b480cbe3953246557c96a24a",
             "start_line": 1,
             "symbol": "buffer"
           },
@@ -58059,11 +58086,11 @@
         "option_members": [],
         "refs": [
           {
-            "end_line": 49,
+            "end_line": 55,
             "path": "native/src/generic_ring.c",
-            "sha256": "e6048c6525a4c48187a25f47d950a471a442e4aa348fbd8950b7dd06bbb69ef8",
+            "sha256": "6da7630a2b3944df9abf4c0d4a57c9ffaf085fd67189b6f54932d636e5a7e5c2",
             "span_sha256": "83a92678c04000e54f1cff189c7ccf412786df3ad6f5a3d1eebafa4d385e418e",
-            "start_line": 49,
+            "start_line": 55,
             "symbol": "bpf_map__type"
           },
           {
@@ -58134,10 +58161,10 @@
         ],
         "refs": [
           {
-            "end_line": 137,
+            "end_line": 177,
             "path": "src/libbpf_mojo/buffer.mojo",
-            "sha256": "72928efe54bf863538f86a5fecb330ca06fd1bdb339ea5e3c50d63fd840aba5f",
-            "span_sha256": "72928efe54bf863538f86a5fecb330ca06fd1bdb339ea5e3c50d63fd840aba5f",
+            "sha256": "b931cb7a7665d0a698ac451c4003db0750041b48b480cbe3953246557c96a24a",
+            "span_sha256": "b931cb7a7665d0a698ac451c4003db0750041b48b480cbe3953246557c96a24a",
             "start_line": 1,
             "symbol": "buffer"
           },
@@ -59103,11 +59130,11 @@
         ],
         "negative_refs": [
           {
-            "end_line": 164,
+            "end_line": 169,
             "path": "tests/native/generic_map_keys.c",
-            "sha256": "3a288772cb77e920edf32af18a9144619145d4c3fa9e4be0d5448627df648161",
+            "sha256": "ed894c7d8727110b5750bbf1d0891724645fca1440b329d36d47b6ce279bc8d0",
             "span_sha256": "0733c344bac9b01636f8d57b2ddcc5268795cfb35d71791d1b070d34b3a1bbd0",
-            "start_line": 161,
+            "start_line": 166,
             "symbol": "test_delete_missing_is_error"
           },
           {
@@ -59123,7 +59150,7 @@
           {
             "end_line": 76,
             "path": "tests/native/generic_map_keys.c",
-            "sha256": "3a288772cb77e920edf32af18a9144619145d4c3fa9e4be0d5448627df648161",
+            "sha256": "ed894c7d8727110b5750bbf1d0891724645fca1440b329d36d47b6ce279bc8d0",
             "span_sha256": "fe7c958ec5b7734693035d07e0ca10e7836358ce956e603cb2efe616e299a87c",
             "start_line": 72,
             "symbol": "test_delete_exact_flags_and_signed_error"
@@ -59699,11 +59726,11 @@
         ],
         "negative_refs": [
           {
-            "end_line": 168,
+            "end_line": 173,
             "path": "tests/native/generic_map_keys.c",
-            "sha256": "3a288772cb77e920edf32af18a9144619145d4c3fa9e4be0d5448627df648161",
+            "sha256": "ed894c7d8727110b5750bbf1d0891724645fca1440b329d36d47b6ce279bc8d0",
             "span_sha256": "3ffdf86cf6a3f02f64c4f93f8ef136397419d16ea1873ebb99beaabb454b5fc5",
-            "start_line": 165,
+            "start_line": 170,
             "symbol": "test_error_does_not_copy_dirty_scratch"
           },
           {
@@ -59719,7 +59746,7 @@
           {
             "end_line": 67,
             "path": "tests/native/generic_map_keys.c",
-            "sha256": "3a288772cb77e920edf32af18a9144619145d4c3fa9e4be0d5448627df648161",
+            "sha256": "ed894c7d8727110b5750bbf1d0891724645fca1440b329d36d47b6ce279bc8d0",
             "span_sha256": "329c9a1061d8e8dcef7f75c42ff9841a6d2af316d1e1fbac6fb00fbbd51c79ad",
             "start_line": 61,
             "symbol": "test_null_first_and_exact_current"
@@ -61757,11 +61784,11 @@
         "option_members": [],
         "refs": [
           {
-            "end_line": 47,
+            "end_line": 53,
             "path": "native/src/generic_ring.c",
-            "sha256": "e6048c6525a4c48187a25f47d950a471a442e4aa348fbd8950b7dd06bbb69ef8",
+            "sha256": "6da7630a2b3944df9abf4c0d4a57c9ffaf085fd67189b6f54932d636e5a7e5c2",
             "span_sha256": "2023b16c9a48d22c1e776be3c721deb44f751b4cde8aa1bf6cea5c954effa170",
-            "start_line": 47,
+            "start_line": 53,
             "symbol": "bpf_object__find_map_by_name"
           },
           {
@@ -61825,10 +61852,10 @@
         ],
         "refs": [
           {
-            "end_line": 137,
+            "end_line": 177,
             "path": "src/libbpf_mojo/buffer.mojo",
-            "sha256": "72928efe54bf863538f86a5fecb330ca06fd1bdb339ea5e3c50d63fd840aba5f",
-            "span_sha256": "72928efe54bf863538f86a5fecb330ca06fd1bdb339ea5e3c50d63fd840aba5f",
+            "sha256": "b931cb7a7665d0a698ac451c4003db0750041b48b480cbe3953246557c96a24a",
+            "span_sha256": "b931cb7a7665d0a698ac451c4003db0750041b48b480cbe3953246557c96a24a",
             "start_line": 1,
             "symbol": "buffer"
           },
@@ -82726,11 +82753,11 @@
             "symbol": "libbpf_get_error"
           },
           {
-            "end_line": 59,
+            "end_line": 65,
             "path": "native/src/generic_ring.c",
-            "sha256": "e6048c6525a4c48187a25f47d950a471a442e4aa348fbd8950b7dd06bbb69ef8",
+            "sha256": "6da7630a2b3944df9abf4c0d4a57c9ffaf085fd67189b6f54932d636e5a7e5c2",
             "span_sha256": "bdb3dafc50ac6cb75b9074a28a6bd2cd8c915111e8005d743f4a5949338511ef",
-            "start_line": 59,
+            "start_line": 65,
             "symbol": "libbpf_get_error"
           },
           {
@@ -82783,10 +82810,10 @@
         ],
         "refs": [
           {
-            "end_line": 137,
+            "end_line": 177,
             "path": "src/libbpf_mojo/buffer.mojo",
-            "sha256": "72928efe54bf863538f86a5fecb330ca06fd1bdb339ea5e3c50d63fd840aba5f",
-            "span_sha256": "72928efe54bf863538f86a5fecb330ca06fd1bdb339ea5e3c50d63fd840aba5f",
+            "sha256": "b931cb7a7665d0a698ac451c4003db0750041b48b480cbe3953246557c96a24a",
+            "span_sha256": "b931cb7a7665d0a698ac451c4003db0750041b48b480cbe3953246557c96a24a",
             "start_line": 1,
             "symbol": "buffer"
           },
@@ -85716,19 +85743,19 @@
         "option_members": [],
         "refs": [
           {
-            "end_line": 95,
+            "end_line": 101,
             "path": "native/src/generic_ring.c",
-            "sha256": "e6048c6525a4c48187a25f47d950a471a442e4aa348fbd8950b7dd06bbb69ef8",
+            "sha256": "6da7630a2b3944df9abf4c0d4a57c9ffaf085fd67189b6f54932d636e5a7e5c2",
             "span_sha256": "0999dcd6c72dc34c74885e02e9abe63876cbe817be6a13eb60680cf339b1e075",
-            "start_line": 95,
+            "start_line": 101,
             "symbol": "ring_buffer__consume_n"
           },
           {
-            "end_line": 58,
+            "end_line": 52,
             "path": "native/src/ring.c",
-            "sha256": "6924b9e122a49f62328089b15c0db2d8ececf4dbbfb1fe70273cbe914c83d9dd",
+            "sha256": "09e79e3c9aec987dbd32b0d79ee5587829ea8c827eed9ef35f5f6f8dfb0580a3",
             "span_sha256": "7c566691dd7ac14096eb67c14e1204b5744b3d17e89263ed2d36ed4b7100c241",
-            "start_line": 58,
+            "start_line": 52,
             "symbol": "ring_buffer__consume_n"
           }
         ],
@@ -85754,10 +85781,10 @@
         ],
         "refs": [
           {
-            "end_line": 137,
+            "end_line": 177,
             "path": "src/libbpf_mojo/buffer.mojo",
-            "sha256": "72928efe54bf863538f86a5fecb330ca06fd1bdb339ea5e3c50d63fd840aba5f",
-            "span_sha256": "72928efe54bf863538f86a5fecb330ca06fd1bdb339ea5e3c50d63fd840aba5f",
+            "sha256": "b931cb7a7665d0a698ac451c4003db0750041b48b480cbe3953246557c96a24a",
+            "span_sha256": "b931cb7a7665d0a698ac451c4003db0750041b48b480cbe3953246557c96a24a",
             "start_line": 1,
             "symbol": "buffer"
           },
@@ -85835,19 +85862,19 @@
         "option_members": [],
         "refs": [
           {
-            "end_line": 83,
+            "end_line": 89,
             "path": "native/src/generic_ring.c",
-            "sha256": "e6048c6525a4c48187a25f47d950a471a442e4aa348fbd8950b7dd06bbb69ef8",
+            "sha256": "6da7630a2b3944df9abf4c0d4a57c9ffaf085fd67189b6f54932d636e5a7e5c2",
             "span_sha256": "5a0c650f5f7c47681e1b644e9ec7c57d5585b37d315724de94abf03479f303e4",
-            "start_line": 83,
+            "start_line": 89,
             "symbol": "ring_buffer__epoll_fd"
           },
           {
-            "end_line": 99,
+            "end_line": 93,
             "path": "native/src/ring.c",
-            "sha256": "6924b9e122a49f62328089b15c0db2d8ececf4dbbfb1fe70273cbe914c83d9dd",
+            "sha256": "09e79e3c9aec987dbd32b0d79ee5587829ea8c827eed9ef35f5f6f8dfb0580a3",
             "span_sha256": "0946c2cd4a6dbb2460aabf4c8b76cbbd78156a9495f365c3d2056290e0f166ac",
-            "start_line": 99,
+            "start_line": 93,
             "symbol": "ring_buffer__epoll_fd"
           }
         ],
@@ -85873,10 +85900,10 @@
         ],
         "refs": [
           {
-            "end_line": 137,
+            "end_line": 177,
             "path": "src/libbpf_mojo/buffer.mojo",
-            "sha256": "72928efe54bf863538f86a5fecb330ca06fd1bdb339ea5e3c50d63fd840aba5f",
-            "span_sha256": "72928efe54bf863538f86a5fecb330ca06fd1bdb339ea5e3c50d63fd840aba5f",
+            "sha256": "b931cb7a7665d0a698ac451c4003db0750041b48b480cbe3953246557c96a24a",
+            "span_sha256": "b931cb7a7665d0a698ac451c4003db0750041b48b480cbe3953246557c96a24a",
             "start_line": 1,
             "symbol": "buffer"
           },
@@ -85954,11 +85981,11 @@
         "option_members": [],
         "refs": [
           {
-            "end_line": 119,
+            "end_line": 123,
             "path": "native/src/generic_ring.c",
-            "sha256": "e6048c6525a4c48187a25f47d950a471a442e4aa348fbd8950b7dd06bbb69ef8",
+            "sha256": "6da7630a2b3944df9abf4c0d4a57c9ffaf085fd67189b6f54932d636e5a7e5c2",
             "span_sha256": "3fba05513c82b15ac4230508f7e04478a667d01ea5a032ef13d3ab858cc49f3a",
-            "start_line": 119,
+            "start_line": 123,
             "symbol": "ring_buffer__free"
           },
           {
@@ -85992,10 +86019,10 @@
         ],
         "refs": [
           {
-            "end_line": 137,
+            "end_line": 177,
             "path": "src/libbpf_mojo/buffer.mojo",
-            "sha256": "72928efe54bf863538f86a5fecb330ca06fd1bdb339ea5e3c50d63fd840aba5f",
-            "span_sha256": "72928efe54bf863538f86a5fecb330ca06fd1bdb339ea5e3c50d63fd840aba5f",
+            "sha256": "b931cb7a7665d0a698ac451c4003db0750041b48b480cbe3953246557c96a24a",
+            "span_sha256": "b931cb7a7665d0a698ac451c4003db0750041b48b480cbe3953246557c96a24a",
             "start_line": 1,
             "symbol": "buffer"
           },
@@ -86091,11 +86118,11 @@
         ],
         "refs": [
           {
-            "end_line": 58,
+            "end_line": 64,
             "path": "native/src/generic_ring.c",
-            "sha256": "e6048c6525a4c48187a25f47d950a471a442e4aa348fbd8950b7dd06bbb69ef8",
+            "sha256": "6da7630a2b3944df9abf4c0d4a57c9ffaf085fd67189b6f54932d636e5a7e5c2",
             "span_sha256": "4fd238a9de3c78628df18ef05eda4a6eb529dcf8ff34701576b5b1ba84d6a547",
-            "start_line": 58,
+            "start_line": 64,
             "symbol": "ring_buffer__new"
           },
           {
@@ -86129,10 +86156,10 @@
         ],
         "refs": [
           {
-            "end_line": 137,
+            "end_line": 177,
             "path": "src/libbpf_mojo/buffer.mojo",
-            "sha256": "72928efe54bf863538f86a5fecb330ca06fd1bdb339ea5e3c50d63fd840aba5f",
-            "span_sha256": "72928efe54bf863538f86a5fecb330ca06fd1bdb339ea5e3c50d63fd840aba5f",
+            "sha256": "b931cb7a7665d0a698ac451c4003db0750041b48b480cbe3953246557c96a24a",
+            "span_sha256": "b931cb7a7665d0a698ac451c4003db0750041b48b480cbe3953246557c96a24a",
             "start_line": 1,
             "symbol": "buffer"
           },

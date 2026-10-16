@@ -9,12 +9,12 @@ old = 'open load attach poll map_info map_read map_write stats last_error detach
 generic = ('object_open object_configure_program object_load object_program_info '
            'object_map_info object_close object_release generic_last_error '
            'object_map_lookup object_map_update program_test_run '
-           'object_attach link_close buffer_open buffer_poll buffer_close '
+           'object_attach link_close buffer_open buffer_poll buffer_close buffer_stats '
            'object_ref object_unref object_gen object_gen_check').split()
-missing = {'testfake': [], 'no_events': ['object_attach','link_close','buffer_open','buffer_poll','buffer_close'],
+missing = {'testfake': [], 'no_events': ['object_attach','link_close','buffer_open','buffer_poll','buffer_close','buffer_stats'],
            'no_attach': ['object_attach'], 'no_link_close': ['link_close'],
            'no_buffer_open': ['buffer_open'], 'no_buffer_poll': ['buffer_poll'],
-           'no_buffer_close': ['buffer_close']}
+           'no_buffer_close': ['buffer_close'], 'no_buffer_stats': ['buffer_stats']}
 if sys.argv[2] not in missing:
     sys.exit('invalid variant')
 generic = [name for name in generic if name not in missing[sys.argv[2]]]

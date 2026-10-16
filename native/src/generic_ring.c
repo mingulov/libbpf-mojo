@@ -6,6 +6,10 @@
 #include <bpf/libbpf.h>
 #include "generic_internal.h"
 #include "internal.h"
+#include "ring_stage.h"
+
+_Static_assert(LMB_GENERIC_FRAME_HEADER_SIZE == LMB_STAGE_HEADER_SIZE,
+        "buffer framing shares the staged header size");
 
 static int32_t fail(uint32_t op, uint32_t domain, int32_t code, const char *text) {
     lmb_generic_record(op, domain, code, text); return code;
@@ -18,9 +22,11 @@ static int ring_name_valid(struct lmb_span_v1 span) {
 static int sample(void *ctx, void *data, size_t size) {
     struct lmb_buffer *buffer = ctx;
     buffer->received++;
-    if (!size || size > buffer->max_raw_bytes) buffer->malformed++;
-    else if (buffer->stage_len) buffer->dropped++;
-    else { memcpy(buffer->stage, data, size); buffer->stage_len = (uint32_t)size; }
+    switch (lmb_classify_record(size, buffer->max_raw_bytes, buffer->stage_len)) {
+    case LMB_STAGE_MALFORMED: buffer->malformed++; break;
+    case LMB_STAGE_DROPPED: buffer->dropped++; break;
+    default: memcpy(buffer->stage, data, size); buffer->stage_len = (uint32_t)size; break;
+    }
     /* A negative callback would still consume this borrowed record. */
     return 0;
 }
@@ -98,14 +104,12 @@ int32_t lmb_buffer_poll_v1(struct lmb_buffer *buffer, uint8_t *dst,
         }
     }
     if (!buffer->stage_len) { lmb_generic_clear(); return 0; }
-    uint32_t frame = LMB_GENERIC_FRAME_HEADER_SIZE + buffer->stage_len;
+    uint32_t frame = lmb_frame_total(buffer->stage_len);
     if (capacity < frame) {
         *needed = frame;
         return fail(op, LMB_GENERIC_DOMAIN_BRIDGE, -ENOSPC, "destination too short; record retained");
     }
-    for (unsigned i = 0; i < 4; i++) dst[i] = (uint8_t)(buffer->stage_len >> (8 * i));
-    dst[4] = LMB_GENERIC_FRAME_VERSION; dst[5] = 0; dst[6] = 0; dst[7] = 0;
-    memcpy(dst + LMB_GENERIC_FRAME_HEADER_SIZE, buffer->stage, buffer->stage_len);
+    lmb_encode_frame(dst, buffer->stage, buffer->stage_len, LMB_GENERIC_FRAME_VERSION);
     buffer->stage_len = 0; buffer->delivered++; *used = frame;
     lmb_generic_clear(); return 0;
 }
@@ -118,5 +122,20 @@ int32_t lmb_buffer_close_v1(struct lmb_buffer **cell) {
         struct lmb_buffer *buffer = *cell; struct lmb_object *parent = buffer->parent;
         ring_buffer__free(buffer->rb); *cell = NULL; free(buffer); lmb_object_unref_v1(parent);
     }
+    lmb_generic_clear(); return 0;
+}
+
+int32_t lmb_buffer_stats_v1(struct lmb_buffer *buffer,
+        struct lmb_buffer_stats_v1 *out) {
+    const uint32_t op = LMB_GENERIC_OP_BUFFER_STATS;
+    if (!out || !lmb_check_header(out->abi_version, out->struct_size, sizeof(*out)))
+        return fail(op, LMB_GENERIC_DOMAIN_BRIDGE, -EINVAL, "invalid stats output header");
+    if (!buffer || !buffer->rb)
+        return fail(op, LMB_GENERIC_DOMAIN_BRIDGE, -EINVAL, "buffer is not open");
+    out->received = buffer->received;
+    out->delivered = buffer->delivered;
+    out->staged = buffer->stage_len ? 1 : 0;
+    out->malformed = buffer->malformed;
+    out->dropped = buffer->dropped;
     lmb_generic_clear(); return 0;
 }

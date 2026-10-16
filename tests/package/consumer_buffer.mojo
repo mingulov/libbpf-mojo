@@ -50,6 +50,13 @@ def harness(elf: Span[UInt8, _]) raises:
     var empty = buffer.poll(zone)
     if not empty.is_empty() or empty.used != 0 or empty.needed != 0:
         exit(1)
+    var counters = buffer.stats()
+    if counters.received != 1 or counters.delivered != 1 or counters.staged != 0:
+        exit(1)
+    if counters.malformed != 0 or counters.dropped != 0:
+        exit(1)
+    if counters.received != counters.delivered + counters.staged + counters.malformed + counters.dropped:
+        exit(1)
     if held.error.operation != 13 or held.error.domain != 4 or held.error.code != -28:
         exit(1)
     if count(UInt32(12)) != 1 or count(UInt32(13)) != 1 or count(UInt32(14)) != 0:
@@ -58,6 +65,15 @@ def harness(elf: Span[UInt8, _]) raises:
     buffer.close()
     var closed = buffer.poll(zone)
     if not closed.is_error() or closed.error.operation != 13 or closed.error.code != -22:
+        exit(1)
+    var stats_refused = False
+    try:
+        _ = buffer.stats()
+    except e:
+        if e.operation != 20 or e.domain != 4 or e.code != -22:
+            exit(1)
+        stats_refused = True
+    if not stats_refused:
         exit(1)
     if count(UInt32(7)) != 0 or count(UInt32(8)) != 1 or count(UInt32(11)) != 1:
         exit(1)

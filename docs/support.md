@@ -159,6 +159,15 @@ behavior. Successful kernel map deletion/traversal, target applicability,
 concurrency and installed kernel execution remain unqualified. Coverage source
 mappings stay partial and conservative evidence cells remain NOT_RUN.
 
+An optional per-buffer stats snapshot appends one operation to the generic
+ABI. Guarded native scripts check output validation, zero snapshots, staged
+reads, read-only repeats, exact 5/2/0/2/1 conservation, success-cleared
+diagnostics, BUSY/release teardown and stable owned FD counts. Typed Mojo
+tests cover the snapshot, conservation, closed-buffer refusal and the
+optional symbol (creation without it keeps working). Installed consumers
+establish the snapshot over the actual pinned reader. The snapshot carries
+no latched error; per-call diagnosis stays in the generic record.
+
 ## Out of scope
 
 A general binding generator, dynamic plugins, automatic

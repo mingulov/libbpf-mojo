@@ -340,7 +340,7 @@ set_tests_properties(generic_testrun PROPERTIES
 
 # Finite host seams retain the actual pinned ring reader and callback.
 # Attachment is a forwarding/ownership seam, never a kernel attach claim.
-foreach(events_test generic_attach generic_ring)
+foreach(events_test generic_attach generic_ring ring_conformance)
   add_executable(test_${events_test}
     ${LMB_ROOT}/tests/native/${events_test}.c
     ${LMB_ROOT}/tests/support/generic_events_host.c
@@ -360,6 +360,8 @@ add_test(NAME generic_attach COMMAND test_generic_attach
   ${CMAKE_BINARY_DIR}/fixtures/generic_events.bpf.o
   ${CMAKE_BINARY_DIR}/fixtures/generic_tracing.bpf.o)
 add_test(NAME generic_ring COMMAND test_generic_ring
+  ${CMAKE_BINARY_DIR}/fixtures/generic_events.bpf.o)
+add_test(NAME ring_conformance COMMAND test_ring_conformance
   ${CMAKE_BINARY_DIR}/fixtures/generic_events.bpf.o)
 
 # Generic ABI contract probe: dlsym-based acceptance battery for
@@ -486,10 +488,10 @@ target_compile_definitions(lmb_events_test_objects PRIVATE
 target_include_directories(lmb_events_test_objects PRIVATE include ${LIBBPF_ROOT}/include)
 add_dependencies(lmb_events_test_objects libbpf_external)
 file(READ ${LMB_ROOT}/tests/support/lmb_events_testfake.map events_base_map)
-foreach(variant testfake no_events no_attach no_link_close no_buffer_open no_buffer_poll no_buffer_close)
+foreach(variant testfake no_events no_attach no_link_close no_buffer_open no_buffer_poll no_buffer_close no_buffer_stats)
   set(events_map "${events_base_map}")
   if(variant STREQUAL no_events)
-    foreach(symbol lmb_object_attach_v1 lmb_link_close_v1 lmb_buffer_open_v1 lmb_buffer_poll_v1 lmb_buffer_close_v1)
+    foreach(symbol lmb_object_attach_v1 lmb_link_close_v1 lmb_buffer_open_v1 lmb_buffer_poll_v1 lmb_buffer_close_v1 lmb_buffer_stats_v1)
       string(REPLACE "${symbol};" "" events_map "${events_map}")
     endforeach()
   elseif(NOT variant STREQUAL testfake)
@@ -563,6 +565,8 @@ lmb_guarded_host_test(generic_attach test_generic_attach
   ${CMAKE_BINARY_DIR}/fixtures/generic_events.bpf.o
   ${CMAKE_BINARY_DIR}/fixtures/generic_tracing.bpf.o)
 lmb_guarded_host_test(generic_ring test_generic_ring
+  ${CMAKE_BINARY_DIR}/fixtures/generic_events.bpf.o)
+lmb_guarded_host_test(ring_conformance test_ring_conformance
   ${CMAKE_BINARY_DIR}/fixtures/generic_events.bpf.o)
 
 # Partial ABI stub for the incompatible-library test: every

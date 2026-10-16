@@ -79,7 +79,8 @@ enum lmb_generic_op_v1 {
     LMB_GENERIC_OP_VIEW_GEN = 16,
     LMB_GENERIC_OP_VIEW_CHECK = 17,
     LMB_GENERIC_OP_MAP_DELETE = 18,
-    LMB_GENERIC_OP_MAP_NEXT_KEY = 19
+    LMB_GENERIC_OP_MAP_NEXT_KEY = 19,
+    LMB_GENERIC_OP_BUFFER_STATS = 20
 };
 
 enum lmb_generic_domain_v1 {
@@ -194,6 +195,20 @@ struct lmb_buffer_options_v1 {
     uint32_t _reserved;
 };
 
+/* Per-buffer transport snapshot. Counter meanings match the
+ * buffer_poll conservation identity; unlike the v1 session
+ * snapshot this record carries no latched native error, since
+ * per-call diagnosis comes from the generic error record. */
+struct lmb_buffer_stats_v1 {
+    uint32_t abi_version;
+    uint32_t struct_size;
+    uint64_t received;
+    uint64_t delivered;
+    uint64_t staged;
+    uint64_t malformed;
+    uint64_t dropped;
+};
+
 struct lmb_object;
 struct lmb_link;
 struct lmb_buffer;
@@ -245,6 +260,8 @@ int32_t lmb_buffer_poll_v1(struct lmb_buffer *buffer, uint8_t *dst,
                            uint64_t capacity, int32_t timeout_ms,
                            uint64_t *used, uint64_t *needed);
 int32_t lmb_buffer_close_v1(struct lmb_buffer **buffer);
+int32_t lmb_buffer_stats_v1(struct lmb_buffer *buffer,
+                            struct lmb_buffer_stats_v1 *out);
 
 /* Retained owner-bound views: each view holds one native object
  * reference (counted like a child for BUSY/last-release) plus the
@@ -391,5 +408,18 @@ _Static_assert(offsetof(struct lmb_buffer_options_v1, _reserved) == 36,
                "bopts.reserved");
 _Static_assert(sizeof(struct lmb_buffer_options_v1) == 40, "bopts.size");
 _Static_assert(_Alignof(struct lmb_buffer_options_v1) == 8, "bopts.align");
+
+_Static_assert(offsetof(struct lmb_buffer_stats_v1, received) == 8,
+               "bstats.received");
+_Static_assert(offsetof(struct lmb_buffer_stats_v1, delivered) == 16,
+               "bstats.delivered");
+_Static_assert(offsetof(struct lmb_buffer_stats_v1, staged) == 24,
+               "bstats.staged");
+_Static_assert(offsetof(struct lmb_buffer_stats_v1, malformed) == 32,
+               "bstats.malformed");
+_Static_assert(offsetof(struct lmb_buffer_stats_v1, dropped) == 40,
+               "bstats.dropped");
+_Static_assert(sizeof(struct lmb_buffer_stats_v1) == 48, "bstats.size");
+_Static_assert(_Alignof(struct lmb_buffer_stats_v1) == 8, "bstats.align");
 
 #endif /* LIBBPF_MOJO_GENERIC_H */

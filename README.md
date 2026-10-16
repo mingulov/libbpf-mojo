@@ -39,7 +39,8 @@ short-buffer retries and exact record conservation. Attachment tests prove
 forwarding and ownership through a test seam. Successful kernel attachment
 and event production still require live qualification. Move-only `Link` and
 `Buffer` owners are available through `libbpf_mojo.link` and
-`libbpf_mojo.buffer`, with optional-symbol preflight and copied poll results.
+`libbpf_mojo.buffer`, with optional-symbol preflight, copied poll results,
+and per-buffer stats snapshots.
 See [links and ring consumers](docs/links-and-ring.md) for their signatures,
 retention and installed-consumer boundaries.
 

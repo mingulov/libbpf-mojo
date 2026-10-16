@@ -246,6 +246,87 @@ static void waits(struct lmb_buffer *ring) {
     ge_epoll_fd_fault(0); ge_sentinel(bytes, sizeof(bytes), 0xa5);
     puts("ring waits: empty timeout, exact ready path, EINTR without retry, POSIX and signed LIBBPF errors checked");
 }
+static void stats_snapshot(const char *fixture) {
+    struct lmb_object *object = ge_object(fixture, 1);
+    struct lmb_buffer_options_v1 opts = ge_buffer_options();
+    struct lmb_buffer *ring = NULL;
+    struct lmb_buffer_stats_v1 snapshot, again, before;
+    uint8_t payload[16], large[4097], bytes[24];
+    uint64_t used, needed;
+    memset(&snapshot, 0, sizeof(snapshot));
+    snapshot.abi_version = 1;
+    snapshot.struct_size = sizeof(snapshot);
+    CHECK(lmb_buffer_stats_v1(NULL, &snapshot) == -EINVAL);
+    ge_diagnostic(20, 4, -EINVAL);
+    CHECK(lmb_buffer_open_v1(object, &opts, &ring) == 0 && ring);
+    CHECK(lmb_buffer_stats_v1(ring, NULL) == -EINVAL);
+    ge_diagnostic(20, 4, -EINVAL);
+    for (unsigned i = 0; i < 4; i++) {
+        memset(&snapshot, 0x5a, sizeof(snapshot));
+        snapshot.abi_version = 1;
+        snapshot.struct_size = sizeof(snapshot);
+        switch (i) {
+        case 0: snapshot.abi_version = 0; break;
+        case 1: snapshot.abi_version = 2; break;
+        case 2: snapshot.struct_size = sizeof(snapshot) - 1; break;
+        default: snapshot.struct_size = sizeof(snapshot) + 1; break;
+        }
+        memcpy(&before, &snapshot, sizeof(before));
+        CHECK(lmb_buffer_stats_v1(ring, &snapshot) == -EINVAL);
+        ge_diagnostic(20, 4, -EINVAL);
+        CHECK(!memcmp(&snapshot, &before, sizeof(snapshot)));
+    }
+    CHECK(sizeof(snapshot) == 48);
+    memset(&snapshot, 0, sizeof(snapshot));
+    snapshot.abi_version = 1;
+    snapshot.struct_size = sizeof(snapshot);
+    CHECK(lmb_buffer_stats_v1(ring, &snapshot) == 0);
+    CHECK(!snapshot.received && !snapshot.delivered && !snapshot.staged);
+    CHECK(!snapshot.malformed && !snapshot.dropped);
+    CHECK(snapshot.abi_version == 1 && snapshot.struct_size == sizeof(snapshot));
+    ge_diagnostic(0, 0, 0);
+    ge_payload(payload, 81);
+    ge_publish(payload, 16, 0);
+    CHECK(lmb_buffer_poll_v1(ring, bytes, 23, 0, &used, &needed) == -ENOSPC);
+    ge_diagnostic(13, 4, -ENOSPC);
+    CHECK(lmb_buffer_stats_v1(ring, &snapshot) == 0 && snapshot.staged == 1);
+    ge_diagnostic(0, 0, 0);
+    memset(&again, 0, sizeof(again));
+    again.abi_version = 1;
+    again.struct_size = sizeof(again);
+    CHECK(lmb_buffer_stats_v1(ring, &again) == 0);
+    CHECK(!memcmp(&snapshot, &again, sizeof(snapshot)));
+    ge_payload(payload, 82);
+    ge_publish(payload, 16, 0);
+    CHECK(ring_buffer__consume_n(ring->rb, 1) == 1);
+    CHECK(lmb_buffer_poll_v1(ring, bytes, 24, 0, &used, &needed) == 0);
+    ge_frame(bytes, 81);
+    ge_publish(NULL, 0, 0);
+    memset(large, 0x6d, sizeof(large));
+    ge_publish(large, 4097, 0);
+    ge_payload(payload, 83);
+    ge_publish(payload, 16, 0);
+    CHECK(lmb_buffer_poll_v1(ring, bytes, 24, 0, &used, &needed) == 0);
+    ge_frame(bytes, 83);
+    CHECK(lmb_buffer_stats_v1(ring, &snapshot) == 0);
+    CHECK(snapshot.received == 5 && snapshot.delivered == 2 && !snapshot.staged);
+    CHECK(snapshot.malformed == 2 && snapshot.dropped == 1);
+    CHECK(snapshot.received == snapshot.delivered + snapshot.staged +
+        snapshot.malformed + snapshot.dropped);
+    CHECK(lmb_object_close_v1(&object) == -EBUSY && object);
+    CHECK(lmb_buffer_stats_v1(ring, &snapshot) == 0 && snapshot.received == 5);
+    lmb_object_release_v1(&object);
+    CHECK(!object);
+    CHECK(lmb_buffer_stats_v1(ring, &snapshot) == 0 && snapshot.received == 5);
+    ge_payload(payload, 84);
+    ge_publish(payload, 16, 0);
+    CHECK(lmb_buffer_poll_v1(ring, bytes, 24, 0, &used, &needed) == 0);
+    ge_frame(bytes, 84);
+    CHECK(lmb_buffer_stats_v1(ring, &snapshot) == 0);
+    CHECK(snapshot.received == 6 && snapshot.delivered == 3);
+    CHECK(lmb_buffer_close_v1(&ring) == 0 && !ring);
+    puts("ring stats: validation, zeros, staged snapshot, read-only, 5/2/0/2/1, BUSY/release teardown checked");
+}
 static int negative_callback(void *ctx, void *data, size_t size) {
     unsigned *count = ctx; (*count)++; CHECK(size == 16 && data != NULL); return -ENOSPC;
 }
@@ -308,6 +389,7 @@ int main(int argc, char **argv) {
     struct lmb_object *object = ge_object(argv[1], 1); struct lmb_buffer *ring = open_ring(object);
     framing(ring); waits(ring);
     CHECK(lmb_buffer_close_v1(&ring) == 0); CHECK(lmb_object_close_v1(&object) == 0);
+    stats_snapshot(argv[1]);
     negative_consumed(0); sequence(argv[1], 0); sequence(argv[1], 1);
     int result = ge_end("generic ring"); int stable = ge_fd_count() == fds; CHECK(stable);
     return result || !stable;

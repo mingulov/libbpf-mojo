@@ -170,7 +170,7 @@ run_mojo() {
     export LMB_GENERIC_TESTFAKE_LIB="$generic_fake"
     export LMB_GENERIC_OBJECTONLY_LIB="$generic_older"
     export LMB_GENERIC_EVENTS_FIXTURE="$ROOT/$BUILD_DIR/fixtures/generic_events.bpf.o"
-    for variant in testfake no_events no_attach no_link_close no_buffer_open no_buffer_poll no_buffer_close; do
+    for variant in testfake no_events no_attach no_link_close no_buffer_open no_buffer_poll no_buffer_close no_buffer_stats; do
         path="$ROOT/$BUILD_DIR/liblmb_events_$variant.so"
         if [ ! -f "$path" ]; then
             echo "test: missing $path; run tools/build first" >&2

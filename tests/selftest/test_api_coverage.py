@@ -20,11 +20,11 @@ SNAPSHOT_PATH = 'tests/fixtures/api_inventory/libbpf-1.7.0.json'
 SCHEMA_PATH = 'schemas/api-coverage.schema.json'
 ARCHIVE_SHA256 = '7ab5feffbf78557f626f2e3e3204788528394494715a30fc2070fcddc2051b7b'
 # FROZEN_SEALS_BEGIN
-BRIDGE_SHA256 = '3cbf0e66457034113c35719b00e9cd9b30c2f417b556487f82c6ac34b3287c44'
+BRIDGE_SHA256 = 'c86e16b92a66506f909cba2fa9dce7a8cbaa616e6b84e5260ec191aadd076900'
 COMPATIBILITY_SHA256 = '4795ff395604a09d0da1e18e23aa3998c11b9e4385e9c1026022682405297489'
 SCHEMA_SHA256 = '8693258b32690175fbde13fb7f3d332cac95fc62dd2d7039880cbc922435cbd2'
 SNAPSHOT_SHA256 = '0b9a37cda49679d94bb9161393afa38bf14f9cd55b71415e849740fad00e1c88'
-SOURCE_MANIFEST_SHA256 = 'b02833e68da0612dbd133541d7f45a1632d5ef85958f00c87b80b64134d677c8'
+SOURCE_MANIFEST_SHA256 = '70b39ca4c5dc893feca6a5cb0bb59da84c9d6fc57f221b2385fa0aef742b7820'
 ENTITY_SEALS = {'alias:DECLARE_LIBBPF_OPTS': 'c8bf2c81ac0af57058fad9bbe6af2b1bae35be12d2d897fe75d5fb098edc1950',
  'alias:bpf_map__for_each': '45b6b77a32445fb046e208c6d28c9e1af7a44fccca5a74bd6f147eb59d303fc2',
  'callback:btf_dump_printf_fn_t': '5a7685c15fba7f77d190f40cb1ee8d50c837db6f45726a4628e6ad71794d56e2',
@@ -1824,6 +1824,7 @@ IMPLEMENTATION_SOURCES = ['README.md',
  'native/src/object_maps.c',
  'native/src/program_test.c',
  'native/src/ring.c',
+ 'native/src/ring_stage.h',
  'native/src/session.c',
  'src/libbpf_mojo/__init__.mojo',
  'src/libbpf_mojo/_ffi.mojo',
@@ -1858,7 +1859,7 @@ ROW_MAPPING_SEALS = {'alias:DECLARE_LIBBPF_OPTS': 'd25be71658015a1e729d1988bf3b4
  'callback:perf_buffer_event_fn': '3bc3a0c0623aa4e810ad32110d645220625159f6b41506d1d75af71aef3960b4',
  'callback:perf_buffer_lost_fn': '3bc3a0c0623aa4e810ad32110d645220625159f6b41506d1d75af71aef3960b4',
  'callback:perf_buffer_sample_fn': '3bc3a0c0623aa4e810ad32110d645220625159f6b41506d1d75af71aef3960b4',
- 'callback:ring_buffer_sample_fn': '41a2fb5b31b08d8b448041ee6b254385ea8564aadcf090c5a75036ab6b1a2ddb',
+ 'callback:ring_buffer_sample_fn': '19560e01c2443dce77324000f11a897a1c3d7a666f85b0c01223f45932f1cd95',
  'enum:bpf_attach_type': 'd25be71658015a1e729d1988bf3b4dad1037739378715ab5cfdff65e16fcab14',
  'enum:bpf_cgroup_iter_order': 'd25be71658015a1e729d1988bf3b4dad1037739378715ab5cfdff65e16fcab14',
  'enum:bpf_func_id': 'd25be71658015a1e729d1988bf3b4dad1037739378715ab5cfdff65e16fcab14',
@@ -2357,7 +2358,7 @@ ROW_MAPPING_SEALS = {'alias:DECLARE_LIBBPF_OPTS': 'd25be71658015a1e729d1988bf3b4
  'function:bpf_map__btf_value_type_id': '3bc3a0c0623aa4e810ad32110d645220625159f6b41506d1d75af71aef3960b4',
  'function:bpf_map__delete_elem': '3bc3a0c0623aa4e810ad32110d645220625159f6b41506d1d75af71aef3960b4',
  'function:bpf_map__exclusive_program': '3bc3a0c0623aa4e810ad32110d645220625159f6b41506d1d75af71aef3960b4',
- 'function:bpf_map__fd': 'f732771fd918e96e50a7c08f6877f78e319f53d8afadb26142c15c77162d0821',
+ 'function:bpf_map__fd': '8a3b3f29e0e85f0fdbb8813904e48529a54d50661aefa5878756b45323f5bc13',
  'function:bpf_map__get_next_key': '3bc3a0c0623aa4e810ad32110d645220625159f6b41506d1d75af71aef3960b4',
  'function:bpf_map__get_pin_path': '3bc3a0c0623aa4e810ad32110d645220625159f6b41506d1d75af71aef3960b4',
  'function:bpf_map__ifindex': '3bc3a0c0623aa4e810ad32110d645220625159f6b41506d1d75af71aef3960b4',
@@ -2390,7 +2391,7 @@ ROW_MAPPING_SEALS = {'alias:DECLARE_LIBBPF_OPTS': 'd25be71658015a1e729d1988bf3b4
  'function:bpf_map__set_pin_path': 'b4b89f81134efec25b3768bfb7afecfaefffb150710720cb153f471bdc155050',
  'function:bpf_map__set_type': '3bc3a0c0623aa4e810ad32110d645220625159f6b41506d1d75af71aef3960b4',
  'function:bpf_map__set_value_size': '3bc3a0c0623aa4e810ad32110d645220625159f6b41506d1d75af71aef3960b4',
- 'function:bpf_map__type': '8c0f3908992f39c90b1009c591f5407eabde5f26e6da7788e89104213302723a',
+ 'function:bpf_map__type': '90de248ef669c8f8d0d2a7887f9942b80eeff0cead4168ae83e3a1698210057f',
  'function:bpf_map__unpin': '3bc3a0c0623aa4e810ad32110d645220625159f6b41506d1d75af71aef3960b4',
  'function:bpf_map__update_elem': '3bc3a0c0623aa4e810ad32110d645220625159f6b41506d1d75af71aef3960b4',
  'function:bpf_map__value_size': '1a3c986290753b044532e7e5ef92ec92c1a659355185484437f3951961e1ad7a',
@@ -2424,7 +2425,7 @@ ROW_MAPPING_SEALS = {'alias:DECLARE_LIBBPF_OPTS': 'd25be71658015a1e729d1988bf3b4
  'function:bpf_object__destroy_skeleton': '3bc3a0c0623aa4e810ad32110d645220625159f6b41506d1d75af71aef3960b4',
  'function:bpf_object__destroy_subskeleton': '3bc3a0c0623aa4e810ad32110d645220625159f6b41506d1d75af71aef3960b4',
  'function:bpf_object__detach_skeleton': '3bc3a0c0623aa4e810ad32110d645220625159f6b41506d1d75af71aef3960b4',
- 'function:bpf_object__find_map_by_name': 'b92dbc7d3099b1d77c97f46bac5826e9a96d52f8596101fa5b17deca9ec6d28a',
+ 'function:bpf_object__find_map_by_name': '6a4096b16db19615f2439972f400967cd29d11f03b2520006925dbaaceb53cf4',
  'function:bpf_object__find_map_fd_by_name': '3bc3a0c0623aa4e810ad32110d645220625159f6b41506d1d75af71aef3960b4',
  'function:bpf_object__find_program_by_name': '94bf99cead88ebea81d83a402ee98a4ecf800442d514e4d19155d394686aa43e',
  'function:bpf_object__gen_loader': '40f1f376cf763f861f4b324b60b311c3bbcf51d69c669123f1fd3cf718558595',
@@ -2629,7 +2630,7 @@ ROW_MAPPING_SEALS = {'alias:DECLARE_LIBBPF_OPTS': 'd25be71658015a1e729d1988bf3b4
  'function:libbpf_bpf_prog_type_str': '3bc3a0c0623aa4e810ad32110d645220625159f6b41506d1d75af71aef3960b4',
  'function:libbpf_find_kernel_btf': '3bc3a0c0623aa4e810ad32110d645220625159f6b41506d1d75af71aef3960b4',
  'function:libbpf_find_vmlinux_btf_id': '3bc3a0c0623aa4e810ad32110d645220625159f6b41506d1d75af71aef3960b4',
- 'function:libbpf_get_error': '77a77045861fd5b94e603be143630f52d9b123bad39b01312feaaae2df68a928',
+ 'function:libbpf_get_error': '5efe69ec503f23d576ce6dee9813bb45f88a98c15fa452698a4e75b89bc88805',
  'function:libbpf_major_version': '3bc3a0c0623aa4e810ad32110d645220625159f6b41506d1d75af71aef3960b4',
  'function:libbpf_minor_version': '3bc3a0c0623aa4e810ad32110d645220625159f6b41506d1d75af71aef3960b4',
  'function:libbpf_num_possible_cpus': 'b9da0bf7ba6aa4608a2346c152f25f86799a91feecaa9fd5e2f3cf7333942ef6',
@@ -2663,10 +2664,10 @@ ROW_MAPPING_SEALS = {'alias:DECLARE_LIBBPF_OPTS': 'd25be71658015a1e729d1988bf3b4
  'function:ring__size': '3bc3a0c0623aa4e810ad32110d645220625159f6b41506d1d75af71aef3960b4',
  'function:ring_buffer__add': '3bc3a0c0623aa4e810ad32110d645220625159f6b41506d1d75af71aef3960b4',
  'function:ring_buffer__consume': '3bc3a0c0623aa4e810ad32110d645220625159f6b41506d1d75af71aef3960b4',
- 'function:ring_buffer__consume_n': '02c54384c5f94cd572c4b42ac01dee2668d597d8ec760efe882e84192c2a91a4',
- 'function:ring_buffer__epoll_fd': '7052a608bd78d97a42d48eec39af523ccde3535b10de9c2fd87bc19d42c40dfc',
- 'function:ring_buffer__free': '2662ced8dcf723df889807e8a2376bdbe6113ad88fdd9e9f94aea019c7fade3f',
- 'function:ring_buffer__new': '41732137340e72a5ef04123efee2562c2198fb329d46345cbc5c7d0027635f27',
+ 'function:ring_buffer__consume_n': '2ec839437fde656cc61b6a1d3162841a762f6f2758da130b5e1258e42947a4e0',
+ 'function:ring_buffer__epoll_fd': '63108cd83d17e5a8207a650b99b2d87ce6a7048e0a9f9dc7a3eba93758cfb937',
+ 'function:ring_buffer__free': '1ac54b74eebdaacff5f31af7796d8f7b13d356a63dfc7e87dcbf1d1c2a32d9b8',
+ 'function:ring_buffer__new': '08f8170d24557752c9b75fa16922824361ff42283425185238b01b09d86a6afd',
  'function:ring_buffer__poll': '3bc3a0c0623aa4e810ad32110d645220625159f6b41506d1d75af71aef3960b4',
  'function:ring_buffer__ring': '3bc3a0c0623aa4e810ad32110d645220625159f6b41506d1d75af71aef3960b4',
  'function:user_ring_buffer__discard': '3bc3a0c0623aa4e810ad32110d645220625159f6b41506d1d75af71aef3960b4',
@@ -3654,6 +3655,8 @@ BRIDGE_SIGNATURES = {'lmb_attach': 'int32_t lmb_attach(struct lmb_session *sessi
                                '    struct lmb_object *object, const struct lmb_name_v1 *name,\n'
                                '    uint32_t has_current, const uint8_t *current, uint64_t current_bytes,\n'
                                '    uint8_t *next, uint64_t capacity, uint64_t *needed);',
+ 'lmb_buffer_stats_v1': 'int32_t lmb_buffer_stats_v1(struct lmb_buffer *buffer,\n'
+                            '                            struct lmb_buffer_stats_v1 *out);',
  'lmb_object_map_update_v1': 'int32_t lmb_object_map_update_v1(struct lmb_object *object,\n'
                              '                                 const struct lmb_name_v1 *name,\n'
                              '                                 const uint8_t *key, uint64_t key_bytes,\n'
@@ -3684,6 +3687,7 @@ LAYERS = ('source', 'native_host', 'mojo_host', 'installed_host', 'target_runtim
 SESSION_EXPORTS = ('lmb_open', 'lmb_load', 'lmb_attach', 'lmb_poll', 'lmb_map_info', 'lmb_map_read', 'lmb_map_write', 'lmb_stats', 'lmb_last_error', 'lmb_detach', 'lmb_close')
 GENERIC_EXPORTS = ('lmb_object_open_v1', 'lmb_object_configure_program_v1', 'lmb_object_load_v1', 'lmb_object_program_info_v1', 'lmb_object_map_info_v1', 'lmb_object_close_v1', 'lmb_object_release_v1', 'lmb_generic_last_error_v1', 'lmb_object_map_lookup_v1', 'lmb_object_map_update_v1', 'lmb_program_test_run_v1', 'lmb_object_attach_v1', 'lmb_link_close_v1', 'lmb_buffer_open_v1', 'lmb_buffer_poll_v1', 'lmb_buffer_close_v1', 'lmb_object_ref_v1', 'lmb_object_unref_v1', 'lmb_object_gen_v1', 'lmb_object_gen_check_v1')
 MAP_KEY_EXPORTS = ('lmb_object_map_delete_v1', 'lmb_object_map_next_key_v1')
+BUFFER_STATS_EXPORTS = ('lmb_buffer_stats_v1',)
 HOST_HEADERS = {'src/' + name for name in ('libbpf.h', 'bpf.h', 'btf.h', 'libbpf_common.h', 'libbpf_legacy.h', 'libbpf_version.h', 'bpf_endian.h')}
 PRODUCER_HEADERS = {'src/' + name for name in ('bpf_helpers.h', 'bpf_helper_defs.h', 'bpf_tracing.h', 'bpf_core_read.h', 'usdt.bpf.h')}
 KINDS = {'function', 'inline', 'callback', 'typedef', 'record', 'enum', 'enumerator', 'member', 'macro', 'alias'}
@@ -4033,7 +4037,7 @@ def validate_inventory(coverage: dict, denominator: dict, repository_root: Path)
         errors.append(eid + ': missing coverage row')
     for eid in sorted(set(rows) - set(entities)):
         errors.append(eid + ': unknown coverage row')
-    bridge_names = set(SESSION_EXPORTS) | set(GENERIC_EXPORTS) | set(MAP_KEY_EXPORTS)
+    bridge_names = set(SESSION_EXPORTS) | set(GENERIC_EXPORTS) | set(MAP_KEY_EXPORTS) | set(BUFFER_STATS_EXPORTS)
     for eid, row in sorted(rows.items()):
         entity = entities.get(eid)
         if entity is None:
@@ -4098,7 +4102,7 @@ def validate_inventory(coverage: dict, denominator: dict, repository_root: Path)
     if _sha(_canonical(abi)) != BRIDGE_SHA256:
         errors.append('bridge_abi: exact source ABI manifest changed')
     expected_nodes = {name:'LIBBPF_MOJO_1' for name in SESSION_EXPORTS}
-    expected_nodes.update({name:'LIBBPF_MOJO_GENERIC_1' for name in GENERIC_EXPORTS + MAP_KEY_EXPORTS})
+    expected_nodes.update({name:'LIBBPF_MOJO_GENERIC_1' for name in GENERIC_EXPORTS + MAP_KEY_EXPORTS + BUFFER_STATS_EXPORTS})
     observed = {}
     for export in abi['exports']:
         name = export['name']
@@ -4222,10 +4226,10 @@ class InventoryTests(unittest.TestCase):
             siblings[1]['start_byte']=siblings[0]['start_byte']
         self.reject(overlap,'sibling ownership overlap',True)
 
-    def test_bridge_manifest_is_exact_11_plus_20_plus_2(self):
-        self.assertEqual(33,len(self.c['bridge_abi']['exports']))
+    def test_bridge_manifest_is_exact_11_plus_20_plus_2_plus_1(self):
+        self.assertEqual(34,len(self.c['bridge_abi']['exports']))
         self.assertEqual(set(SESSION_EXPORTS),{e['name'] for e in self.c['bridge_abi']['exports'] if e['version_node']=='LIBBPF_MOJO_1'})
-        self.assertEqual(set(GENERIC_EXPORTS + MAP_KEY_EXPORTS),{e['name'] for e in self.c['bridge_abi']['exports'] if e['version_node']=='LIBBPF_MOJO_GENERIC_1'})
+        self.assertEqual(set(GENERIC_EXPORTS + MAP_KEY_EXPORTS + BUFFER_STATS_EXPORTS),{e['name'] for e in self.c['bridge_abi']['exports'] if e['version_node']=='LIBBPF_MOJO_GENERIC_1'})
         self.reject(lambda c:c['bridge_abi']['exports'].pop(),'missing original/generic export')
 
     def test_map_key_mappings_are_present_and_cannot_disappear(self):
@@ -4310,6 +4314,31 @@ class InventoryTests(unittest.TestCase):
         for c in mutants:
             self.assertTrue(_schema_errors(c,self.schema,self.schema))
             self.assertTrue(validate_inventory(c,self.d,ROOT))
+
+    def test_shared_staging_helper_drift_rejected(self):
+        helper = 'native/src/ring_stage.h'
+        raw = _read(ROOT, helper)
+        self.assertIn(b'size > max_raw', raw)
+        mutant = raw.replace(b'size > max_raw', b'size >= max_raw', 1)
+        real_read = globals()['_read']
+        def mutated_read(root, path):
+            if path == helper:
+                return mutant
+            return real_read(root, path)
+        globals()['_read'] = mutated_read
+        try:
+            errors = validate_inventory(copy.deepcopy(self.c),
+                                        copy.deepcopy(self.d), ROOT)
+        finally:
+            globals()['_read'] = real_read
+        self.assertTrue(any('implementation_snapshot: source changed ' + helper in e
+                            for e in errors), errors)
+        self.assertTrue(any('source anchor hash/lines changed ' + helper in e
+                            for e in errors), errors)
+        self.assertIn(helper, IMPLEMENTATION_SOURCES)
+        entry = next(e for e in self.c['implementation_snapshot']['sources']
+                     if e['path'] == helper)
+        self.assertEqual(entry['sha256'], _sha(raw))
 
     def test_exact_source_seals_and_public_paths(self):
         self.assertEqual(SNAPSHOT_SHA256,_sha(_read(ROOT,SNAPSHOT_PATH)))

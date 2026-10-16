@@ -13,7 +13,7 @@ LIBBPF_MOJO_GENERIC_1 {
         lmb_object_close_v1; lmb_object_release_v1; lmb_generic_last_error_v1;
         lmb_object_map_lookup_v1; lmb_object_map_update_v1; lmb_program_test_run_v1;
         lmb_object_attach_v1; lmb_link_close_v1; lmb_buffer_open_v1;
-        lmb_buffer_poll_v1; lmb_buffer_close_v1;
+        lmb_buffer_poll_v1; lmb_buffer_close_v1; lmb_buffer_stats_v1;
         lmb_object_ref_v1; lmb_object_unref_v1; lmb_object_gen_v1;
         lmb_object_gen_check_v1;
 };

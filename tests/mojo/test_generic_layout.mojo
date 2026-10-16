@@ -15,6 +15,7 @@ from std.testing import TestSuite, assert_equal
 from libbpf_mojo._ffi import (
     AttachOptionsV1,
     BufferOptionsV1,
+    BufferStatsV1,
     GenericErrorV1,
     GenericOutSpanV1,
     GenericSpanV1,
@@ -40,6 +41,7 @@ def test_sizes() raises:
     assert_equal(size_of[TestResultV1](), 40)
     assert_equal(size_of[AttachOptionsV1](), 72)
     assert_equal(size_of[BufferOptionsV1](), 40)
+    assert_equal(size_of[BufferStatsV1](), 48)
 
 
 def test_alignments() raises:
@@ -53,6 +55,7 @@ def test_alignments() raises:
     assert_equal(align_of[TestResultV1](), 8)
     assert_equal(align_of[AttachOptionsV1](), 8)
     assert_equal(align_of[BufferOptionsV1](), 8)
+    assert_equal(align_of[BufferStatsV1](), 8)
 
 
 def test_span_offsets() raises:
@@ -256,6 +259,26 @@ def test_buffer_options_offsets() raises:
     assert_equal(read_u32_le(p, 36), UInt32(0))
 
 
+def test_buffer_stats_offsets() raises:
+    var s = BufferStatsV1(
+        UInt32(1),
+        UInt32(48),
+        UInt64(5),
+        UInt64(2),
+        UInt64(1),
+        UInt64(3),
+        UInt64(4),
+    )
+    var p = Pointer(to=s).unsafe_bitcast[UInt8]()
+    assert_equal(read_u32_le(p, 0), UInt32(1))
+    assert_equal(read_u32_le(p, 4), UInt32(48))
+    assert_equal(read_u64_le(p, 8), UInt64(5))
+    assert_equal(read_u64_le(p, 16), UInt64(2))
+    assert_equal(read_u64_le(p, 24), UInt64(1))
+    assert_equal(read_u64_le(p, 32), UInt64(3))
+    assert_equal(read_u64_le(p, 40), UInt64(4))
+
+
 def run() raises -> Int:
     var suite = TestSuite()
     suite.test[test_sizes]()
@@ -269,6 +292,7 @@ def run() raises -> Int:
     suite.test[test_test_result_offsets]()
     suite.test[test_attach_options_offsets]()
     suite.test[test_buffer_options_offsets]()
+    suite.test[test_buffer_stats_offsets]()
     suite^.run()
     return 0
 

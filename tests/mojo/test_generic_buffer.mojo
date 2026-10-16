@@ -4,7 +4,7 @@ from std.os import getenv
 from std.pathlib import Path
 from std.sys import argv
 from std.testing import TestSuite, assert_equal, assert_true
-from libbpf_mojo._ffi import AUTOLOAD_DISABLE, BufferOptionsV1, GenericLib, GenericSpanV1, read_u64_le
+from libbpf_mojo._ffi import AUTOLOAD_DISABLE, BufferOptionsV1, BufferStatsV1, GenericLib, GenericSpanV1, read_u64_le
 from libbpf_mojo.batch import decode_frame
 from libbpf_mojo.buffer import Buffer, BufferPollResult, open_ring
 from libbpf_mojo.object import Object, MapView
@@ -270,6 +270,84 @@ def test_optional_ffi_operation_identity() raises:
         assert_equal(handle, UInt64(0))
 
 
+def test_stats_snapshot_conservation_and_teardown() raises:
+    var buffer = child_from_parent_scope()
+    var counters = buffer.stats()
+    assert_equal(counters.received, UInt64(0))
+    assert_equal(counters.delivered, UInt64(0))
+    assert_equal(counters.staged, UInt64(0))
+    assert_equal(counters.malformed, UInt64(0))
+    assert_equal(counters.dropped, UInt64(0))
+    scenario(buffer, 3)
+    var storage = List[UInt8](length=26, fill=0xa5)
+    var destination = Span(storage)
+    var short = buffer.poll(destination[1:24])
+    assert_true(short.is_short())
+    counters = buffer.stats()
+    assert_equal(counters.received, UInt64(1))
+    assert_equal(counters.delivered, UInt64(0))
+    assert_equal(counters.staged, UInt64(1))
+    assert_equal(counters.malformed, UInt64(0))
+    assert_equal(counters.dropped, UInt64(0))
+    var repeat = buffer.stats()
+    assert_equal(repeat.received, counters.received)
+    assert_equal(repeat.staged, counters.staged)
+    var frame = buffer.poll(destination[1:25])
+    assert_true(frame.is_frame())
+    counters = buffer.stats()
+    assert_equal(counters.received, UInt64(1))
+    assert_equal(counters.delivered, UInt64(1))
+    assert_equal(counters.staged, UInt64(0))
+    assert_equal(counters.received, counters.delivered + counters.staged
+                 + counters.malformed + counters.dropped)
+    buffer.close()
+    var refused = False
+    try:
+        _ = buffer.stats()
+    except e:
+        assert_equal(e.operation, UInt32(20))
+        assert_equal(e.domain, UInt32(4))
+        assert_equal(e.code, Int32(-22))
+        refused = True
+    assert_true(refused)
+    scenario(buffer, 10)
+
+
+def test_stats_optional_symbol() raises:
+    var library = getenv("LMB_EVENTS_NO_BUFFER_STATS_LIB")
+    var object = loaded(library)
+    var control = object._lib[]._handle.get_function[NoneType]("lmb_events_scenario")
+    control(UInt32(2))
+    var ring = object.map("events")
+    var buffer = open_ring(ring)
+    assert_true(not buffer.is_closed())
+    var refused = False
+    try:
+        var counters = buffer.stats()
+        _ = counters
+    except e:
+        assert_equal(e.operation, UInt32(20))
+        assert_equal(e.domain, UInt32(4))
+        assert_equal(e.code, Int32(-38))
+        refused = True
+    assert_true(refused)
+    buffer.close()
+    ring.close()
+    object.close()
+    control(UInt32(10))
+    var bare = GenericLib(library)
+    var stats_refused = False
+    try:
+        var record = BufferStatsV1(1, 48, 0, 0, 0, 0, 0)
+        _ = bare.buffer_stats(0, Pointer(to=record))
+    except e:
+        assert_equal(e.operation, UInt32(20))
+        assert_equal(e.domain, UInt32(4))
+        assert_equal(e.code, Int32(-38))
+        stats_refused = True
+    assert_true(stats_refused)
+
+
 def main() raises:
     var args = argv()
     if len(args) > 1:
@@ -287,5 +365,7 @@ def main() raises:
     suite.test[test_prefix_and_error_classification]()
     suite.test[test_options_stale_missing_and_destructor]()
     suite.test[test_optional_ffi_operation_identity]()
+    suite.test[test_stats_snapshot_conservation_and_teardown]()
+    suite.test[test_stats_optional_symbol]()
     suite^.run()
     print("NOT_RUN generic_buffer.kernel-production: actual-reader host mappings only")

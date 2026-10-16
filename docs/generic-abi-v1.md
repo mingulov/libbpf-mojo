@@ -101,6 +101,9 @@ int32_t lmb_buffer_poll_v1(struct lmb_buffer *buffer, uint8_t *dst,
     uint64_t capacity, int32_t timeout_ms, uint64_t *used,
     uint64_t *needed);
 int32_t lmb_buffer_close_v1(struct lmb_buffer **buffer);
+/* Optional per-buffer stats snapshot; the original twenty-name set is unchanged. */
+int32_t lmb_buffer_stats_v1(struct lmb_buffer *buffer,
+    struct lmb_buffer_stats_v1 *out);
 int32_t lmb_object_ref_v1(struct lmb_object *object);
 void lmb_object_unref_v1(struct lmb_object *object);
 int32_t lmb_object_gen_v1(const struct lmb_object *object,
@@ -273,6 +276,7 @@ enum lmb_generic_op_v1 {
     LMB_GENERIC_OP_VIEW_CHECK = 17,
     LMB_GENERIC_OP_MAP_DELETE = 18,
     LMB_GENERIC_OP_MAP_NEXT_KEY = 19,
+    LMB_GENERIC_OP_BUFFER_STATS = 20,
 };
 
 enum lmb_generic_domain_v1 {
@@ -429,6 +433,48 @@ One ring map per buffer; one owned staging slot for a retained
 4096-byte record. Opening requires a loaded object whose maps
 include the named ring. No ring is required to open or load a
 generic object.
+
+## Buffer statistics
+
+```c
+struct lmb_buffer_stats_v1 {
+    uint32_t abi_version; /* 0 */
+    uint32_t struct_size; /* 4, must be 48 */
+    uint64_t received;    /* 8 */
+    uint64_t delivered;   /* 16 */
+    uint64_t staged;      /* 24, currently held (0 or 1) */
+    uint64_t malformed;   /* 32 */
+    uint64_t dropped;     /* 40, explicitly declared drops only */
+};                        /* size 48, align 8 */
+```
+
+`lmb_buffer_stats_v1` snapshots one buffer's transport
+counters without consuming a record. Counter meanings match
+the `buffer_poll` conservation identity: `received` counts
+callback-seen records, `delivered` counts framed records
+handed to the caller, `staged` is 1 exactly while a record is
+retained, `malformed` counts empty and oversized records, and
+`dropped` counts valid records lost to the occupied slot.
+`received == delivered + staged + malformed + dropped` holds
+after every call. The snapshot is read-only: it changes no
+counter, disturbs no staged record, and reports identical
+bytes when called twice with no poll in between.
+
+The caller sets the header (`abi_version` 1, `struct_size`
+48); success preserves the header and fills the five
+counters. A null buffer, a null output, or a header that
+fails its own size check reports `BRIDGE`/`-EINVAL` with
+operation `BUFFER_STATS` and leaves the output struct
+unchanged. Success clears the generic diagnostic record,
+like every other generic success.
+
+Unlike the v1 session snapshot, this record carries no
+latched native error: native failures surface only through
+the per-call generic diagnostic, never through a sticky
+counter. The snapshot stays available while the buffer is
+open, including with a staged record, under a `BUSY`
+parent, and after parent release while the buffer's own
+reference is alive.
 
 ## Ownership and lifetime
 
@@ -599,9 +645,17 @@ pointers-before-state position.
   records lost to the occupied slot count as drops; the
   conservation identity `received == delivered + staged +
   malformed + dropped` holds per buffer. Counters are
-  internal: conservation is proven behaviorally with
-  controlled sources, since no stats call exists in this
-  interface.
+  observable through the optional `buffer_stats` snapshot;
+  conservation is still proven behaviorally with controlled
+  sources.
+- `buffer_stats`: read-only snapshot of one buffer's five
+  counters; the header is preserved and the conservation
+  identity holds after every call. A null buffer, a null
+  output, or a bad header reports `BRIDGE`/`-EINVAL` with
+  operation `BUFFER_STATS` and leaves the output struct
+  unchanged. Success clears the generic record. No error
+  latch: native failures surface only through the per-call
+  diagnostic, unlike v1 stats.
 
 Each successful buffer_poll call returns at most one complete frame. A
 consumer may assemble several frames by polling repeatedly into successive
@@ -819,3 +873,14 @@ cursor can cause a kernel first-key restart. The bridge neither hides restarts
 nor sorts, caches or filters keys. HASH/ARRAY host scripts establish forwarding
 contracts; actual map applicability and successful kernel operations require
 separate target qualification.
+
+## Optional per-buffer stats snapshot
+
+`lmb_buffer_stats_v1` appends at `LIBBPF_MOJO_GENERIC_1`; SONAME remains
+`libbpf_mojo.so.1`. Buffer creation still requires only open, poll and close:
+the stats symbol resolves only when called, so object-only and older buffer
+libraries keep working and report `BRIDGE/-ENOSYS` for the snapshot itself.
+The snapshot reuses the buffer's retained owner and calling thread. It adds
+no product event types and reinterprets no v1 session record: counter names
+match the poll conservation identity, and the absence of a `last_error` latch
+is deliberate, since generic diagnosis flows through the per-call record.

@@ -105,15 +105,17 @@ static void test_geometry_derivatives(const uint8_t *elf,size_t len) {
 }
 typedef int32_t (*delete_fn)(struct lmb_object *, const struct lmb_name_v1 *, const uint8_t *, uint64_t, uint64_t);
 typedef int32_t (*next_fn)(struct lmb_object *, const struct lmb_name_v1 *, uint32_t, const uint8_t *, uint64_t, uint8_t *, uint64_t, uint64_t *);
+typedef int32_t (*stats_fn)(struct lmb_buffer *, struct lmb_buffer_stats_v1 *);
 _Static_assert(_Generic(&lmb_object_map_delete_v1, delete_fn: 1, default: 0), "delete scalar/pointer signature");
+_Static_assert(_Generic(&lmb_buffer_stats_v1, stats_fn: 1, default: 0), "stats scalar/pointer signature");
 _Static_assert(_Generic(&lmb_object_map_next_key_v1, next_fn: 1, default: 0), "next-key scalar/pointer signature");
 _Static_assert(sizeof(int) == 4 && sizeof(void *) == 8 && sizeof(uint64_t) == 8, "LP64 boundary");
 static void test_exact_candidate_abi(const char *path) {
     static const char *const names[] = {
         "lmb_open", "lmb_load", "lmb_attach", "lmb_poll", "lmb_map_info", "lmb_map_read", "lmb_map_write", "lmb_stats", "lmb_last_error", "lmb_detach", "lmb_close",
-        "lmb_object_open_v1", "lmb_object_configure_program_v1", "lmb_object_load_v1", "lmb_object_program_info_v1", "lmb_object_map_info_v1", "lmb_object_close_v1", "lmb_object_release_v1", "lmb_generic_last_error_v1", "lmb_object_map_lookup_v1", "lmb_object_map_update_v1", "lmb_program_test_run_v1", "lmb_object_attach_v1", "lmb_link_close_v1", "lmb_buffer_open_v1", "lmb_buffer_poll_v1", "lmb_buffer_close_v1", "lmb_object_ref_v1", "lmb_object_unref_v1", "lmb_object_gen_v1", "lmb_object_gen_check_v1", "lmb_object_map_delete_v1", "lmb_object_map_next_key_v1"
+        "lmb_object_open_v1", "lmb_object_configure_program_v1", "lmb_object_load_v1", "lmb_object_program_info_v1", "lmb_object_map_info_v1", "lmb_object_close_v1", "lmb_object_release_v1", "lmb_generic_last_error_v1", "lmb_object_map_lookup_v1", "lmb_object_map_update_v1", "lmb_program_test_run_v1", "lmb_object_attach_v1", "lmb_link_close_v1", "lmb_buffer_open_v1", "lmb_buffer_poll_v1", "lmb_buffer_close_v1", "lmb_object_ref_v1", "lmb_object_unref_v1", "lmb_object_gen_v1", "lmb_object_gen_check_v1", "lmb_object_map_delete_v1", "lmb_object_map_next_key_v1", "lmb_buffer_stats_v1"
     };
-    unsigned seen[33] = {0}, count = 0, soname = 0;
+    unsigned seen[34] = {0}, count = 0, soname = 0;
     CHECK(elf_version(EV_CURRENT) != EV_NONE);
     int fd = open(path, O_RDONLY); CHECK(fd >= 0); if (fd < 0) return;
     Elf *elf = elf_begin(fd, ELF_C_READ, NULL); CHECK(elf != NULL); if (!elf) { close(fd); return; }
@@ -131,19 +133,22 @@ static void test_exact_candidate_abi(const char *path) {
             GElf_Sym symbol; CHECK(gelf_getsym(data, (int)i, &symbol) != NULL);
             if (symbol.st_shndx == SHN_UNDEF || GELF_ST_TYPE(symbol.st_info) != STT_FUNC) continue;
             const char *name = elf_strptr(elf, header.sh_link, symbol.st_name); unsigned found = 0;
-            for (unsigned j = 0; j < 33; j++) if (name && !strcmp(name,names[j])) { seen[j]++; found++; }
+            for (unsigned j = 0; j < 34; j++) if (name && !strcmp(name,names[j])) { seen[j]++; found++; }
             CHECK(found == 1); count++;
         }
     }
-    CHECK(count == 33 && soname == 1); for (unsigned j=0;j<33;j++) CHECK(seen[j] == 1);
+    CHECK(count == 34 && soname == 1); for (unsigned j=0;j<34;j++) CHECK(seen[j] == 1);
     CHECK(elf_end(elf) == 0); CHECK(close(fd) == 0);
     void *library = dlopen(path, RTLD_NOW | RTLD_LOCAL); CHECK(library != NULL); if (!library) return;
-    for (unsigned j=0;j<33;j++) CHECK(dlvsym(library,names[j],j<11?"LIBBPF_MOJO_1":"LIBBPF_MOJO_GENERIC_1") != NULL);
+    for (unsigned j=0;j<34;j++) CHECK(dlvsym(library,names[j],j<11?"LIBBPF_MOJO_1":"LIBBPF_MOJO_GENERIC_1") != NULL);
     delete_fn deletion = (delete_fn)dlvsym(library,"lmb_object_map_delete_v1","LIBBPF_MOJO_GENERIC_1");
     next_fn iteration = (next_fn)dlvsym(library,"lmb_object_map_next_key_v1","LIBBPF_MOJO_GENERIC_1");
+    stats_fn snapshot = (stats_fn)dlvsym(library,"lmb_buffer_stats_v1","LIBBPF_MOJO_GENERIC_1");
     struct lmb_name_v1 n=name_of("values");uint8_t key[4]={0xff,0x80,0x42,0x91},out[8];uint64_t needed=123;memset(out,0xa5,sizeof(out));
+    struct lmb_buffer_stats_v1 st; memset(&st,0,sizeof(st)); st.abi_version=1; st.struct_size=sizeof(st);
     CHECK(deletion(NULL,&n,key,4,UINT64_C(0x80000000ffffffff)) == -EINVAL);
     CHECK(iteration(NULL,&n,1,key,4,out,sizeof(out),&needed) == -EINVAL); CHECK(needed == 123); untouched(out,sizeof(out));
+    CHECK(snapshot != NULL && snapshot(NULL,&st) == -EINVAL);
     /* No static-instance opaque owner crosses into the opened library. */
     CHECK(dlclose(library) == 0);
 }

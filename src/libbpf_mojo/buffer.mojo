@@ -2,9 +2,9 @@
 """Move-only generic ring consumers with borrowed mutable destinations."""
 from std.memory import ArcPointer
 from libbpf_mojo._ffi import (
-    BufferOptionsV1, GenericLib, GenericSpanV1, MAX_FRAME_BYTES,
+    BufferOptionsV1, BufferStatsV1, GenericLib, GenericSpanV1, MAX_FRAME_BYTES,
     GENERIC_DOMAIN_BRIDGE, GENERIC_OP_BUFFER_OPEN, GENERIC_OP_BUFFER_POLL,
-    GENERIC_OP_BUFFER_CLOSE, GENERIC_OP_VIEW_CHECK,
+    GENERIC_OP_BUFFER_CLOSE, GENERIC_OP_BUFFER_STATS, GENERIC_OP_VIEW_CHECK,
 )
 from libbpf_mojo.batch import POLL_BATCH, POLL_TIMEOUT, POLL_SHORT, POLL_ERROR
 from libbpf_mojo.error import EINVAL, ENOSPC, LmbError
@@ -30,6 +30,17 @@ struct BufferPollResult(Copyable):
 
     def is_error(self) -> Bool:
         return self.kind == POLL_ERROR
+
+
+@fieldwise_init
+struct BufferStats(Copyable):
+    """Transport counters for one ring consumer."""
+
+    var received: UInt64
+    var delivered: UInt64
+    var staged: UInt64
+    var malformed: UInt64
+    var dropped: UInt64
 
 
 struct Buffer(Movable):
@@ -127,6 +138,35 @@ struct Buffer(Movable):
             return BufferPollResult(kind, used, needed, LmbError(0, 0, 0, ""))
         except e:
             return BufferPollResult(POLL_ERROR, 0, 0, e.copy())
+
+    def stats(mut self) raises LmbError -> BufferStats:
+        """Snapshot this consumer's transport counters without polling."""
+        if self._handle == 0:
+            raise LmbError(
+                GENERIC_OP_BUFFER_STATS, GENERIC_DOMAIN_BRIDGE, EINVAL,
+                "buffer is closed")
+        var rc = self._lib[].object_generation_check(self._parent, self._generation)
+        if rc != 0:
+            raise capture_generic_error(self._lib[], GENERIC_OP_VIEW_CHECK, rc)
+        var out = BufferStatsV1(
+            UInt32(1),
+            UInt32(48),
+            UInt64(0),
+            UInt64(0),
+            UInt64(0),
+            UInt64(0),
+            UInt64(0),
+        )
+        rc = self._lib[].buffer_stats(self._handle, Pointer(to=out))
+        if rc != 0:
+            raise capture_generic_error(self._lib[], GENERIC_OP_BUFFER_STATS, rc)
+        return BufferStats(
+            out.received,
+            out.delivered,
+            out.staged,
+            out.malformed,
+            out.dropped,
+        )
 
 
 def open_ring(

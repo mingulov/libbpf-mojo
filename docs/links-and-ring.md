@@ -25,6 +25,7 @@ def is_closed(self) -> Bool
 def poll(
     mut self, dst: Span[mut=True, UInt8, _], timeout_ms: Int32 = 0,
 ) -> BufferPollResult
+def stats(mut self) raises LmbError -> BufferStats
 ```
 
 Open an `Object` from caller-owned ELF bytes, configure it before loading,
@@ -69,10 +70,21 @@ valid required length is short. Diagnostics are copied immediately on the same
 calling thread; inspecting a retained result after another successful operation
 preserves its signed code, domain, operation and message.
 
+`Buffer.stats()` snapshots the consumer's `received`, `delivered`,
+`staged`, `malformed` and `dropped` counters as a copyable
+`BufferStats` without consuming a record; the conservation
+identity holds after every call. The snapshot disturbs no staged
+record, stays available under a BUSY parent and after parent
+release, and carries no latched error. A closed buffer raises
+BUFFER_STATS/BRIDGE/-EINVAL before touching its retired parent.
+
 New symbols remain optional. Link creation preflights attach and link-close;
-ring creation preflights open, poll and close. Missing teardown support refuses
-before acquisition with ATTACH or BUFFER_OPEN, BRIDGE/-ENOSYS. Existing object
-and Session consumers continue to require only their original symbol slices.
+ring creation preflights open, poll and close. Stats resolves only when
+called: older buffer libraries refuse the snapshot with
+BUFFER_STATS/BRIDGE/-ENOSYS while creation keeps working. Missing teardown
+support refuses before acquisition with ATTACH or BUFFER_OPEN, BRIDGE/-ENOSYS.
+Existing object and Session consumers continue to require only their original
+symbol slices.
 No arbitrary Mojo callback crosses the native boundary. One calling thread
 owns each handle; broader concurrency remains unqualified.
 

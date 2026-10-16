@@ -431,6 +431,7 @@ comptime GENERIC_OP_BUFFER_CLOSE = UInt32(14)
 comptime GENERIC_OP_VIEW_REF = UInt32(15)
 comptime GENERIC_OP_VIEW_GEN = UInt32(16)
 comptime GENERIC_OP_VIEW_CHECK = UInt32(17)
+comptime GENERIC_OP_BUFFER_STATS = UInt32(20)
 
 comptime GENERIC_DOMAIN_NONE = UInt32(0)
 comptime GENERIC_DOMAIN_POSIX = UInt32(1)
@@ -582,6 +583,19 @@ struct BufferOptionsV1(Copyable):
     var stage_slots: UInt32
     var flags: UInt32
     var _reserved: UInt32
+
+
+@fieldwise_init
+struct BufferStatsV1(Copyable):
+    """Mirrors ``struct lmb_buffer_stats_v1``: transport snapshot."""
+
+    var abi_version: UInt32
+    var struct_size: UInt32
+    var received: UInt64
+    var delivered: UInt64
+    var staged: UInt64
+    var malformed: UInt64
+    var dropped: UInt64
 
 
 def generic_symbol_names() -> List[String]:
@@ -746,6 +760,16 @@ struct GenericLib(Movable):
         except e:
             raise LmbError(GENERIC_OP_BUFFER_CLOSE, GENERIC_DOMAIN_BRIDGE,
                            ENOSYS, "unresolved lmb_buffer_close_v1")
+
+    def buffer_stats(
+        mut self, buffer: UInt64, stats_out: MutPointer[BufferStatsV1, _]
+    ) raises LmbError -> Int32:
+        try:
+            var function = self._handle.get_function[Int32]("lmb_buffer_stats_v1")
+            return function(buffer, stats_out)
+        except e:
+            raise LmbError(GENERIC_OP_BUFFER_STATS, GENERIC_DOMAIN_BRIDGE,
+                           ENOSYS, "unresolved lmb_buffer_stats_v1")
 
     def configure_program(
         mut self, object_handle: UInt64, opts: ImmPointer[ProgramOptionsV1, _]
