@@ -74,6 +74,35 @@ def git_sha(root):
     return sha
 
 
+def probe_tool_version(cmd, cwd, run=None):
+    """Return the stripped first line of a tool-version probe.
+
+    Fails closed: a probe that cannot launch, exits nonzero, or
+    yields no version line aborts the receipt instead of recording
+    a guess. Every failure retains the exact argv, the exit status,
+    and the diagnostic output. The optional run hook executes the
+    probe; tests inject fakes, production uses subprocess.run.
+    """
+    runner = run if run is not None else subprocess.run
+    try:
+        out = runner(cmd, cwd=cwd, stdout=subprocess.PIPE,
+                     stderr=subprocess.STDOUT, text=True)
+    except OSError as exc:
+        sys.exit("receipt: tool probe failed to launch: argv=%r "
+                 "exit=launch-error diagnostic=%r" % (cmd, str(exc)))
+    diagnostic = out.stdout if out.stdout else ""
+    if out.returncode != 0:
+        sys.exit("receipt: tool probe failed: argv=%r exit=%d "
+                 "diagnostic=%r"
+                 % (cmd, out.returncode, diagnostic.strip()))
+    first = diagnostic.splitlines()[0] if diagnostic.strip() else ""
+    if not first.strip():
+        sys.exit("receipt: tool probe returned no version output: "
+                 "argv=%r exit=%d diagnostic=%r"
+                 % (cmd, out.returncode, diagnostic.strip()))
+    return first.strip()
+
+
 def main(argv):
     if len(argv) != 4:
         sys.exit("usage: build_receipt.py <build-dir> <cc> <sanitize>")
@@ -92,14 +121,7 @@ def main(argv):
         if os.path.isfile(cache_path) else None
     toolchain = {}
     for name, cmd in PROBES:
-        try:
-            out = subprocess.run(cmd, cwd=root,
-                                 stdout=subprocess.PIPE,
-                                 stderr=subprocess.STDOUT, text=True)
-        except OSError as exc:
-            sys.exit("receipt: cannot run %s: %s" % (cmd[0], exc))
-        first = out.stdout.splitlines()[0] if out.stdout else ""
-        toolchain[name] = first.strip()
+        toolchain[name] = probe_tool_version(cmd, root)
     artifacts = {}
     for rel in ARTIFACTS:
         full = os.path.join(root, build_dir, rel)
