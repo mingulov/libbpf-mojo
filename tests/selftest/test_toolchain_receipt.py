@@ -8,10 +8,14 @@ retaining argv, exit status, and diagnostic output: nonzero exits
 launch errors. Only an exit-0 probe with a usable first line is
 recorded, and a failed probe emits no receipt. No subprocess runs
 and no file is written; fakes stand in for the runner, the source
-manifest, and the build tree. Standard library only.
+manifest, and the build tree. Build receipts also retain every
+checked tool version and the lock pin they consumed. Standard
+library only.
 """
 
+import json
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -34,7 +38,7 @@ def _run(result=None, error=None):
     return fake
 
 
-class ToolchainReceipt(unittest.TestCase):
+class ToolchainReceiptProbeFailClosed(unittest.TestCase):
     def test_success_records_stripped_first_line(self):
         out = build_receipt.probe_tool_version(
             ["tool", "--version"], ".",
@@ -98,6 +102,25 @@ class ToolchainReceipt(unittest.TestCase):
         finally:
             build_receipt.subprocess.run = saved_run
             build_receipt.provenance.source_manifest = saved_manifest
+
+
+class ToolchainReceiptPins(unittest.TestCase):
+    def test_probes_cover_checked_toolchain(self):
+        names = [name for name, _ in build_receipt.PROBES]
+        for name in ("pixi", "mojo", "clang", "bpftool", "cmake",
+                     "ninja", "make", "gcc", "pkg-config",
+                     "zlib", "python"):
+            self.assertIn(name, names, names)
+
+    def test_dependency_identities_read_lock_pin(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            lock = {"toolchain": {"libbpf_source": {
+                "tarball_sha256": "l" * 64}}}
+            (Path(tmp) / "toolchain.lock.json").write_text(
+                json.dumps(lock))
+            identities = build_receipt.dependency_identities(tmp)
+            self.assertEqual(
+                identities["libbpf_tarball_sha256"], "l" * 64)
 
 
 if __name__ == "__main__":

@@ -8,7 +8,9 @@ exact); the `pixi.lock` file carries authoritative conda package hashes.
 
 ## Prerequisites
 
-- `pixi` 0.81.0 exactly, to create the Mojo environment.
+- `pixi` 0.81.0 exactly, to create the Mojo environment
+  (`python3 tools/install-pixi` installs the locked release
+  after verifying its digest; see below).
 - System `clang`, `ninja`, `make`, and `bpftool` at the locked
   versions, plus `cmake` at or above the locked floor, for the
   native bridge and test fixtures.
@@ -206,6 +208,75 @@ the clean suites:
 - `tools/package` records these floors in the packaged README and
   refuses sanitizer trees: `build-san/` binaries need ASan/UBSan
   runtimes and are test-only, never releasable.
+
+## Pinned executable inputs
+
+Every executable input that enters a build or automation
+lane is either pinned to an immutable identity verified
+before use, or an ambient OS-generation input verified
+fail-closed against exact versions and retained in
+receipts. Pinning every ambient OS byte is out of scope:
+drift there is detected, not silently accepted, because
+the build refuses unexpected tool versions.
+
+Packaging-only helpers stay outside that claim as
+documented ambient exceptions: `tools/package` resolves
+runtime libraries through ambient `readelf` (DT_NEEDED
+traversal) and `ldconfig` (system resolution), failing
+closed when either is missing or errors but recording
+neither version; and the `package` lane's clean-room
+check drives ambient `docker` (skipped when absent,
+version unrecorded) over an image whose `apt` layer
+installs `libelf1t64`, `zlib1g`, and `bpftool` from the
+ambient archive at image build time, likewise without
+retained identities. The package `MANIFEST.json` carries
+the build receipt's observed build-tool versions and
+expected lines, never packaging-helper identities. These
+helpers can change while every build-tool check passes,
+so reproducing a byte-identical package needs the same
+host toolset and the same clean-image archive state.
+
+| Input | Immutable identity | Verified by |
+|---|---|---|
+| Automation actions | Full commit SHA plus the tag comment in `.github/workflows/*.yml` | Provenance gate |
+| pixi installer | Versioned release tarball plus `release_sha256` in `toolchain.lock.json` | `tools/install-pixi`, provenance and input-pins gates |
+| Conda toolchain | `pixi.lock` hashes with `--frozen` resolution and exact first-line checks | `tools/build` |
+| libbpf source | `tarball_sha256` in `toolchain.lock.json`, mirrored in `native/CMakeLists.txt` | CMake `URL_HASH`, build receipt, provenance gate |
+| Clean-room base | `ubuntu:26.04@sha256:` digest in `tests/package/Dockerfile.clean` | Docker resolution, provenance gate, package lane |
+| apt tools, runner image | Verified ambient: exact versions in `toolchain.lock.json`, floors where noted | `tools/build` refusal, receipts |
+| Packaging helpers (`readelf`, `ldconfig`, `docker`, clean-image apt) | Ambient exception, no recorded identity | Availability checks; documented above |
+
+Refresh routes, one input at a time with the affected lanes
+re-run:
+
+- Actions: resolve the tag to its commit with `git ls-remote`
+  against the action repository (corroborate with the
+  published tag listing), then update the SHA and the tag
+  comment together.
+- pixi: set the new `version`, `release_asset`,
+  `release_url`, and `release_sha256` together; confirm the
+  digest by downloading the versioned asset independently and
+  running `tools/install-pixi` from a clean prefix.
+- Conda, libbpf: update the lock, the CMake mirror, and the
+  recorded hashes together; the build and the provenance gate
+  re-verify each side.
+- Clean-room base: resolve the tag with `docker buildx
+  imagetools inspect`, update the digest, and rebuild. A
+  republished tag does not change the built bytes: Docker
+  resolves the digest pin to the pinned manifest, so the
+  lane keeps building on the pinned bytes until the pin
+  is refreshed deliberately. Refresh is a freshness
+  choice, not a drift refusal.
+- Ambient tools: re-qualify the new versions, then update the
+  expected lines in the lock; builds keep refusing anything
+  else.
+
+`build/build-receipt.json` retains the observed build-tool
+versions and the consumed libbpf digest for the build; the
+package `MANIFEST.json` carries the same identities into
+the artifact. Neither carries packaging-helper identities:
+`readelf`, `ldconfig`, `docker`, and clean-image apt inputs
+leave no recorded version anywhere.
 
 ## Compiler settings
 

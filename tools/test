@@ -304,7 +304,10 @@ case "$1" in
         ;;
     provenance)
         echo "+ python3 tests/provenance/test_provenance.py" >&2
-        (cd "$ROOT" && python3 tests/provenance/test_provenance.py)
+        (cd "$ROOT" && python3 tests/provenance/test_provenance.py) \
+            || exit 1
+        echo "+ python3 tests/provenance/test_input_pins.py" >&2
+        (cd "$ROOT" && python3 tests/provenance/test_input_pins.py)
         exit "$?"
         ;;
     source-export)
