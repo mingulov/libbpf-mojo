@@ -13,6 +13,14 @@
 static _Thread_local struct lmb_generic_error_v1 generic_error;
 static _Thread_local struct lmb_object *loading_object;
 
+/* Kernel working room for the running verifier log, per program.
+ * The kernel fails the load when its running log outgrows the
+ * buffer (several KiB for small fixtures), even though a
+ * successful load retains only a short summary. The caller's
+ * log_capacity still bounds retention; this working buffer only
+ * keeps a small retention bound from failing the load. */
+#define LMB_KERNEL_LOG_WORKING_SIZE 1048576
+
 int __real_bpf_prog_load(enum bpf_prog_type type, const char *name,
     const char *license, const struct bpf_insn *insns, size_t count,
     struct bpf_prog_load_opts *opts);
@@ -202,11 +210,11 @@ int32_t lmb_object_open_v1(const uint8_t *elf, uint64_t elf_bytes,
         struct lmb_program_state *state = &obj->programs[i++];
         state->program = program;
         if (obj->log_capacity && obj->log_level) {
-            state->log = calloc(1, obj->log_capacity);
+            state->log = calloc(1, LMB_KERNEL_LOG_WORKING_SIZE);
             if (!state->log) { code = -ENOMEM; goto allocation_failed; }
         }
         code = bpf_program__set_log_buf(program, state->log,
-                                        state->log ? obj->log_capacity : 0);
+                                        state->log ? LMB_KERNEL_LOG_WORKING_SIZE : 0);
         if (code) goto native_failed;
         code = bpf_program__set_log_level(program, obj->log_level ? 1 : 0);
         if (code) goto native_failed;

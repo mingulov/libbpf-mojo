@@ -67,6 +67,12 @@ static void program_attempt(struct bpf_program *prog, const char *log,
     uint32_t function_info[4] = {0};
     size_t size = 0;
     const char *buffer = bpf_program__log_buf(prog, &size);
+    /* The kernel needs working room for the running verifier log
+     * (several KiB here) or the load fails before retention can
+     * truncate anything, so the bridge must hand libbpf a fixed
+     * working buffer instead of the retention-sized one. */
+    CHECK((buffer == NULL && size == 0) ||
+          (buffer != NULL && size == 1048576));
     opts.sz = sizeof(opts);
     opts.log_buf = alternate_buffer ? alternate_buffer : (char *)buffer;
     opts.log_size = (uint32_t)(alternate_buffer ? alternate_size : size);

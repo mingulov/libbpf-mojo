@@ -186,7 +186,13 @@ normal kernel BTF discovery. `log_level` selects verifier-log
 retention (0 discards, 1 retains failing programs, 2 retains
 every load attempt); `log_capacity` bounds each per-program
 retained log to `1..1048576` bytes, with 0 meaning no per-program
-buffers. A level above 0 with capacity 0 attempts verbose loads
+buffers. The kernel-facing working buffer is a fixed 1048576
+bytes per program: the kernel fails the load when its running
+verifier log outgrows the working buffer, even on loads whose
+retained summary is short, so a small retention bound never
+fails the load by itself. Retention keeps the first
+`log_capacity` bytes of what the kernel wrote. A level above 0
+with capacity 0 attempts verbose loads
 but retains nothing. Garbage ELF fails here with a signed libbpf
 code, not at load: unlike v1 open (which copies without
 parsing), generic open must parse so that pre-load configuration
@@ -735,8 +741,9 @@ level (`0` requests no logging with retry-on-error,
 `1`/`2` request verbose loads), disables map pinning and
 implicit BPF token derivation (empty token path; token
 operation is unsupported here), and leaves kconfig and
-relaxed maps unset. Verifier logs use per-program buffers
-at the configured capacity; the shared object-level buffer
+relaxed maps unset. Verifier logs use fixed 1048576-byte
+per-program kernel working buffers with retention bounded by
+the configured capacity; the shared object-level buffer
 stays unset. Test-run zeroes the upstream cpu and batch
 fields. Upstream `bool` fields are set explicitly (never
 exposed in this ABI); the variadic print callback is

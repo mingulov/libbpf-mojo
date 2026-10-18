@@ -1817,6 +1817,23 @@ static void part_b6a(struct gen_api *g, const uint8_t *elf,
           "b6a-discard-empty", "discard mode must retain no log");
     CHECK(g->close(&discard) == 0, "b6a-close-discard",
           "close must succeed");
+
+    /* On-failure mode succeeds on a clean load and retains nothing:
+     * the retention bound must not fail the load either. */
+    struct lmb_object *onfail = NULL;
+    CHECK(open_loaded(g, elf, elf_len, LMB_LOG_ON_FAILURE, 4096,
+                      &onfail) == 0 &&
+              onfail != NULL,
+          "b6a-load-onfailure", "on-failure load must succeed");
+    if (onfail == NULL)
+        return;
+    make_pinfo(&pi);
+    CHECK(g->pinfo(onfail, &prog, &pi) == 0 && pi.log_actual == 0 &&
+              pi.log_truncated == 0,
+          "b6a-onfailure-empty",
+          "clean on-failure load must retain no log");
+    CHECK(g->close(&onfail) == 0, "b6a-close-onfailure",
+          "close must succeed");
 }
 
 /* B6b: checked map access on a loaded object. */
@@ -2226,7 +2243,8 @@ static void part_b6c(struct gen_api *g, const uint8_t *elf,
 
 /* Arm the fixture PID filter for this process (keys 0/1/2:
  * TGID plus st_dev/st_ino of our PID namespace). */
-static int arm_filter(struct gen_api *g, struct lmb_object *obj) {
+static int arm_filter(struct gen_api *g, struct lmb_object *obj,
+                      uint64_t *tgid_out) {
     struct lmb_name_v1 name;
     struct stat st;
     uint32_t key;
@@ -2251,6 +2269,7 @@ static int arm_filter(struct gen_api *g, struct lmb_object *obj) {
     if (g->update(obj, &name, (const uint8_t *)&key, 4, val, 8,
                   LMB_MAP_UPDATE_ANY) != 0)
         return -1;
+    *tgid_out = tgid;
     return 0;
 }
 
@@ -2333,9 +2352,9 @@ static void part_b6d(struct gen_api *g, const uint8_t *elf,
                      (uint64_t *)(dst + 8)) == -EINVAL,
           "b6d-poll-needed-in-dst", "needed inside dst must fail");
 
-    /* One exact event: drain, arm, trap once, then prove
+    /* One exact event: arm, drain, trap once, then prove
      * retain-across-retries plus exactly-once delivery. */
-    if (arm_filter(g, obj) != 0) {
+    if (arm_filter(g, obj, &tgid) != 0) {
         FAIL("b6d-arm", "filter arming must succeed");
         goto out;
     }
@@ -2351,7 +2370,9 @@ static void part_b6d(struct gen_api *g, const uint8_t *elf,
         }
     }
     CHECK(drained, "b6d-drain", "pre-workload ring must be empty");
-    tgid = (uint64_t)getpid();
+    /* No second getpid call here: each one traps, and a post-drain
+     * trap would add a second matched event. The armed TGID above
+     * is the expected identity. */
     syscall(SYS_getpid);
     used = 99;
     needed = 99;

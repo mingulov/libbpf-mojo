@@ -44,6 +44,72 @@ reported as skipped, never as success. The default native
 scope fails on any skipped selected test; offline lanes use
 `--host-only` with declared `NOT_RUN` omissions.
 
+## Live kernel qualification
+
+The default privileged suites qualify the surfaces below on one
+exact environment; nothing else is claimed:
+
+- x86-64 host running Linux 7.0.0-38-generic (#38-Ubuntu),
+  kernel config sha256
+  `6cb18717c6914d4947489eedf8cb69ac23db3faa8ef9b9f563ff02c346dcd32d`,
+  kernel BTF sha256
+  `2b91134c0f8fdf86be01ddf92bd7bb12393b0137aedd190556d0f26bddddd12b`,
+  with BPF collection privilege and bpftool v7.7.0. Other
+  kernels, including other 7.0.x builds, need their own run.
+- Toolchain pins from `toolchain.lock.json`: pixi 0.81.0, Mojo
+  1.1.0 (8189361e), clang 21.1.8, libbpf 1.7.0 source
+  (tarball sha256
+  `7ab5feffbf78557f626f2e3e3204788528394494715a30fc2070fcddc2051b7b`),
+  bpftool v7.7.0, Python 3.14.4. Bridge `libbpf_mojo.so.1`
+  sha256
+  `0cd04a3541a1f45b6dd0b57c890a01171fcfb2c90e914729594b6140d7e99d39`,
+  tracepoint example object sha256
+  `92756ed8bc623f4b7b017e4873d93647c734a30864d04ebfc92d1cac86c97a36`,
+  generic fixtures `ring_test`
+  `4d71807830742641a4061e6d5a00b0ac6afe03fb53aa732b58a310c41ecedd16`
+  and `generic_maps`
+  `d8fd6c2489c1f85b6a0b0f42fe8c0229e921164d7b06b62e91066936aa0352cc`.
+- `tools/test native` default scope: 28/28, including the
+  generic probe Part B at 417/417 with zero skips: generic
+  open plus DISCARD, ALWAYS, and ON-FAILURE loads with log
+  retention and truncation (a 98-byte summary retained from
+  a 7189-byte running log at ALWAYS/4096), ordinary and
+  per-CPU map geometry plus ANY lookup/update roundtrips,
+  NOEXIST insertion with EEXIST refusal, EXIST missing-key
+  refusal, invalid-combination and high-bit refusals, and
+  LOCK refusal without a spinlock (successful EXIST/LOCK
+  roundtrips stay unqualified), XDP test-run with real
+  durations,
+  tracepoint attach, ring open/poll/close with staged short
+  retries and exactly-once delivery, and both teardown
+  orders with stable FD counts.
+- `tools/test mojo` default scope: 12 files green with zero
+  skips, including the privileged session load, map, and
+  attach branches through Mojo. Typed Mojo map and test-run
+  calls keep scripted host evidence only (their suites
+  declare `NOT_RUN` kernel-runtime).
+- `tools/test live-tracepoint`: 128/128 reconciled
+  observations on both the Mojo lane and the C reference
+  lane, with BPF sequence counter and trigger ledger
+  agreement and no leftover programs, maps, or links.
+  `tools/test cleanup`: failed attach, bad object,
+  post-first-link rollback, and interrupted poll each
+  return to the exact FD baseline with no leftover objects.
+- `tools/test package` clean-room and `tools/test
+  package-consumer`: packaged-only imports, relocation,
+  native header, and missing/incompatible library refusals,
+  plus the missing-bridge and incompatible-runtime
+  negatives. Installed-consumer kernel execution stays
+  `NOT_RUN` by lane design.
+
+Still unqualified everywhere: XDP attachment (only XDP
+test-run is exercised), tracing-target configuration on a
+live load, kernel map deletion and key traversal, the
+stats snapshot over a live buffer, Mojo typed map/test-run
+kernel execution, installed-consumer kernel execution,
+cross-handle concurrency, non-x86-64 targets, and
+performance.
+
 ## Generic object checkpoint
 
 The additive generic interface implements twenty operations: object
@@ -95,9 +161,10 @@ probe; that regression fails if the boundary is crossed. The native host
 runner selects the registered guarded CTest twins and export checks, without
 double-counting the ordinary tests. The guard runs only in native test
 executables, including the shared bridge's bundled libbpf. Successful generic load, loaded map geometry,
-tracing-target configuration and their target/platform evidence remain
-unqualified. Native generic map and XDP test-run calls have host contract
-evidence only. Typed Mojo map/test-run functions are implemented over the
+and native generic map and XDP test-run calls carry live evidence
+on the qualified kernel (see above); tracing-target
+configuration on a live load and its target/platform evidence
+remain unqualified. Typed Mojo map/test-run functions are implemented over the
 same retained views. Their scripted host tests cover full-width scalar
 values, raw per-CPU padding, exact flag/error forwarding, bloom refusal
 forwarding, independent
@@ -112,8 +179,9 @@ Installed consumers compile from extracted modules only, then run after
 relocation with their input sources removed and no compiler on PATH. They
 exercise existing session behavior, generic view ownership and typed
 unloaded/closed/stale errors. Test-only scripted libraries are not shipped.
-Successful kernel operations, including installed package map/test-run
-execution, remain unqualified. Native and typed Mojo links and buffers have
+Native kernel operations carry live evidence on the qualified
+kernel (see above); installed package map/test-run execution
+remains unqualified. Native and typed Mojo links and buffers have
 host contract evidence. Their installed consumers use extracted public modules
 only, then run after source removal and relocation. Product-library cases prove
 unloaded/closed and option refusals; an explicit external test-library mode
@@ -144,8 +212,12 @@ keep links/buffers/views alive after parent release. Ring construction
 failure tests cover each observed allocation, both mappings, map-info,
 epoll creation and registration, with references, mappings and owned FDs
 returning to baseline. No test BPF or perf-event request reaches the
-kernel. Successful tracepoint attachment, real signals/blocking, kernel
-ring production and target resource cleanup remain unqualified.
+kernel. Successful tracepoint attachment, kernel ring
+production, and target resource cleanup carry live evidence
+on the qualified kernel (see above). Interrupted and
+blocking waits carry live evidence only through the session
+poll path; generic blocked waits and EINTR handling stay
+unqualified (host-scripted only).
 
 Optional retained-map delete and key traversal append two operations to the
 original twenty-name generic ABI. Guarded native scripts use real pinned libbpf
