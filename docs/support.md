@@ -1,5 +1,5 @@
 <!-- SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception -->
-# Support envelope (0.2.0, ABI v1)
+# Support envelope (0.2.1, ABI v1)
 
 ## Tested configuration
 

@@ -13924,7 +13924,7 @@
     "sources": [
       {
         "path": "README.md",
-        "sha256": "21532e47fe11d7f86c876938de7f310015e085c6c53b69de1e4f0c54b48950cd"
+        "sha256": "b21621692099da5ca2270e67a49c8d9f37469e074986353796041543024d195b"
       },
       {
         "path": "docs/abi-v1.md",
@@ -13952,7 +13952,7 @@
       },
       {
         "path": "docs/support.md",
-        "sha256": "49a53ffa4722ce469da5b1cf07b0754a5d9b9452556b9ede6eb8e2c71c3fa5ae"
+        "sha256": "f53e095f9f8a1bfc4d4c6f60faa62e7f139d1b0040316e794d9d6397af076918"
       },
       {
         "path": "native/CMakeLists.txt",
@@ -14092,7 +14092,7 @@
       },
       {
         "path": "tests/package/test_source_export.py",
-        "sha256": "98736564d47e0fdebccd3b327f9b0e7140e1f2a441463014d7f96fa3c046e92e"
+        "sha256": "0a0358d4daee665f2807925085bf8c0d63ca4bf896d9084707637ce6a02c2838"
       },
       {
         "path": "tests/support/check_generic_testfake_exports.sh",

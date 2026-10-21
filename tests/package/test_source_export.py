@@ -142,21 +142,21 @@ def main(argv=None):
                 shutil.copyfile(tree / "build/build-receipt.json",
                                 OUT / (case + "-build-receipt.json"))
             run(tree, "./tools/package", env=env, label=case + "-package")
-            ball = tree / "dist/libbpf-mojo-0.2.0.tar.gz"
+            ball = tree / "dist/libbpf-mojo-0.2.1.tar.gz"
             first = ball.read_bytes()
-            tp.verify_manifest(str(ball), "0.2.0")
+            tp.verify_manifest(str(ball), "0.2.1")
             previous_root = tp.ROOT
             tp.ROOT = str(tree)
             try:
                 if options.host_only:
                     retention_base = OUT / "consumers" if OUT else Path(os.environ["LMB_PACKAGE_CONSUMER_OUT"]) \
                         if os.environ.get("LMB_PACKAGE_CONSUMER_OUT") else None
-                    consumers.object_consumer_check(str(ball), "0.2.0", host_only=True,
+                    consumers.object_consumer_check(str(ball), "0.2.1", host_only=True,
                         retention_out=str(retention_base / case) if retention_base else None,
                         events_test_lib=str(tree / "build/liblmb_events_testfake.so"),
                         events_fixture=str(tree / "build/fixtures/generic_events.bpf.o"))
                 else:
-                    tp.consumer_check(str(ball), "0.2.0")
+                    tp.consumer_check(str(ball), "0.2.1")
             finally:
                 tp.ROOT = previous_root
             if case == "unrelated-parent":

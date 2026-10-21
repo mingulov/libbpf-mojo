@@ -54,7 +54,7 @@ class CleanBase(unittest.TestCase):
                 mock.patch.object(lane, "remove_owned_container",
                                   return_value=None), \
                 contextlib.redirect_stdout(out):
-            lane.clean_room("dummy.tgz", "0.2.0")
+            lane.clean_room("dummy.tgz", "0.2.1")
         digest = lane.clean_base_digest()
         self.assertIn("clean base: ubuntu:26.04@sha256:"
                       + digest, out.getvalue())

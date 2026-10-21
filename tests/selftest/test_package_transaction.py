@@ -177,7 +177,7 @@ class PackageTransaction(unittest.TestCase):
     def setUp(self):
         self.out = self.base / self.id().rsplit('.', 1)[-1]
         self.out.mkdir()
-        self.final = self.out / 'libbpf-mojo-0.2.0.tar.gz'
+        self.final = self.out / 'libbpf-mojo-0.2.1.tar.gz'
         # A readable sentinel archive with an independent predecessor payload.
         stream = io.BytesIO()
         with gzip.GzipFile(fileobj=stream, mode='wb', mtime=0) as gz:
@@ -296,7 +296,7 @@ class PackageTransaction(unittest.TestCase):
                 self.assertIn('INJECTED ' + mode, result.stderr)
                 self.assertNotEqual(self.final.read_bytes(), self.sentinel)
                 with tarfile.open(self.final) as archive:
-                    self.assertIn('libbpf-mojo-0.2.0/MANIFEST.json', archive.getnames())
+                    self.assertIn('libbpf-mojo-0.2.1/MANIFEST.json', archive.getnames())
                 self.assertEqual(sorted(p.name for p in self.out.iterdir()), ['.unrelated.tmp', self.final.name])
 
     def test_member_failure_preserves_predecessor(self):
@@ -351,7 +351,7 @@ class PackageTransaction(unittest.TestCase):
         self.assertIn('cannot clean staging directory', result.stderr)
         self.assertNotEqual(self.final.read_bytes(), self.sentinel)
         with tarfile.open(self.final) as archive:
-            self.assertIn('libbpf-mojo-0.2.0/MANIFEST.json', archive.getnames())
+            self.assertIn('libbpf-mojo-0.2.1/MANIFEST.json', archive.getnames())
 
     def test_postpublication_checksum_failure_retains_complete_new_archive(self):
         result = self.run_package(shell_fault='sha256sum')
@@ -359,7 +359,7 @@ class PackageTransaction(unittest.TestCase):
         self.assertIn('INJECTED sha256sum', result.stderr)
         self.assertNotEqual(self.final.read_bytes(), self.sentinel)
         with tarfile.open(self.final) as archive:
-            self.assertIn('libbpf-mojo-0.2.0/MANIFEST.json', archive.getnames())
+            self.assertIn('libbpf-mojo-0.2.1/MANIFEST.json', archive.getnames())
         self.assertEqual(sorted(p.name for p in self.out.iterdir()), ['.unrelated.tmp', self.final.name])
 
     def test_successful_replacement_is_complete_and_deterministic(self):
@@ -373,7 +373,7 @@ class PackageTransaction(unittest.TestCase):
         with tarfile.open(self.final) as archive:
             members = archive.getmembers()
             self.assertTrue(all(m.mtime == 1234567890 and m.uid == m.gid == 0 for m in members))
-            prefix = 'libbpf-mojo-0.2.0/'
+            prefix = 'libbpf-mojo-0.2.1/'
             manifest = json.load(archive.extractfile(prefix + 'MANIFEST.json'))
             for row in manifest['files']:
                 self.assertEqual(digest(archive.extractfile(prefix + row['path']).read()), row['sha256'])
@@ -388,7 +388,7 @@ class PackageTransaction(unittest.TestCase):
         result = self.run_package()
         self.assertEqual(result.returncode, 0, result.stderr)
         with tarfile.open(self.final) as archive:
-            self.assertIn('libbpf-mojo-0.2.0/MANIFEST.json', archive.getnames())
+            self.assertIn('libbpf-mojo-0.2.1/MANIFEST.json', archive.getnames())
 
 
 if __name__ == '__main__':
