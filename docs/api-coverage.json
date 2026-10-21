@@ -1048,15 +1048,15 @@
                 "tag_kind": "enum"
               },
               "source_ref": {
-                "end_byte": 2264,
-                "end_line": 81,
+                "end_byte": 2376,
+                "end_line": 84,
                 "file": "native/include/libbpf_mojo_generic.h",
-                "sha256": "7adf4e345a6b5434f4ff498bce103300264491673c43310809fe5dc91eba2cfd",
-                "span_sha256": "0161385c1997bde0a5e37f78a12470172659cadcbc60acf37b1c35a3eddb6177",
+                "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
+                "span_sha256": "d6c56c083627b992cc57292aed557210a737c9e20a3fe44fbb07db72a9910634",
                 "start_byte": 1601,
                 "start_line": 62
               },
-              "source_text": "enum lmb_generic_op_v1 {\n    LMB_GENERIC_OP_NONE = 0,\n    LMB_GENERIC_OP_OBJECT_OPEN = 1,\n    LMB_GENERIC_OP_PROGRAM_CONFIGURE = 2,\n    LMB_GENERIC_OP_OBJECT_LOAD = 3,\n    LMB_GENERIC_OP_PROGRAM_INFO = 4,\n    LMB_GENERIC_OP_MAP_INFO = 5,\n    LMB_GENERIC_OP_OBJECT_CLOSE = 6,\n    LMB_GENERIC_OP_MAP_LOOKUP = 7,\n    LMB_GENERIC_OP_MAP_UPDATE = 8,\n    LMB_GENERIC_OP_TEST_RUN = 9,\n    LMB_GENERIC_OP_ATTACH = 10,\n    LMB_GENERIC_OP_LINK_CLOSE = 11,\n    LMB_GENERIC_OP_BUFFER_OPEN = 12,\n    LMB_GENERIC_OP_BUFFER_POLL = 13,\n    LMB_GENERIC_OP_BUFFER_CLOSE = 14,\n    LMB_GENERIC_OP_VIEW_REF = 15,\n    LMB_GENERIC_OP_VIEW_GEN = 16,\n    LMB_GENERIC_OP_VIEW_CHECK = 17\n};"
+              "source_text": "enum lmb_generic_op_v1 {\n    LMB_GENERIC_OP_NONE = 0,\n    LMB_GENERIC_OP_OBJECT_OPEN = 1,\n    LMB_GENERIC_OP_PROGRAM_CONFIGURE = 2,\n    LMB_GENERIC_OP_OBJECT_LOAD = 3,\n    LMB_GENERIC_OP_PROGRAM_INFO = 4,\n    LMB_GENERIC_OP_MAP_INFO = 5,\n    LMB_GENERIC_OP_OBJECT_CLOSE = 6,\n    LMB_GENERIC_OP_MAP_LOOKUP = 7,\n    LMB_GENERIC_OP_MAP_UPDATE = 8,\n    LMB_GENERIC_OP_TEST_RUN = 9,\n    LMB_GENERIC_OP_ATTACH = 10,\n    LMB_GENERIC_OP_LINK_CLOSE = 11,\n    LMB_GENERIC_OP_BUFFER_OPEN = 12,\n    LMB_GENERIC_OP_BUFFER_POLL = 13,\n    LMB_GENERIC_OP_BUFFER_CLOSE = 14,\n    LMB_GENERIC_OP_VIEW_REF = 15,\n    LMB_GENERIC_OP_VIEW_GEN = 16,\n    LMB_GENERIC_OP_VIEW_CHECK = 17,\n    LMB_GENERIC_OP_MAP_DELETE = 18,\n    LMB_GENERIC_OP_MAP_NEXT_KEY = 19,\n    LMB_GENERIC_OP_BUFFER_STATS = 20\n};"
             }
           ],
           "scope": "public"
@@ -1081,7 +1081,8 @@
           "enumerator:enum:lmb_generic_op_v1.LMB_GENERIC_OP_BUFFER_CLOSE",
           "enumerator:enum:lmb_generic_op_v1.LMB_GENERIC_OP_VIEW_REF",
           "enumerator:enum:lmb_generic_op_v1.LMB_GENERIC_OP_VIEW_GEN",
-          "enumerator:enum:lmb_generic_op_v1.LMB_GENERIC_OP_VIEW_CHECK"
+          "enumerator:enum:lmb_generic_op_v1.LMB_GENERIC_OP_VIEW_CHECK",
+          "enumerator:enum:lmb_generic_op_v1.LMB_GENERIC_OP_BUFFER_STATS"
         ],
         "name": "lmb_generic_op_v1",
         "source_refs": [
@@ -3593,6 +3594,59 @@
             "span_sha256": "2fdda1c4461a8553f3f48bbf60d8a1331cb439fb3f85abeb12d3d8b4bfae5fbd",
             "start_line": 76,
             "symbol": "enum:lmb_generic_op_v1.LMB_GENERIC_OP_BUFFER_POLL"
+          }
+        ]
+      },
+      {
+        "declaration": {
+          "alternatives": [
+            {
+              "conditions": [
+                {
+                  "branches": [
+                    {
+                      "directive": "ifndef",
+                      "tokens": [
+                        "LIBBPF_MOJO_GENERIC_H"
+                      ]
+                    }
+                  ],
+                  "selected_branch": 0
+                }
+              ],
+              "parsed": {
+                "classification": "value",
+                "expression_tokens": [
+                  "20"
+                ],
+                "implicit_successor_of": null
+              },
+              "source_ref": {
+                "end_byte": 2373,
+                "end_line": 83,
+                "file": "native/include/libbpf_mojo_generic.h",
+                "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
+                "span_sha256": "4fe3d2857a96ceccb516a69c4f4553f111e4b8ca88aff8d9c5bf6e0f88248a65",
+                "start_byte": 2341,
+                "start_line": 83
+              },
+              "source_text": "LMB_GENERIC_OP_BUFFER_STATS = 20"
+            }
+          ],
+          "scope": "public"
+        },
+        "id": "enumerator:enum:lmb_generic_op_v1.LMB_GENERIC_OP_BUFFER_STATS",
+        "kind": "enumerator",
+        "members": [],
+        "name": "enum:lmb_generic_op_v1.LMB_GENERIC_OP_BUFFER_STATS",
+        "source_refs": [
+          {
+            "end_line": 83,
+            "path": "native/include/libbpf_mojo_generic.h",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
+            "span_sha256": "a57072c07947849cbfa7283e19799f88e4bd5b5b26ce6248764a5025147811b8",
+            "start_line": 83,
+            "symbol": "enum:lmb_generic_op_v1.LMB_GENERIC_OP_BUFFER_STATS"
           }
         ]
       },
@@ -6311,6 +6365,447 @@
             "span_sha256": "862799a00f9d17c527ea76ab57f05997b738d7214e660a54e364a26c1bf77019",
             "start_line": 113,
             "symbol": "lmb_buffer_options_v1.struct_size"
+          }
+        ]
+      },
+      {
+        "declaration": {
+          "alternatives": [
+            {
+              "conditions": [
+                {
+                  "branches": [
+                    {
+                      "directive": "ifndef",
+                      "tokens": [
+                        "LIBBPF_MOJO_GENERIC_H"
+                      ]
+                    }
+                  ],
+                  "selected_branch": 0
+                }
+              ],
+              "parsed": {
+                "anonymous": false,
+                "bitfield_tokens": null,
+                "record_members": [],
+                "type": {
+                  "declarator": {
+                    "attributes": [],
+                    "inner": null,
+                    "name": "abi_version",
+                    "pointers": [],
+                    "suffixes": []
+                  },
+                  "specifiers": [
+                    "uint32_t"
+                  ]
+                }
+              },
+              "source_ref": {
+                "end_byte": 5224,
+                "end_line": 203,
+                "file": "native/include/libbpf_mojo_generic.h",
+                "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
+                "span_sha256": "1684461b7cdb6ef14dc28ccb26b35bff5bcafbeeb4963589ce9e8864c2916c48",
+                "start_byte": 5204,
+                "start_line": 203
+              },
+              "source_text": "uint32_t abi_version"
+            }
+          ],
+          "scope": "public"
+        },
+        "id": "member:lmb_buffer_stats_v1.abi_version",
+        "kind": "member",
+        "members": [],
+        "name": "lmb_buffer_stats_v1.abi_version",
+        "source_refs": [
+          {
+            "end_line": 203,
+            "path": "native/include/libbpf_mojo_generic.h",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
+            "span_sha256": "161ee8f9a332e820221f7e89f3788f5bda37f8cf30d72e6893a60b58592dd9cc",
+            "start_line": 203,
+            "symbol": "lmb_buffer_stats_v1.abi_version"
+          }
+        ]
+      },
+      {
+        "declaration": {
+          "alternatives": [
+            {
+              "conditions": [
+                {
+                  "branches": [
+                    {
+                      "directive": "ifndef",
+                      "tokens": [
+                        "LIBBPF_MOJO_GENERIC_H"
+                      ]
+                    }
+                  ],
+                  "selected_branch": 0
+                }
+              ],
+              "parsed": {
+                "anonymous": false,
+                "bitfield_tokens": null,
+                "record_members": [],
+                "type": {
+                  "declarator": {
+                    "attributes": [],
+                    "inner": null,
+                    "name": "delivered",
+                    "pointers": [],
+                    "suffixes": []
+                  },
+                  "specifiers": [
+                    "uint64_t"
+                  ]
+                }
+              },
+              "source_ref": {
+                "end_byte": 5297,
+                "end_line": 206,
+                "file": "native/include/libbpf_mojo_generic.h",
+                "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
+                "span_sha256": "a4813471d0b6546690874e711ad22484b08c2d76e5dcdeafccddd4f3051ed744",
+                "start_byte": 5279,
+                "start_line": 206
+              },
+              "source_text": "uint64_t delivered"
+            }
+          ],
+          "scope": "public"
+        },
+        "id": "member:lmb_buffer_stats_v1.delivered",
+        "kind": "member",
+        "members": [],
+        "name": "lmb_buffer_stats_v1.delivered",
+        "source_refs": [
+          {
+            "end_line": 206,
+            "path": "native/include/libbpf_mojo_generic.h",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
+            "span_sha256": "6a936d36d96c445e48e83599e3c6bf809e8a522eb7ec57187e9fee27b81f0858",
+            "start_line": 206,
+            "symbol": "lmb_buffer_stats_v1.delivered"
+          }
+        ]
+      },
+      {
+        "declaration": {
+          "alternatives": [
+            {
+              "conditions": [
+                {
+                  "branches": [
+                    {
+                      "directive": "ifndef",
+                      "tokens": [
+                        "LIBBPF_MOJO_GENERIC_H"
+                      ]
+                    }
+                  ],
+                  "selected_branch": 0
+                }
+              ],
+              "parsed": {
+                "anonymous": false,
+                "bitfield_tokens": null,
+                "record_members": [],
+                "type": {
+                  "declarator": {
+                    "attributes": [],
+                    "inner": null,
+                    "name": "dropped",
+                    "pointers": [],
+                    "suffixes": []
+                  },
+                  "specifiers": [
+                    "uint64_t"
+                  ]
+                }
+              },
+              "source_ref": {
+                "end_byte": 5364,
+                "end_line": 209,
+                "file": "native/include/libbpf_mojo_generic.h",
+                "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
+                "span_sha256": "f1cc2ea3ddb484a27da8a59c0826a75fc3a901445ed26ed10057a8f03b76e793",
+                "start_byte": 5348,
+                "start_line": 209
+              },
+              "source_text": "uint64_t dropped"
+            }
+          ],
+          "scope": "public"
+        },
+        "id": "member:lmb_buffer_stats_v1.dropped",
+        "kind": "member",
+        "members": [],
+        "name": "lmb_buffer_stats_v1.dropped",
+        "source_refs": [
+          {
+            "end_line": 209,
+            "path": "native/include/libbpf_mojo_generic.h",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
+            "span_sha256": "9158ae9511c027b63dba0cdcc4a09905e33744d4966fb538ee7cc5ca8e264fa0",
+            "start_line": 209,
+            "symbol": "lmb_buffer_stats_v1.dropped"
+          }
+        ]
+      },
+      {
+        "declaration": {
+          "alternatives": [
+            {
+              "conditions": [
+                {
+                  "branches": [
+                    {
+                      "directive": "ifndef",
+                      "tokens": [
+                        "LIBBPF_MOJO_GENERIC_H"
+                      ]
+                    }
+                  ],
+                  "selected_branch": 0
+                }
+              ],
+              "parsed": {
+                "anonymous": false,
+                "bitfield_tokens": null,
+                "record_members": [],
+                "type": {
+                  "declarator": {
+                    "attributes": [],
+                    "inner": null,
+                    "name": "malformed",
+                    "pointers": [],
+                    "suffixes": []
+                  },
+                  "specifiers": [
+                    "uint64_t"
+                  ]
+                }
+              },
+              "source_ref": {
+                "end_byte": 5342,
+                "end_line": 208,
+                "file": "native/include/libbpf_mojo_generic.h",
+                "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
+                "span_sha256": "7d4c8c3fd660a130ffa80f3b85107bb1b5809ff59a0b6d36397ec02d37d74b68",
+                "start_byte": 5324,
+                "start_line": 208
+              },
+              "source_text": "uint64_t malformed"
+            }
+          ],
+          "scope": "public"
+        },
+        "id": "member:lmb_buffer_stats_v1.malformed",
+        "kind": "member",
+        "members": [],
+        "name": "lmb_buffer_stats_v1.malformed",
+        "source_refs": [
+          {
+            "end_line": 208,
+            "path": "native/include/libbpf_mojo_generic.h",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
+            "span_sha256": "5473d0ffc902b07e72ec05b7345fb6d9ce9c1ff49992766860b0bcbabf891003",
+            "start_line": 208,
+            "symbol": "lmb_buffer_stats_v1.malformed"
+          }
+        ]
+      },
+      {
+        "declaration": {
+          "alternatives": [
+            {
+              "conditions": [
+                {
+                  "branches": [
+                    {
+                      "directive": "ifndef",
+                      "tokens": [
+                        "LIBBPF_MOJO_GENERIC_H"
+                      ]
+                    }
+                  ],
+                  "selected_branch": 0
+                }
+              ],
+              "parsed": {
+                "anonymous": false,
+                "bitfield_tokens": null,
+                "record_members": [],
+                "type": {
+                  "declarator": {
+                    "attributes": [],
+                    "inner": null,
+                    "name": "received",
+                    "pointers": [],
+                    "suffixes": []
+                  },
+                  "specifiers": [
+                    "uint64_t"
+                  ]
+                }
+              },
+              "source_ref": {
+                "end_byte": 5273,
+                "end_line": 205,
+                "file": "native/include/libbpf_mojo_generic.h",
+                "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
+                "span_sha256": "c1691ef5fdb42da7e0e846fa0fdd9ec8b2623e625b5dad93cc5e742e58769bd9",
+                "start_byte": 5256,
+                "start_line": 205
+              },
+              "source_text": "uint64_t received"
+            }
+          ],
+          "scope": "public"
+        },
+        "id": "member:lmb_buffer_stats_v1.received",
+        "kind": "member",
+        "members": [],
+        "name": "lmb_buffer_stats_v1.received",
+        "source_refs": [
+          {
+            "end_line": 205,
+            "path": "native/include/libbpf_mojo_generic.h",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
+            "span_sha256": "b966a92d2083379c92b9240268415f259f3910dd8dbcbc5c8824d6d2536daf99",
+            "start_line": 205,
+            "symbol": "lmb_buffer_stats_v1.received"
+          }
+        ]
+      },
+      {
+        "declaration": {
+          "alternatives": [
+            {
+              "conditions": [
+                {
+                  "branches": [
+                    {
+                      "directive": "ifndef",
+                      "tokens": [
+                        "LIBBPF_MOJO_GENERIC_H"
+                      ]
+                    }
+                  ],
+                  "selected_branch": 0
+                }
+              ],
+              "parsed": {
+                "anonymous": false,
+                "bitfield_tokens": null,
+                "record_members": [],
+                "type": {
+                  "declarator": {
+                    "attributes": [],
+                    "inner": null,
+                    "name": "staged",
+                    "pointers": [],
+                    "suffixes": []
+                  },
+                  "specifiers": [
+                    "uint64_t"
+                  ]
+                }
+              },
+              "source_ref": {
+                "end_byte": 5318,
+                "end_line": 207,
+                "file": "native/include/libbpf_mojo_generic.h",
+                "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
+                "span_sha256": "9119d40136813bcb58757f85cea240dee536cc764ac2208deba8eb78c01e2bb0",
+                "start_byte": 5303,
+                "start_line": 207
+              },
+              "source_text": "uint64_t staged"
+            }
+          ],
+          "scope": "public"
+        },
+        "id": "member:lmb_buffer_stats_v1.staged",
+        "kind": "member",
+        "members": [],
+        "name": "lmb_buffer_stats_v1.staged",
+        "source_refs": [
+          {
+            "end_line": 207,
+            "path": "native/include/libbpf_mojo_generic.h",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
+            "span_sha256": "97df4383a74b154608684d52c94b49f3b8456187f089c55ce339214d5b629f46",
+            "start_line": 207,
+            "symbol": "lmb_buffer_stats_v1.staged"
+          }
+        ]
+      },
+      {
+        "declaration": {
+          "alternatives": [
+            {
+              "conditions": [
+                {
+                  "branches": [
+                    {
+                      "directive": "ifndef",
+                      "tokens": [
+                        "LIBBPF_MOJO_GENERIC_H"
+                      ]
+                    }
+                  ],
+                  "selected_branch": 0
+                }
+              ],
+              "parsed": {
+                "anonymous": false,
+                "bitfield_tokens": null,
+                "record_members": [],
+                "type": {
+                  "declarator": {
+                    "attributes": [],
+                    "inner": null,
+                    "name": "struct_size",
+                    "pointers": [],
+                    "suffixes": []
+                  },
+                  "specifiers": [
+                    "uint32_t"
+                  ]
+                }
+              },
+              "source_ref": {
+                "end_byte": 5250,
+                "end_line": 204,
+                "file": "native/include/libbpf_mojo_generic.h",
+                "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
+                "span_sha256": "5c0a9eef92929d5ceb2ae2b7f6f3c03924b2a16d95978e266357552fc30c3ba0",
+                "start_byte": 5230,
+                "start_line": 204
+              },
+              "source_text": "uint32_t struct_size"
+            }
+          ],
+          "scope": "public"
+        },
+        "id": "member:lmb_buffer_stats_v1.struct_size",
+        "kind": "member",
+        "members": [],
+        "name": "lmb_buffer_stats_v1.struct_size",
+        "source_refs": [
+          {
+            "end_line": 204,
+            "path": "native/include/libbpf_mojo_generic.h",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
+            "span_sha256": "862799a00f9d17c527ea76ab57f05997b738d7214e660a54e364a26c1bf77019",
+            "start_line": 204,
+            "symbol": "lmb_buffer_stats_v1.struct_size"
           }
         ]
       },
@@ -12306,6 +12801,65 @@
             "span_sha256": "e0d5f2ccd560f40dea1a94f6a4b81906d5e49313b9ce2b931a9e0069f35b2582",
             "start_line": 188,
             "symbol": "lmb_buffer_options_v1"
+          }
+        ]
+      },
+      {
+        "declaration": {
+          "alternatives": [
+            {
+              "conditions": [
+                {
+                  "branches": [
+                    {
+                      "directive": "ifndef",
+                      "tokens": [
+                        "LIBBPF_MOJO_GENERIC_H"
+                      ]
+                    }
+                  ],
+                  "selected_branch": 0
+                }
+              ],
+              "parsed": {
+                "attributes": [],
+                "complete": true,
+                "tag_kind": "struct"
+              },
+              "source_ref": {
+                "end_byte": 5368,
+                "end_line": 210,
+                "file": "native/include/libbpf_mojo_generic.h",
+                "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
+                "span_sha256": "ffe22857997de4e1858e40ca9dff553cc0a42ae5b15534a67408b3743442d0e3",
+                "start_byte": 5171,
+                "start_line": 202
+              },
+              "source_text": "struct lmb_buffer_stats_v1 {\n    uint32_t abi_version;\n    uint32_t struct_size;\n    uint64_t received;\n    uint64_t delivered;\n    uint64_t staged;\n    uint64_t malformed;\n    uint64_t dropped;\n};"
+            }
+          ],
+          "scope": "public"
+        },
+        "id": "record:lmb_buffer_stats_v1",
+        "kind": "record",
+        "members": [
+          "member:lmb_buffer_stats_v1.abi_version",
+          "member:lmb_buffer_stats_v1.struct_size",
+          "member:lmb_buffer_stats_v1.received",
+          "member:lmb_buffer_stats_v1.delivered",
+          "member:lmb_buffer_stats_v1.staged",
+          "member:lmb_buffer_stats_v1.malformed",
+          "member:lmb_buffer_stats_v1.dropped"
+        ],
+        "name": "lmb_buffer_stats_v1",
+        "source_refs": [
+          {
+            "end_line": 210,
+            "path": "native/include/libbpf_mojo_generic.h",
+            "sha256": "2f99101c157b39255497a0a1fcbdb0ade7eac99f003771502776868ace6273ca",
+            "span_sha256": "29534b658e305582f5bfab46a14ba64c3c0e8ef99787a4ec4e58b74fb80f681a",
+            "start_line": 202,
+            "symbol": "lmb_buffer_stats_v1"
           }
         ]
       },
