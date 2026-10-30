@@ -3,22 +3,26 @@
 
 This repository builds with a pinned Mojo toolchain managed by pixi, plus
 system C tooling for the native bridge. Pinned versions live in
-`toolchain.lock.json` (cmake carries a minimum floor, the rest are
-exact); the `pixi.lock` file carries authoritative conda package hashes.
+`toolchain.lock.json` (pixi, Mojo, ninja, make, and pkg-config are
+exact; system clang, bpftool, gcc, zlib, cmake, and dev-only Python
+carry minimum floors); the `pixi.lock` file carries authoritative
+conda package hashes.
 
 ## Prerequisites
 
-- `pixi` 0.81.0 exactly, to create the Mojo environment
+- `pixi` 0.83.0 exactly, to create the Mojo environment
   (`python3 tools/install-pixi` installs the locked release
   after verifying its digest; see below).
-- System `clang`, `ninja`, `make`, and `bpftool` at the locked
-  versions, plus `cmake` at or above the locked floor, for the
-  native bridge and test fixtures.
-- `libelf` headers (`libelf-dev 0.194-4`), `zlib` headers, and
-  `pkg-config` at the locked versions, for the libbpf source build. The
-  native build verifies them with `pkg-config` and fails closed when
-  they are absent; install them with `apt-get install libelf-dev`
-  (plus its dependencies) before building native targets.
+- System `clang` and `bpftool` at or above the locked floors,
+  `ninja` and `make` at the locked versions, plus `cmake` at or
+  above its floor, for the native bridge and test fixtures.
+- `libelf` headers (`libelf-dev 0.194-4`, or
+  `elfutils-libelf-devel` on Fedora), `zlib` headers at or above
+  the locked floor, and `pkg-config`, for the libbpf source build.
+  The native build verifies them with `pkg-config` and fails closed
+  when they are absent; install them with `apt-get install libelf-dev`
+  or `dnf install elfutils-libelf-devel zlib-ng-compat-devel`
+  (plus dependencies) before building native targets.
 - `python3` for development-only validation tooling.
 
 Run `pixi install` once after cloning. Every Mojo command below runs inside

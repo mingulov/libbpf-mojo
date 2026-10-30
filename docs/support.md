@@ -12,9 +12,10 @@
   the package manifest; see `docs/build.md`). Pure offline
   module use needs neither: importing analysis-only Mojo
   modules never initializes libbpf or requires privilege.
-- Exact toolchain in `toolchain.lock.json` (Mojo 1.1.0 via
-  pixi, libbpf 1.7.0 source, system clang/bpftool/CMake).
-  `tools/build --check-toolchain` verifies the pins.
+- Pinned toolchain in `toolchain.lock.json` (Mojo 1.2.0 via
+  pixi, libbpf 1.7.0 source, system clang/bpftool/CMake at or
+  above their floors). `tools/build --check-toolchain` verifies
+  the pins.
 - `libbpf_mojo.so.1` plus the libraries named by the package
   manifest; consumers resolve the bridge from the pinned
   release tarball, never from a sibling checkout.

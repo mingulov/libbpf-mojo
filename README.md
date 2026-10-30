@@ -46,7 +46,7 @@ retention and installed-consumer boundaries.
 
 ## Build, test, and package
 
-Pinned Mojo 1.1.0 toolchain via pixi plus system C tooling;
+Pinned Mojo 1.2.0 toolchain via pixi plus system C tooling;
 see `docs/build.md` and `toolchain.lock.json`.
 
     ./tools/build                                    # everything

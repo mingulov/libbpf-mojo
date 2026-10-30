@@ -13842,7 +13842,7 @@
       "bridge_abi": 1,
       "evidence_refs": [],
       "id": "pinned-source",
-      "mojo_version": "1.1.0",
+      "mojo_version": "1.2.0",
       "outcome": "NOT_RUN",
       "profile": "linux-x86_64-lp64-le",
       "requirement": "required",
@@ -13852,7 +13852,7 @@
       "bridge_abi": 1,
       "evidence_refs": [],
       "id": "installed-pinned",
-      "mojo_version": "1.1.0",
+      "mojo_version": "1.2.0",
       "outcome": "NOT_RUN",
       "profile": "installed-linux-x86_64-v2-glibc-2.38",
       "requirement": "required",
@@ -13862,7 +13862,7 @@
       "bridge_abi": 1,
       "evidence_refs": [],
       "id": "old-session",
-      "mojo_version": "1.1.0",
+      "mojo_version": "1.2.0",
       "outcome": "NOT_RUN",
       "profile": "old-session-with-optional-generic-symbols",
       "requirement": "required",
@@ -13872,7 +13872,7 @@
       "bridge_abi": 1,
       "evidence_refs": [],
       "id": "missing-optional",
-      "mojo_version": "1.1.0",
+      "mojo_version": "1.2.0",
       "outcome": "NOT_RUN",
       "profile": "operation-specific-missing-generic-symbol",
       "requirement": "required",
@@ -13882,7 +13882,7 @@
       "bridge_abi": 1,
       "evidence_refs": [],
       "id": "native-aarch64",
-      "mojo_version": "1.1.0",
+      "mojo_version": "1.2.0",
       "outcome": "NOT_RUN",
       "profile": "physical-native-linux-aarch64",
       "requirement": "required",
@@ -13892,7 +13892,7 @@
       "bridge_abi": 1,
       "evidence_refs": [],
       "id": "other-abi",
-      "mojo_version": "1.1.0",
+      "mojo_version": "1.2.0",
       "outcome": "NOT_RUN",
       "profile": "additional-supported-abi-to-be-selected",
       "requirement": "required",
@@ -13902,7 +13902,7 @@
       "bridge_abi": 1,
       "evidence_refs": [],
       "id": "older-upstream",
-      "mojo_version": "1.1.0",
+      "mojo_version": "1.2.0",
       "outcome": "NOT_RUN",
       "profile": "supported-older-upstream-to-be-pinned",
       "requirement": "required",
@@ -13912,7 +13912,7 @@
       "bridge_abi": 1,
       "evidence_refs": [],
       "id": "newer-upstream",
-      "mojo_version": "1.1.0",
+      "mojo_version": "1.2.0",
       "outcome": "NOT_RUN",
       "profile": "supported-newer-upstream-to-be-pinned",
       "requirement": "required",
@@ -13924,7 +13924,7 @@
     "sources": [
       {
         "path": "README.md",
-        "sha256": "b21621692099da5ca2270e67a49c8d9f37469e074986353796041543024d195b"
+        "sha256": "3e8c7f713f54d483621700737ef2084ab7b338d603e6b011022f2c00e3f5f72e"
       },
       {
         "path": "docs/abi-v1.md",
@@ -13932,7 +13932,7 @@
       },
       {
         "path": "docs/build.md",
-        "sha256": "9e46b9e8844f2de9fc01c34de75c7351d09b9815f2260726a8d6a91881d7e763"
+        "sha256": "5544000224f7f451d2d61ee2ddd5460f2824cdab79d1804bec1e783efb2e3810"
       },
       {
         "path": "docs/generic-abi-v1.md",
@@ -13952,7 +13952,7 @@
       },
       {
         "path": "docs/support.md",
-        "sha256": "f53e095f9f8a1bfc4d4c6f60faa62e7f139d1b0040316e794d9d6397af076918"
+        "sha256": "ad225d2151e8d57044b114c42dad0d3b8b7a58d9b884990e2e3723170fec38e1"
       },
       {
         "path": "native/CMakeLists.txt",
@@ -14108,7 +14108,7 @@
       },
       {
         "path": "toolchain.lock.json",
-        "sha256": "005eed843e4f91b1e57b6205aa5acfdfb6dc43b78abb8e717d16bd7275569925"
+        "sha256": "840e0bffd032115b46c63bffa8d7ec1cc92686fdc306dd941ca6303ae8b7e298"
       }
     ]
   },

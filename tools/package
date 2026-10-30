@@ -249,7 +249,7 @@ controlled mappings and explicit attachment seams; successful kernel
 attachment and event production remain unqualified. See
 [links and ring consumers](docs/links-and-ring.md).
 
-Build a consumer with the pinned Mojo 1.1.0 compiler and
+Build a consumer with the pinned Mojo 1.2.0 compiler and
 \`mojo build -I <package>/mojo\`. Run the compiled consumer with
 \`LD_LIBRARY_PATH=<package>/lib\` and \`LMB_NATIVE_LIB\` pointing at
 \`<package>/lib/libbpf_mojo.so.1\`. Compiled consumers use the bundled
