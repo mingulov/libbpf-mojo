@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception */
 #ifndef LMB_GENERIC_INTERNAL_H
 #define LMB_GENERIC_INTERNAL_H
+#include <stdatomic.h>
 #include <stddef.h>
 #include "libbpf_mojo_generic.h"
 
@@ -25,7 +26,9 @@ struct lmb_object {
     uint32_t log_level;
     size_t log_capacity;
     uint64_t generation;
-    unsigned refs;
+    /* Shared by concurrent views: ref/unref only through atomics.
+     * `external` stays single-owner (release), read alongside. */
+    atomic_uint refs;
     unsigned external;
     unsigned load_attempted;
     unsigned loaded;

@@ -1,9 +1,17 @@
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 """Installed typed map imports, ownership and host rejection paths."""
+from std.os import getenv
 from std.pathlib import Path
 from std.sys import argv, exit
 from libbpf_mojo.maps import lookup, update, lookup_u64, update_u64
 from libbpf_mojo.object import Object
+
+
+def packaged_lib() raises -> String:
+    # The harness sets LMB_NATIVE_LIB to the packaged bridge;
+    # the consumer resolves it explicitly instead of relying
+    # on environment lookup.
+    return getenv("LMB_NATIVE_LIB")
 
 
 def main() raises:
@@ -11,8 +19,9 @@ def main() raises:
     if len(args) != 2:
         exit(2)
     var elf = Path(args[1]).read_bytes()
+    var lib_path = packaged_lib()
     try:
-        var obj = Object.open(Span(elf))
+        var obj = Object.open_with_lib(Span(elf), lib_path)
         var view = obj.map("events")
         var owner = obj^
         var moved = view^

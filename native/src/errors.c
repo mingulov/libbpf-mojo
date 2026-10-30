@@ -19,8 +19,10 @@ void lmb_record(uint32_t op, uint32_t domain, int32_t code,
     tls_err.operation = op;
     tls_err.domain = domain;
     tls_err.code = code;
+    /* Clear first: the record is copied whole to inspectors, so bytes
+     * past msg_len must never survive from a longer predecessor. */
+    memset(tls_err.message, 0, sizeof(tls_err.message));
     memcpy(tls_err.message, msg, n);
-    tls_err.message[n] = 0;
     tls_err.msg_len = (uint32_t)n;
 }
 
@@ -98,8 +100,8 @@ int lmb_check_bytes(const struct lmb_bytes_v1 *in, uint32_t max,
     return utf8_ok(in->ptr, in->len);
 }
 
-int lmb_ranges_overlap(const void *a, uint32_t a_len, const void *b,
-                       uint32_t b_len) {
+int lmb_ranges_overlap(const void *a, uint64_t a_len, const void *b,
+                       uint64_t b_len) {
     uintptr_t as = (uintptr_t)a;
     uintptr_t bs = (uintptr_t)b;
     if (a_len == 0 || b_len == 0)

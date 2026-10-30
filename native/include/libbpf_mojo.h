@@ -25,7 +25,8 @@ enum {
     LMB_MAX_FRAME_BYTES = 4104,
     LMB_MAX_NAME_BYTES = 256,
     LMB_ERROR_MSG_CAP = 1024,
-    LMB_MAX_MSG_LEN = 1023
+    LMB_MAX_MSG_LEN = 1023,
+    LMB_MAX_ELF_BYTES = 16777216
 };
 
 enum lmb_attach_kind_v1 {

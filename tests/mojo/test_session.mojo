@@ -5,6 +5,7 @@
 Every test runs without privileges except the valid-load branch,
 which follows the independent privilege probe deterministically.
 """
+from std.ffi import external_call
 from std.os import getenv
 from std.sys import exit
 from std.testing import TestSuite, assert_equal, assert_false, assert_true
@@ -22,17 +23,20 @@ from libbpf_mojo._ffi import (
     OP_POLL,
     MapInfoV1,
 )
-from libbpf_mojo.error import EBUSY, EINVAL, ENOENT, LmbError
+from libbpf_mojo.error import EBUSY, EINVAL, ENOENT, EPERM, LmbError
 from libbpf_mojo.session import (
     AttachSpec,
     BridgeStats,
     MapReadResult,
     Session,
+    is_privileged_ids,
+    native_lib_path,
 )
 from testutil import (
     TestFake,
     must_close,
     must_open,
+    open_explicit,
     peak_rss_kb,
     read_fixture_elf,
 )
@@ -63,7 +67,7 @@ def test_open_invalid_elf() raises:
     var code = Int32(0)
     var raised = False
     try:
-        var s = Session.open(
+        var s = open_explicit(
             Span(empty), String("events"), UInt32(4096)
         )
         s.close()
@@ -82,7 +86,7 @@ def test_open_invalid_max_raw() raises:
         var code = Int32(0)
         var raised = False
         try:
-            var s = Session.open(Span(elf), String("events"), raw)
+            var s = open_explicit(Span(elf), String("events"), raw)
             s.close()
         except e:
             code = e.code
@@ -96,7 +100,7 @@ def test_open_invalid_ring() raises:
     var code = Int32(0)
     var raised = False
     try:
-        var s = Session.open(Span(elf), String(""), UInt32(4096))
+        var s = open_explicit(Span(elf), String(""), UInt32(4096))
         s.close()
     except e:
         code = e.code
@@ -230,7 +234,7 @@ def test_load_garbage() raises:
     var code = Int32(0)
     var raised = False
     try:
-        var s = Session.open(
+        var s = open_explicit(
             Span(garbage), String("events"), UInt32(4096)
         )
         s.load()
@@ -475,7 +479,7 @@ def test_destruction_no_close() raises:
     for _ in range(10):
         var warm_closed: Bool
         try:
-            var s = Session.open(
+            var s = open_explicit(
                 Span(big), String("events"), UInt32(4096)
             )
             warm_closed = s.is_closed()
@@ -486,7 +490,7 @@ def test_destruction_no_close() raises:
     for _ in range(200):
         var cycle_closed: Bool
         try:
-            var s = Session.open(
+            var s = open_explicit(
                 Span(big), String("events"), UInt32(4096)
             )
             cycle_closed = s.is_closed()
@@ -498,6 +502,51 @@ def test_destruction_no_close() raises:
     assert_true(p1 - p0 < 20 * 1024)
 
 
+def test_privilege_identity_matrix() raises:
+    assert_true(is_privileged_ids(UInt32(0), UInt32(0)))
+    assert_true(is_privileged_ids(UInt32(0), UInt32(1000)))
+    assert_true(is_privileged_ids(UInt32(1000), UInt32(0)))
+    assert_false(is_privileged_ids(UInt32(1000), UInt32(1000)))
+
+
+def test_env_lib_privilege_consistent() raises:
+    var euid = external_call["geteuid", UInt32]()
+    var ruid = external_call["getuid", UInt32]()
+    var privileged = euid == UInt32(0) or euid != ruid
+    var refused = False
+    var code = Int32(0)
+    var path = String("")
+    try:
+        path = native_lib_path()
+    except e:
+        refused = True
+        code = e.code
+    if privileged:
+        assert_true(refused)
+        assert_equal(code, EPERM)
+        var open_refused = False
+        var open_code = Int32(0)
+        var elf = read_fixture_elf()
+        try:
+            var s = Session.open(
+                Span(elf), String("events"), UInt32(4096)
+            )
+            s.close()
+        except e:
+            open_refused = True
+            open_code = e.code
+        assert_true(open_refused)
+        assert_equal(open_code, EPERM)
+    else:
+        assert_false(refused)
+        assert_true(path != "")
+
+
+def test_env_lib_opt_in_allows_lookup() raises:
+    var path = native_lib_path(allow_privileged_env=True)
+    assert_equal(path, getenv("LMB_NATIVE_LIB"))
+
+
 def run() raises -> Int:
     var suite = TestSuite()
     suite.test[test_open_close]()
@@ -506,6 +555,9 @@ def run() raises -> Int:
     suite.test[test_open_invalid_max_raw]()
     suite.test[test_open_invalid_ring]()
     suite.test[test_open_missing_lib]()
+    suite.test[test_privilege_identity_matrix]()
+    suite.test[test_env_lib_privilege_consistent]()
+    suite.test[test_env_lib_opt_in_allows_lookup]()
     suite.test[test_transfer_two_hops]()
     suite.test[test_stats_zeros]()
     suite.test[test_error_preserved_on_success]()

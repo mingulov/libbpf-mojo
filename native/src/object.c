@@ -135,7 +135,8 @@ static void destroy(struct lmb_object *obj) {
 }
 
 unsigned lmb_object_live_children(const struct lmb_object *obj) {
-    return obj ? obj->refs - obj->external : 0;
+    if (!obj) return 0;
+    return atomic_load_explicit(&obj->refs, memory_order_relaxed) - obj->external;
 }
 
 int lmb_object_need_loaded(const struct lmb_object *obj, uint32_t op) {
@@ -153,6 +154,18 @@ int32_t lmb_object_open_v1(const uint8_t *elf, uint64_t elf_bytes,
     struct bpf_object_open_opts native = {0};
     int32_t code;
     if (!out) return fail(op, 4, -EINVAL, "null output handle");
+    /* The out cell must not overlap any input. The guard runs before
+     * the first write: an aliased call is rejected without touching
+     * the cell, while every other rejection below clears it. Absent
+     * inputs have no bytes to overlap. */
+    if ((opts && lmb_generic_ranges_overlap(out, sizeof(*out), opts, sizeof(*opts))) ||
+        (opts && opts->name.ptr && opts->name.len &&
+         lmb_generic_ranges_overlap(out, sizeof(*out), opts->name.ptr, opts->name.len)) ||
+        (opts && opts->custom_btf.ptr && opts->custom_btf.len &&
+         lmb_generic_ranges_overlap(out, sizeof(*out), opts->custom_btf.ptr, opts->custom_btf.len)) ||
+        (elf && elf_bytes &&
+         lmb_generic_ranges_overlap(out, sizeof(*out), elf, elf_bytes)))
+        return fail(op, 4, -EINVAL, "output aliases input");
     *out = NULL;
     if (!opts || !lmb_check_header(opts->abi_version, opts->struct_size, sizeof(*opts)))
         return fail(op, 4, -EINVAL, "invalid options header");
@@ -163,11 +176,8 @@ int32_t lmb_object_open_v1(const uint8_t *elf, uint64_t elf_bytes,
         return fail(op, 4, -EINVAL, "invalid input span");
     if (opts->log_level > 2 || opts->flags || opts->_reserved || opts->log_capacity > 1048576)
         return fail(op, 4, -EINVAL, "unsupported object options");
-    if (lmb_generic_ranges_overlap(out, sizeof(*out), opts, sizeof(*opts)) ||
-        lmb_generic_ranges_overlap(out, sizeof(*out), elf, elf_bytes) ||
-        lmb_generic_ranges_overlap(out, sizeof(*out), opts->name.ptr, opts->name.len) ||
-        lmb_generic_ranges_overlap(out, sizeof(*out), opts->custom_btf.ptr, opts->custom_btf.len))
-        return fail(op, 4, -EINVAL, "output aliases input");
+    if (elf_bytes > LMB_GENERIC_MAX_ELF_BYTES)
+        return fail(op, 1, -ENOMEM, "ELF exceeds size bound");
     obj = calloc(1, sizeof(*obj));
     if (!obj) return fail(op, 1, -ENOMEM, "allocation failed");
     obj->elf_len = (size_t)elf_bytes;
@@ -201,6 +211,13 @@ int32_t lmb_object_open_v1(const uint8_t *elf, uint64_t elf_bytes,
         if (code) goto native_failed;
     }
     bpf_object__for_each_program(program, obj->obj) obj->program_count++;
+    if (obj->program_count > LMB_GENERIC_MAX_PROGRAMS) {
+        /* destroy() iterates the program table: reset the count
+         * first, since the table was never allocated. */
+        obj->program_count = 0;
+        destroy(obj);
+        return fail(op, 1, -ENOMEM, "program count exceeds bound");
+    }
     if (obj->program_count) {
         obj->programs = calloc(obj->program_count, sizeof(*obj->programs));
         if (!obj->programs) { obj->program_count = 0; code = -ENOMEM; goto allocation_failed; }
@@ -219,7 +236,7 @@ int32_t lmb_object_open_v1(const uint8_t *elf, uint64_t elf_bytes,
         code = bpf_program__set_log_level(program, obj->log_level ? 1 : 0);
         if (code) goto native_failed;
     }
-    obj->refs = 1; obj->external = 1;
+    atomic_init(&obj->refs, 1); obj->external = 1;
     *out = obj;
     lmb_generic_clear();
     return 0;
@@ -395,13 +412,24 @@ int32_t lmb_object_map_info_v1(struct lmb_object *obj,
 }
 
 int32_t lmb_object_ref_v1(struct lmb_object *obj) {
+    unsigned old;
     if (!obj) return fail(15, 4, -EINVAL, "null view owner");
-    if (obj->refs == UINT_MAX) return fail(15, 4, -EOVERFLOW, "view count overflow");
-    obj->refs++; lmb_generic_clear(); return 0;
+    old = atomic_load_explicit(&obj->refs, memory_order_relaxed);
+    for (;;) {
+        if (old == UINT_MAX)
+            return fail(15, 4, -EOVERFLOW, "view count overflow");
+        if (atomic_compare_exchange_weak_explicit(&obj->refs, &old, old + 1,
+                memory_order_relaxed, memory_order_relaxed))
+            break;
+    }
+    lmb_generic_clear(); return 0;
 }
 
 void lmb_object_unref_v1(struct lmb_object *obj) {
-    if (obj && --obj->refs == 0) destroy(obj);
+    if (obj && atomic_fetch_sub_explicit(&obj->refs, 1, memory_order_acq_rel) == 1) {
+        atomic_thread_fence(memory_order_acquire);
+        destroy(obj);
+    }
 }
 
 int32_t lmb_object_gen_v1(const struct lmb_object *obj, uint64_t *generation) {

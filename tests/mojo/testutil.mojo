@@ -11,9 +11,13 @@ from std.os import getenv
 from std.pathlib import Path
 from std.testing import assert_true
 
-from libbpf_mojo._ffi import read_u64_le
+from libbpf_mojo._ffi import (
+    DOMAIN_BRIDGE,
+    OP_OPEN,
+    read_u64_le,
+)
 from libbpf_mojo.batch import PollResult
-from libbpf_mojo.error import LmbError
+from libbpf_mojo.error import ENOENT, LmbError
 from libbpf_mojo.session import Session
 
 
@@ -33,10 +37,32 @@ def read_fixture_elf() raises -> List[UInt8]:
     return Path(fixture_path()).read_bytes()
 
 
+def open_explicit(
+    elf: Span[UInt8, _], ring: String, max_raw_bytes: UInt32
+) raises LmbError -> Session:
+    """Open on the harness library via an explicit path.
+
+    Tests resolve the harness path themselves and never rely
+    on environment lookup, so the suite runs identically
+    privileged or not. Environment resolution is covered by
+    dedicated tests, not by every open call.
+    """
+    var lib: String
+    try:
+        lib = native_lib_path()
+    except e:
+        raise LmbError(
+            OP_OPEN, DOMAIN_BRIDGE, ENOENT,
+            String("LMB_NATIVE_LIB unusable: ") + String(e),
+        )
+    var s = Session.open_with_lib(elf, ring, max_raw_bytes, lib)
+    return s^
+
+
 def must_open(elf: Span[UInt8, _]) raises -> Session:
     """Open a fixture session or fail the test with the structure."""
     try:
-        var s = Session.open(elf, String("events"), UInt32(4096))
+        var s = open_explicit(elf, String("events"), UInt32(4096))
         return s^
     except e:
         raise Error("open failed: " + String(e))

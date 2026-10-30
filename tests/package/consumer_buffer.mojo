@@ -1,13 +1,21 @@
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 """Installed ring imports/refusals and explicit actual-reader host mode."""
+from std.os import getenv
 from std.pathlib import Path
 from std.sys import argv, exit
 from libbpf_mojo.buffer import Buffer, BufferPollResult, open_ring
 from libbpf_mojo.object import Object
 
 
+def packaged_lib() raises -> String:
+    # The harness sets LMB_NATIVE_LIB to the packaged bridge;
+    # the consumer resolves it explicitly instead of relying
+    # on environment lookup.
+    return getenv("LMB_NATIVE_LIB")
+
+
 def from_parent_scope(elf: Span[UInt8, _]) raises -> Buffer:
-    var object = Object.open(elf)
+    var object = Object.open_with_lib(elf, packaged_lib())
     var reset = object._lib[]._handle.get_function[NoneType]("lmb_events_reset")
     reset()
     var scenario = object._lib[]._handle.get_function[NoneType]("lmb_events_scenario")
@@ -96,8 +104,9 @@ def main() raises:
             exit(2)
         harness(Span(elf))
         return
+    var lib_path = packaged_lib()
     try:
-        var object = Object.open(Span(elf))
+        var object = Object.open_with_lib(Span(elf), lib_path)
         var original = object.map("events")
         var owner = object^
         var ring = original^

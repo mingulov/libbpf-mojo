@@ -1,5 +1,6 @@
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 """Installed typed test-run imports and retained-view rejection paths."""
+from std.os import getenv
 from std.pathlib import Path
 from std.sys import argv, exit
 from libbpf_mojo._ffi import AUTOLOAD_DISABLE
@@ -7,13 +8,21 @@ from libbpf_mojo.object import Object
 from libbpf_mojo.program import ProgramTestResult, test_run
 
 
+def packaged_lib() raises -> String:
+    # The harness sets LMB_NATIVE_LIB to the packaged bridge;
+    # the consumer resolves it explicitly instead of relying
+    # on environment lookup.
+    return getenv("LMB_NATIVE_LIB")
+
+
 def main() raises:
     var args = argv()
     if len(args) != 2:
         exit(2)
     var elf = Path(args[1]).read_bytes()
+    var lib_path = packaged_lib()
     try:
-        var obj = Object.open(Span(elf))
+        var obj = Object.open_with_lib(Span(elf), lib_path)
         var stale = obj.program("trace_probe")
         obj.configure_program("trace_probe", AUTOLOAD_DISABLE)
         var input = List[UInt8]()

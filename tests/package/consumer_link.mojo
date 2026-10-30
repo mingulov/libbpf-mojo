@@ -1,13 +1,21 @@
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 """Installed link ownership/refusals; explicit external host-harness mode."""
+from std.os import getenv
 from std.pathlib import Path
 from std.sys import argv, exit
 from libbpf_mojo.link import Link, attach_tracepoint
 from libbpf_mojo.object import Object
 
 
+def packaged_lib() raises -> String:
+    # The harness sets LMB_NATIVE_LIB to the packaged bridge;
+    # the consumer resolves it explicitly instead of relying
+    # on environment lookup.
+    return getenv("LMB_NATIVE_LIB")
+
+
 def from_parent_scope(elf: Span[UInt8, _]) raises -> Link:
-    var object = Object.open(elf)
+    var object = Object.open_with_lib(elf, packaged_lib())
     var reset = object._lib[]._handle.get_function[NoneType]("lmb_events_reset")
     reset()
     object.load()
@@ -41,8 +49,9 @@ def main() raises:
             exit(2)
         harness(Span(elf))
         return
+    var lib_path = packaged_lib()
     try:
-        var object = Object.open(Span(elf))
+        var object = Object.open_with_lib(Span(elf), lib_path)
         var original = object.program("trace_probe")
         var owner = object^
         var program = original^

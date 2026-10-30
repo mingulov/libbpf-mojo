@@ -12,11 +12,19 @@ stats need no BPF privilege.
 Usage: consumer_main <elf-path>; LMB_NATIVE_LIB must point
 at the packaged bridge. Exit 0 prints CONSUMER-OK.
 """
+from std.os import getenv
 from std.pathlib import Path
 from std.sys import argv, exit
 
 from libbpf_mojo.batch import decode_frame
 from libbpf_mojo.session import Session
+
+
+def packaged_lib() raises -> String:
+    # The harness sets LMB_NATIVE_LIB to the packaged bridge;
+    # the consumer resolves it explicitly instead of relying
+    # on environment lookup.
+    return getenv("LMB_NATIVE_LIB")
 
 
 def main() raises:
@@ -44,8 +52,8 @@ def main() raises:
         print("pure payload mismatch")
         exit(1)
     var elf = Path(args[1]).read_bytes()
-    var session = Session.open(
-        Span(elf), String("events"), UInt32(64)
+    var session = Session.open_with_lib(
+        Span(elf), String("events"), UInt32(64), packaged_lib()
     )
     var stats = session.stats()
     if stats.received != UInt64(0):

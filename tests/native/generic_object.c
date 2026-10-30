@@ -2,8 +2,10 @@
 /* Real libbpf parsing/metadata/ownership, with the load boundary stopped
  * before kernel work. These tests never qualify a successful load. */
 #include <dirent.h>
+#include <elf.h>
 #include <errno.h>
 #include <linux/bpf.h>
+#include <pthread.h>
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdbool.h>
@@ -341,6 +343,151 @@ static struct lmb_object *open_object(const uint8_t *elf, size_t size,
     return obj;
 }
 
+/* A synthetic object with more programs than the bridge admits:
+ * 4097 one-instruction "socket" sections with unique function
+ * symbols, plus the symbol table libbpf requires before it counts
+ * programs. libbpf parses (but never verifies) at open, so the
+ * bridge must count and reject before allocating its per-program
+ * table. */
+static uint8_t *make_many_program_elf(size_t *size) {
+    const unsigned nprog = 4097;
+    const unsigned nsec = nprog + 4;
+    size_t data_off = sizeof(Elf64_Ehdr);
+    size_t data_size = (size_t)nprog * 8;
+    size_t stab_off = data_off + data_size;
+    size_t stab_size = 1;
+    size_t str_off, sym_off, shoff, total, i;
+    Elf64_Ehdr *ehdr;
+    Elf64_Shdr *shdr;
+    Elf64_Sym *sym;
+    uint8_t *elf;
+    char *names, *strs;
+    stab_size += 7;
+    stab_size += 8 + 8;
+    str_off = stab_off + stab_size;
+    sym_off = str_off + 1 + (size_t)nprog * 7;
+    sym_off = (sym_off + 7) & ~(size_t)7;
+    shoff = sym_off + ((size_t)nprog + 1) * sizeof(Elf64_Sym);
+    total = shoff + (size_t)nsec * sizeof(Elf64_Shdr);
+    elf = calloc(1, total);
+    if (!elf) return NULL;
+    ehdr = (Elf64_Ehdr *)elf;
+    ehdr->e_ident[EI_MAG0] = ELFMAG0;
+    ehdr->e_ident[EI_MAG1] = ELFMAG1;
+    ehdr->e_ident[EI_MAG2] = ELFMAG2;
+    ehdr->e_ident[EI_MAG3] = ELFMAG3;
+    ehdr->e_ident[EI_CLASS] = ELFCLASS64;
+    ehdr->e_ident[EI_DATA] = ELFDATA2LSB;
+    ehdr->e_ident[EI_VERSION] = EV_CURRENT;
+    ehdr->e_type = ET_REL;
+    ehdr->e_machine = EM_BPF;
+    ehdr->e_version = EV_CURRENT;
+    ehdr->e_shoff = (Elf64_Off)shoff;
+    ehdr->e_ehsize = sizeof(Elf64_Ehdr);
+    ehdr->e_shentsize = sizeof(Elf64_Shdr);
+    ehdr->e_shnum = (Elf64_Half)nsec;
+    ehdr->e_shstrndx = (Elf64_Half)(nprog + 1);
+    names = (char *)(elf + stab_off);
+    names[0] = 0;
+    memcpy(names + 1, "socket", 7);
+    for (i = 0; i < nprog; i++) {
+        /* BPF_EXIT: valid bytes; open never verifies. */
+        elf[data_off + i * 8] = 0x95;
+    }
+    memcpy(names + 8, ".symtab", 8);
+    memcpy(names + 16, ".strtab", 8);
+    strs = (char *)(elf + str_off);
+    strs[0] = 0;
+    sym = (Elf64_Sym *)(elf + sym_off);
+    for (i = 0; i < nprog; i++) {
+        snprintf(strs + 1 + i * 7, 7, "p%04u", (unsigned)i);
+        sym[1 + i].st_name = (Elf64_Word)(1 + i * 7);
+        sym[1 + i].st_info = (unsigned char)ELF64_ST_INFO(STB_GLOBAL, STT_FUNC);
+        sym[1 + i].st_shndx = (Elf64_Section)(1 + i);
+        sym[1 + i].st_size = 8;
+    }
+    shdr = (Elf64_Shdr *)(elf + shoff);
+    for (i = 0; i < nprog; i++) {
+        shdr[1 + i].sh_name = 1;
+        shdr[1 + i].sh_type = SHT_PROGBITS;
+        shdr[1 + i].sh_flags = (Elf64_Xword)(SHF_ALLOC | SHF_EXECINSTR);
+        shdr[1 + i].sh_offset = (Elf64_Off)(data_off + i * 8);
+        shdr[1 + i].sh_size = 8;
+        shdr[1 + i].sh_addralign = 8;
+    }
+    shdr[nprog + 1].sh_name = 0;
+    shdr[nprog + 1].sh_type = SHT_STRTAB;
+    shdr[nprog + 1].sh_offset = (Elf64_Off)stab_off;
+    shdr[nprog + 1].sh_size = (Elf64_Xword)stab_size;
+    shdr[nprog + 1].sh_addralign = 1;
+    shdr[nprog + 2].sh_name = 8;
+    shdr[nprog + 2].sh_type = SHT_SYMTAB;
+    shdr[nprog + 2].sh_offset = (Elf64_Off)sym_off;
+    shdr[nprog + 2].sh_size = (Elf64_Xword)(((size_t)nprog + 1) * sizeof(Elf64_Sym));
+    shdr[nprog + 2].sh_link = (Elf64_Word)(nprog + 3);
+    shdr[nprog + 2].sh_info = 1;
+    shdr[nprog + 2].sh_addralign = 8;
+    shdr[nprog + 2].sh_entsize = sizeof(Elf64_Sym);
+    shdr[nprog + 3].sh_name = 16;
+    shdr[nprog + 3].sh_type = SHT_STRTAB;
+    shdr[nprog + 3].sh_offset = (Elf64_Off)str_off;
+    shdr[nprog + 3].sh_size = (Elf64_Xword)(1 + (size_t)nprog * 7);
+    shdr[nprog + 3].sh_addralign = 1;
+    *size = total;
+    return elf;
+}
+
+static pthread_barrier_t stress_barrier;
+
+struct stress_arg {
+    struct lmb_object *obj;
+    unsigned iters;
+    unsigned errors;
+};
+
+static void *stress_worker(void *arg) {
+    struct stress_arg *a = arg;
+    pthread_barrier_wait(&stress_barrier);
+    for (unsigned i = 0; i < a->iters; i++) {
+        if (lmb_object_ref_v1(a->obj) != 0) {
+            a->errors++;
+            return NULL;
+        }
+        lmb_object_unref_v1(a->obj);
+    }
+    return NULL;
+}
+
+/* Concurrent views must share one exact count: every ref/unref pair
+ * nets to zero across threads and rounds, deterministically. A torn
+ * increment leaves phantom views that block close; a premature
+ * last-unref destroys the object under its remaining views. A clean
+ * close after the join proves the count is exact. */
+static void refcount_stress(const uint8_t *elf, size_t size) {
+    enum { NTHREAD = 8, ITERS = 50000, ROUNDS = 3 };
+    for (unsigned round = 0; round < ROUNDS; round++) {
+        struct lmb_object_options_v1 o = options();
+        struct lmb_object *obj = open_object(elf, size, &o);
+        pthread_t threads[NTHREAD];
+        struct stress_arg args[NTHREAD];
+        unsigned errors = 0;
+        CHECK(pthread_barrier_init(&stress_barrier, NULL, NTHREAD) == 0);
+        for (unsigned t = 0; t < NTHREAD; t++) {
+            args[t].obj = obj;
+            args[t].iters = ITERS;
+            args[t].errors = 0;
+            CHECK(pthread_create(&threads[t], NULL, stress_worker,
+                                 &args[t]) == 0);
+        }
+        for (unsigned t = 0; t < NTHREAD; t++)
+            CHECK(pthread_join(threads[t], NULL) == 0);
+        CHECK(pthread_barrier_destroy(&stress_barrier) == 0);
+        for (unsigned t = 0; t < NTHREAD; t++) errors += args[t].errors;
+        CHECK(errors == 0);
+        CHECK(lmb_object_close_v1(&obj) == 0 && !obj);
+    }
+}
+
 static void open_validation(const uint8_t *elf, size_t size,
                             const char *valid_btf) {
     struct lmb_object_options_v1 o;
@@ -404,6 +551,77 @@ static void open_validation(const uint8_t *elf, size_t size,
         after.abi_version = 1;
         after.struct_size = sizeof(after);
         CHECK(lmb_generic_last_error_v1(&after) == 0 && !memcmp(&before, &after, sizeof(after)));
+    }
+    /* Allocation bounds: the admitted ELF size and program count
+     * are contracts, and over-cap input fails closed with ENOMEM
+     * before any allocation or native call. */
+    CHECK(LMB_GENERIC_MAX_ELF_BYTES == 16777216);
+    CHECK(LMB_GENERIC_MAX_PROGRAMS == 4096);
+    {
+        uint64_t over = (uint64_t)LMB_GENERIC_MAX_ELF_BYTES + 1;
+        uint8_t *big = calloc(1, (size_t)over);
+        o = options();
+        obj = (struct lmb_object *)(uintptr_t)1;
+        CHECK(big != NULL);
+        if (big) {
+            int32_t elf_rc;
+            memcpy(big, elf, size);
+            elf_rc = lmb_object_open_v1(big, over, &o, &obj);
+            if (elf_rc == 0 && obj) CHECK(lmb_object_close_v1(&obj) == 0);
+            CHECK(elf_rc == -ENOMEM && !obj);
+            error_is(1, 1, -ENOMEM);
+            free(big);
+        }
+    }
+    {
+        /* Exactly at the bound, open proceeds to parsing: a valid
+         * prefix with zero padding opens and closes normally. */
+        uint64_t at = (uint64_t)LMB_GENERIC_MAX_ELF_BYTES;
+        uint8_t *big = calloc(1, (size_t)at);
+        o = options();
+        CHECK(big != NULL);
+        if (big) {
+            memcpy(big, elf, size);
+            obj = NULL;
+            CHECK(lmb_object_open_v1(big, (size_t)at, &o, &obj) == 0 && obj);
+            if (obj) CHECK(lmb_object_close_v1(&obj) == 0 && !obj);
+            free(big);
+        }
+    }
+    {
+        size_t many_size = 0;
+        uint8_t *many = make_many_program_elf(&many_size);
+        o = options();
+        obj = NULL;
+        CHECK(many != NULL && many_size > 0);
+        if (many) {
+            int32_t cap_rc = lmb_object_open_v1(many, many_size, &o, &obj);
+            if (cap_rc == 0 && obj) CHECK(lmb_object_close_v1(&obj) == 0);
+            CHECK(cap_rc == -ENOMEM && !obj);
+            error_is(1, 1, -ENOMEM);
+            free(many);
+        }
+    }
+    /* Output aliasing: the out cell must not overlap any input,
+     * and a rejected call leaves every input byte untouched. */
+    {
+        struct lmb_object_options_v1 pristine;
+        uint8_t *elf_copy = malloc(size ? size : 1);
+        o = options();
+        pristine = o;
+        CHECK(elf_copy != NULL);
+        if (elf_copy) {
+            memcpy(elf_copy, elf, size);
+            obj = (struct lmb_object *)(uintptr_t)1;
+            CHECK(lmb_object_open_v1(elf_copy, size, &o,
+                                     (struct lmb_object **)&o) == -EINVAL);
+            CHECK(!memcmp(&o, &pristine, sizeof(o)));
+            o = options();
+            CHECK(lmb_object_open_v1(elf_copy, size, &o,
+                                     (struct lmb_object **)(elf_copy + size - 8)) == -EINVAL);
+            CHECK(!memcmp(elf_copy, elf, size));
+            free(elf_copy);
+        }
     }
 }
 
@@ -498,6 +716,8 @@ static void lifetime(const uint8_t *elf, size_t size) {
     CHECK(lmb_object_close_v1(&obj) == 0 && !obj);
     CHECK(lmb_object_close_v1(&obj) == 0);
     CHECK(lmb_object_close_v1(NULL) == -EINVAL);
+    CHECK(lmb_object_ref_v1(NULL) == -EINVAL);
+    error_is(15, 4, -EINVAL);
     lmb_object_release_v1(&obj);
     lmb_object_release_v1(NULL);
     lmb_object_unref_v1(NULL);
@@ -697,6 +917,7 @@ int main(int argc, char **argv) {
     metadata_config(elf, size);
     metadata_config(nomap, nomap_size);
     lifetime(elf, size);
+    refcount_stress(elf, size);
     load_failure(elf, size);
     {
         /* bpf_prog_load checks attempts only after bump_rlimit_memlock.

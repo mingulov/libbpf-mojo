@@ -164,6 +164,97 @@ int main(int argc, char **argv) {
                   lmb_error_is(LMB_OP_OPEN, LMB_DOMAIN_POSIX),
               "open-huge-enomem", "giant length must fail ENOMEM");
 
+    /* Allocation bound: the admitted ELF size is a contract; over-cap
+     * input fails closed with ENOMEM before any allocation. */
+    LMB_CHECK(LMB_MAX_ELF_BYTES == 16777216, "open-elf-cap-value",
+              "ELF cap must be 16 MiB");
+    {
+        uint64_t over = (uint64_t)LMB_MAX_ELF_BYTES + 1;
+        uint8_t *big = calloc(1, (size_t)over);
+        lmb_make_options(&o, "events", 4096);
+        s = NULL;
+        if (!big) {
+            LMB_FAIL("open-elf-over-cap", "cannot allocate test buffer");
+        } else {
+            memcpy(big, elf, (size_t)elf_len);
+            rc = lmb_open(big, over, &o, &s);
+            if (rc == 0 && s)
+                lmb_close(&s);
+            LMB_CHECK(rc == -ENOMEM && s == NULL &&
+                          lmb_error_is(LMB_OP_OPEN, LMB_DOMAIN_POSIX),
+                      "open-elf-over-cap",
+                      "over-cap ELF must fail ENOMEM, got %d", (int)rc);
+            free(big);
+        }
+    }
+    {
+        /* Exactly at the bound, open proceeds: a valid prefix with
+         * zero padding opens and closes normally. */
+        uint64_t at = (uint64_t)LMB_MAX_ELF_BYTES;
+        uint8_t *big = calloc(1, (size_t)at);
+        lmb_make_options(&o, "events", 4096);
+        if (!big) {
+            LMB_FAIL("open-elf-at-cap", "cannot allocate test buffer");
+        } else {
+            memcpy(big, elf, (size_t)elf_len);
+            s = NULL;
+            rc = lmb_open(big, at, &o, &s);
+            LMB_CHECK(rc == 0 && s != NULL, "open-elf-at-cap",
+                      "at-cap ELF must proceed, got %d", (int)rc);
+            if (s)
+                lmb_close(&s);
+            free(big);
+        }
+    }
+    /* Output aliasing: the out cell must not overlap any input, and a
+     * rejected call leaves every input byte untouched. */
+    {
+        struct lmb_options_v1 pristine;
+        uint8_t *elf_copy = malloc(elf_len ? (size_t)elf_len : 1);
+        char ringbuf[32];
+        struct lmb_session *leaked;
+        lmb_make_options(&o, "events", 4096);
+        pristine = o;
+        memset(ringbuf, 0xA5, sizeof(ringbuf));
+        memcpy(ringbuf, "events", 6);
+        if (!elf_copy) {
+            LMB_FAIL("open-alias", "cannot allocate test buffer");
+        } else {
+            int ring_tail_clean;
+            memcpy(elf_copy, elf, (size_t)elf_len);
+            rc = lmb_open(elf_copy, elf_len, &o,
+                          (struct lmb_session **)&o);
+            LMB_CHECK(rc == -EINVAL && !memcmp(&o, &pristine, sizeof(o)),
+                      "open-alias-out-opts",
+                      "out/opts overlap must fail without clobbering");
+            lmb_make_options(&o, "events", 4096);
+            rc = lmb_open(elf_copy, elf_len, &o,
+                          (struct lmb_session **)(elf_copy + elf_len - 8));
+            if (rc == 0) {
+                memcpy(&leaked, elf_copy + elf_len - 8, sizeof(leaked));
+                if (leaked)
+                    lmb_close(&leaked);
+            }
+            LMB_CHECK(rc == -EINVAL &&
+                          !memcmp(elf_copy, elf, (size_t)elf_len),
+                      "open-alias-out-elf",
+                      "out/elf overlap must fail without clobbering");
+            memcpy(elf_copy, elf, (size_t)elf_len);
+            lmb_make_options(&o, "events", 4096);
+            o.ring.ptr = (const uint8_t *)ringbuf;
+            o.ring.len = 6;
+            rc = lmb_open(elf_copy, elf_len, &o,
+                          (struct lmb_session **)(ringbuf + 2));
+            ring_tail_clean = ringbuf[6] == (char)0xA5 &&
+                              ringbuf[9] == (char)0xA5;
+            LMB_CHECK(rc == -EINVAL && ring_tail_clean &&
+                          !memcmp(ringbuf, "events", 6),
+                      "open-alias-out-ring",
+                      "out/ring overlap must fail without clobbering");
+            free(elf_copy);
+        }
+    }
+
     /* Error content after a usage failure. */
     lmb_make_options(&o, "events", 4096);
     o.abi_version = 0;
@@ -177,6 +268,40 @@ int main(int argc, char **argv) {
                   err.msg_len <= LMB_MAX_MSG_LEN &&
                   err.message[err.msg_len] == 0,
               "error-content", "usage error must carry a message");
+
+    /* A short record must not leave bytes from a longer predecessor:
+     * the full message tail stays zeroed. */
+    lmb_make_options(&o, "events", 4096);
+    s = NULL;
+    rc = lmb_open(elf, elf_len, &o, (struct lmb_session **)&o);
+    LMB_CHECK(rc == -EINVAL, "error-tail-long",
+              "alias open must fail, got %d", (int)rc);
+    memset(&st, 0, sizeof(st));
+    st.abi_version = LMB_ABI_VERSION;
+    st.struct_size = sizeof(st);
+    rc = lmb_stats(NULL, &st);
+    LMB_CHECK(rc == -EINVAL, "error-tail-short",
+              "null stats must fail, got %d", (int)rc);
+    memset(&err, 0, sizeof(err));
+    err.abi_version = LMB_ABI_VERSION;
+    err.struct_size = sizeof(err);
+    {
+        int tail_clean = 1;
+        uint32_t i;
+        LMB_CHECK(lmb_last_error(&err) == 0 &&
+                      err.operation == LMB_OP_STATS && err.msg_len < 29,
+                  "error-tail-order", "short record must follow long one");
+        for (i = err.msg_len; i < sizeof(err.message); i++)
+            if (err.message[i] != 0)
+                tail_clean = 0;
+        LMB_CHECK(tail_clean, "error-tail-zero",
+                  "message tail must be zeroed");
+    }
+    /* Restore the OP_OPEN record the preservation check below needs. */
+    lmb_make_options(&o, "events", 4096);
+    o.abi_version = 0;
+    s = NULL;
+    lmb_open(elf, elf_len, &o, &s);
 
     /* Inspection failure preserves the stored record. */
     memset(&st, 0, sizeof(st));

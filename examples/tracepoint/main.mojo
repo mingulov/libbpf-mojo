@@ -19,6 +19,7 @@ an elapsed-time deadline of <timeout-s> from the first poll.
 Wire layout (see examples/tracepoint/event.h): each 16-byte payload
 is seq u64 @0, tgid u32 @8, tag u32 @12, little-endian.
 """
+from std.os import getenv
 from std.sys import argv, exit
 from std.pathlib import Path
 from std.time import perf_counter_ns
@@ -133,9 +134,21 @@ def run(args: List[String]) raises Fail -> Int:
         elf = Path(elf_path).read_bytes()
     except e:
         raise Fail(1, String("cannot read object: ") + String(e))
+    var lib_path: String
+    try:
+        lib_path = getenv("LMB_NATIVE_LIB")
+        if lib_path == "":
+            raise Error("empty LMB_NATIVE_LIB")
+    except e:
+        raise Fail(2, String("LMB_NATIVE_LIB unusable: ") + String(e))
     var session: Session
     try:
-        session = Session.open(Span(elf), String("events"), UInt32(64))
+        # Explicit path: this collector runs privileged, so it
+        # resolves its library itself instead of relying on
+        # environment lookup (see Session.open).
+        session = Session.open_with_lib(
+            Span(elf), String("events"), UInt32(64), lib_path
+        )
     except e:
         raise Fail(1, String("open failed: ") + String(e))
     try:

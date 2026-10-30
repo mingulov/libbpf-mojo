@@ -22,12 +22,19 @@ the process is still alive.
 Exit 0 when the expected fault (and only it) happened, 77 when a
 privileged step is denied, 1 otherwise.
 """
+from std.os import getenv
 from std.sys import argv, exit
 from std.pathlib import Path
 from std.time import perf_counter_ns, sleep
 
-from libbpf_mojo._ffi import ATTACH_TRACEPOINT, OP_ATTACH, OP_LOAD
-from libbpf_mojo.error import EPERM, LmbError
+from libbpf_mojo._ffi import (
+    ATTACH_TRACEPOINT,
+    DOMAIN_BRIDGE,
+    OP_ATTACH,
+    OP_LOAD,
+    OP_OPEN,
+)
+from libbpf_mojo.error import ENOENT, EPERM, LmbError
 from libbpf_mojo.session import AttachSpec, Session
 
 comptime EACCES = Int32(-13)
@@ -71,8 +78,30 @@ def is_privilege(op: UInt32, code: Int32) -> Bool:
     return code == EACCES and op == OP_ATTACH
 
 
+def open_driver_session(
+    elf: Span[UInt8, _]
+) raises LmbError -> Session:
+    # The driver runs privileged, so it resolves the harness
+    # library path itself and opens it explicitly instead of
+    # relying on environment lookup.
+    var lib_path: String
+    try:
+        lib_path = getenv("LMB_NATIVE_LIB")
+        if lib_path == "":
+            raise Error("empty LMB_NATIVE_LIB")
+    except e:
+        raise LmbError(
+            OP_OPEN, DOMAIN_BRIDGE, ENOENT,
+            String("LMB_NATIVE_LIB unusable: ") + String(e),
+        )
+    var s = Session.open_with_lib(
+        elf, String("events"), UInt32(64), lib_path,
+    )
+    return s^
+
+
 def mode_bad_attach(elf: Span[UInt8, _]) raises LmbError -> String:
-    var session = Session.open(elf, String("events"), UInt32(64))
+    var session = open_driver_session(elf)
     var outcome: String
     try:
         session.load()
@@ -99,7 +128,7 @@ def mode_bad_elf(raw: Span[UInt8, _]) raises LmbError -> String:
     # only retains the bytes. The operation is the contract; the
     # exact libbpf errno for malformed input is an implementation
     # detail, so only the operation is asserted.
-    var session = Session.open(raw, String("events"), UInt32(64))
+    var session = open_driver_session(raw)
     var outcome = String("fault=none unexpected-success")
     try:
         session.load()
@@ -116,7 +145,7 @@ def mode_bad_elf(raw: Span[UInt8, _]) raises LmbError -> String:
 
 
 def mode_rollback(elf: Span[UInt8, _]) raises LmbError -> String:
-    var session = Session.open(elf, String("events"), UInt32(64))
+    var session = open_driver_session(elf)
     var outcome: String
     try:
         session.load()

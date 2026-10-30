@@ -10,7 +10,16 @@ without ``close`` still releases the native state exactly once.
 Sessions are single-threaded owners: native error records are
 thread-local, so each method captures its failure immediately and
 a session must not cross threads.
+
+Generic-surface views are the exception, not the rule: native
+object views share one atomic reference count, so concurrent
+``ref``/``unref`` from any thread is safe. Closing or releasing an
+object while another thread may still reference it is a caller
+protocol error: the bridge rejects close against the views it can
+see, but a reference racing close can outlive the check. Holders
+of shared views must synchronize close against use externally.
 """
+from std.ffi import external_call
 from std.os import getenv
 
 from libbpf_mojo._ffi import (
@@ -42,6 +51,7 @@ from libbpf_mojo.error import (
     ENOENT,
     ENOSPC,
     EOVERFLOW,
+    EPERM,
     LmbError,
     message_from_bytes,
 )
@@ -137,18 +147,53 @@ def capture_error(
         )
 
 
-def native_lib_path() raises LmbError -> String:
-    """Resolve the native library path from the environment."""
+def is_privileged_ids(euid: UInt32, ruid: UInt32) -> Bool:
+    """True for root or shifted-identity execution.
+
+    euid 0 covers sudo and root; euid != ruid covers setuid
+    and capability-shaped identity shifts.
+    """
+    return euid == UInt32(0) or euid != ruid
+
+
+def _live_euid() -> UInt32:
+    return external_call["geteuid", UInt32]()
+
+
+def _live_ruid() -> UInt32:
+    return external_call["getuid", UInt32]()
+
+
+def native_lib_path(
+    allow_privileged_env: Bool = False
+) raises LmbError -> String:
+    """Resolve the native library path from the environment.
+
+    Refused with EPERM for privileged callers (root or
+    shifted identity): an environment path must never select
+    a privileged process's native library. Pass an explicit
+    library path to ``open_with_lib`` instead. Set
+    ``allow_privileged_env`` only when the caller has
+    validated the environment itself; the default refuses.
+    """
+    var path: String
     try:
-        var path = getenv("LMB_NATIVE_LIB")
+        path = getenv("LMB_NATIVE_LIB")
         if path == "":
             raise Error("empty LMB_NATIVE_LIB")
-        return path
     except e:
         raise LmbError(
             OP_OPEN, DOMAIN_BRIDGE, ENOENT,
             String("LMB_NATIVE_LIB unusable: ") + String(e),
         )
+    if not allow_privileged_env and is_privileged_ids(
+        _live_euid(), _live_ruid()
+    ):
+        raise LmbError(
+            OP_OPEN, DOMAIN_BRIDGE, EPERM,
+            String("LMB_NATIVE_LIB refused when privileged"),
+        )
+    return path
 
 
 struct Session(Movable):
@@ -216,6 +261,12 @@ struct Session(Movable):
     def open(
         elf: Span[UInt8, _], ring: String, max_raw_bytes: UInt32
     ) raises LmbError -> Session:
+        """Open on the environment library path.
+
+        Refused with EPERM when privileged; see
+        ``native_lib_path``. Privileged callers pass an
+        explicit path to ``open_with_lib``.
+        """
         return Session.open_with_lib(
             elf, ring, max_raw_bytes, native_lib_path()
         )

@@ -40,6 +40,22 @@ int32_t lmb_open(const uint8_t *elf, uint64_t elf_bytes,
                    "lmb_open: null out handle");
         return -EINVAL;
     }
+    /* The out cell must not overlap any input. The guard runs before
+     * the first write: an aliased call is rejected without touching
+     * the cell, while every other rejection below clears it. Absent
+     * inputs have no bytes to overlap. Only span addresses are
+     * compared; the pointed-to bytes are never touched. */
+    if ((options &&
+         lmb_ranges_overlap(out, sizeof(*out), options, sizeof(*options))) ||
+        (options && options->ring.ptr && options->ring.len &&
+         lmb_ranges_overlap(out, sizeof(*out), options->ring.ptr,
+                            options->ring.len)) ||
+        (elf && elf_bytes &&
+         lmb_ranges_overlap(out, sizeof(*out), elf, elf_bytes))) {
+        lmb_record(LMB_OP_OPEN, LMB_DOMAIN_BRIDGE, -EINVAL,
+                   "lmb_open: output aliases input");
+        return -EINVAL;
+    }
     *out = NULL;
     if (!options ||
         !lmb_check_header(options->abi_version, options->struct_size,
@@ -57,6 +73,11 @@ int32_t lmb_open(const uint8_t *elf, uint64_t elf_bytes,
         lmb_record(LMB_OP_OPEN, LMB_DOMAIN_BRIDGE, -EINVAL,
                    "lmb_open: invalid ELF input");
         return -EINVAL;
+    }
+    if (elf_bytes > LMB_MAX_ELF_BYTES) {
+        lmb_record(LMB_OP_OPEN, LMB_DOMAIN_POSIX, -ENOMEM,
+                   "lmb_open: ELF exceeds size bound");
+        return -ENOMEM;
     }
     s = calloc(1, sizeof(*s));
     if (!s) {

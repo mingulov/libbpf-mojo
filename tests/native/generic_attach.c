@@ -8,11 +8,11 @@
 
 static void refused(struct lmb_object *object, const struct lmb_attach_options_v1 *opts, int code) {
     uint64_t calls = lmb_events_call_count(GE_ATTACH);
-    unsigned refs = object ? object->refs : 0;
+    unsigned refs = object ? atomic_load(&object->refs) : 0;
     struct lmb_link *link = (void *)1;
     CHECK(lmb_object_attach_v1(object, opts, &link) == code && !link);
     CHECK(lmb_events_call_count(GE_ATTACH) == calls);
-    CHECK(!object || object->refs == refs);
+    CHECK(!object || atomic_load(&object->refs) == refs);
     ge_diagnostic(10, 4, code);
 }
 static void validation(const char *fixture, const char *tracing) {
@@ -83,21 +83,21 @@ static void ownership(const char *fixture) {
     struct lmb_link *a = NULL, *b = NULL;
     struct lmb_buffer *ring = NULL;
     CHECK(lmb_object_attach_v1(object, &opts, &a) == 0 && a);
-    CHECK(object->refs == 2 && a->parent == object);
+    CHECK(atomic_load(&object->refs) == 2 && a->parent == object);
     CHECK(lmb_object_close_v1(&object) == -EBUSY && object);
-    unsigned refs = object->refs;
+    unsigned refs = atomic_load(&object->refs);
     ge_alloc_fault(1);
     CHECK(lmb_object_attach_v1(object, &opts, &b) == -ENOMEM && !b);
-    CHECK(ge_alloc_finish() == 1 && object->refs == refs); ge_diagnostic(10, 1, -ENOMEM);
-    object->refs = UINT_MAX;
+    CHECK(ge_alloc_finish() == 1 && atomic_load(&object->refs) == refs); ge_diagnostic(10, 1, -ENOMEM);
+    atomic_store(&object->refs, UINT_MAX);
     uint64_t native = lmb_events_call_count(GE_ATTACH);
     CHECK(lmb_object_attach_v1(object, &opts, &b) == -EOVERFLOW && !b);
-    CHECK(object->refs == UINT_MAX && lmb_events_call_count(GE_ATTACH) == native);
-    ge_diagnostic(10, 4, -EOVERFLOW); object->refs = refs;
+    CHECK(atomic_load(&object->refs) == UINT_MAX && lmb_events_call_count(GE_ATTACH) == native);
+    ge_diagnostic(10, 4, -EOVERFLOW); atomic_store(&object->refs, refs);
     for (int null_result = 0; null_result < 2; null_result++) {
         ge_attach_fault(-EACCES, null_result);
         CHECK(lmb_object_attach_v1(object, &opts, &b) == -EACCES && !b);
-        CHECK(object->refs == refs); ge_diagnostic(10, 2, -EACCES);
+        CHECK(atomic_load(&object->refs) == refs); ge_diagnostic(10, 2, -EACCES);
     }
     ge_attach_fault(0, 0);
     CHECK(lmb_object_attach_v1(object, &opts, &b) == 0 && b);
@@ -105,23 +105,24 @@ static void ownership(const char *fixture) {
     CHECK(lmb_object_ref_v1(object) == 0); /* A retained view. */
     struct lmb_object *view = object;
     uint64_t before = lmb_events_close_count();
-    lmb_object_release_v1(&object); CHECK(!object && view->refs == 4);
+    lmb_object_release_v1(&object); CHECK(!object && atomic_load(&view->refs) == 4);
     CHECK(lmb_link_close_v1(&a) == 0 && !a);
-    CHECK(view->refs == 3 && lmb_events_close_count() == before);
+    CHECK(atomic_load(&view->refs) == 3 && lmb_events_close_count() == before);
     ge_destroy_fault(-EIO);
     CHECK(lmb_link_close_v1(&b) == -EIO && !b); ge_diagnostic(11, 2, -EIO);
-    CHECK(view->refs == 2 && lmb_events_close_count() == before);
+    CHECK(atomic_load(&view->refs) == 2 && lmb_events_close_count() == before);
     ge_destroy_fault(0);
     CHECK(lmb_buffer_close_v1(&ring) == 0 && !ring);
-    CHECK(view->refs == 1 && lmb_events_close_count() == before);
+    CHECK(atomic_load(&view->refs) == 1 && lmb_events_close_count() == before);
     lmb_object_unref_v1(view); CHECK(lmb_events_close_count() == before + 1);
     CHECK(lmb_link_close_v1(&a) == 0); ge_diagnostic(0, 0, 0);
     CHECK(lmb_link_close_v1(NULL) == -EINVAL); ge_diagnostic(11, 4, -EINVAL);
+    refused(NULL, &opts, -EINVAL);
     /* Cancellation after successful link creation and later setup refusal. */
     object = ge_object(fixture, 1);
     CHECK(lmb_object_attach_v1(object, &opts, &a) == 0);
     ropts.flags = 1; CHECK(lmb_buffer_open_v1(object, &ropts, &ring) == -EINVAL && !ring);
-    CHECK(object->refs == 2); CHECK(lmb_link_close_v1(&a) == 0);
+    CHECK(atomic_load(&object->refs) == 2); CHECK(lmb_link_close_v1(&a) == 0);
     CHECK(lmb_object_close_v1(&object) == 0);
     puts("attach ownership: overflow/allocation/native rollback, sibling retention, parent release and cancellation checked");
 }
@@ -133,7 +134,7 @@ int main(int argc, char **argv) {
         struct lmb_object *object = ge_object(argv[1], 1);
         struct lmb_attach_options_v1 opts = ge_attach_options(); struct lmb_link *link = NULL;
         ge_attach_fault(-EIO, i % 2);
-        CHECK(lmb_object_attach_v1(object, &opts, &link) == -EIO && !link && object->refs == 1);
+        CHECK(lmb_object_attach_v1(object, &opts, &link) == -EIO && !link && atomic_load(&object->refs) == 1);
         CHECK(lmb_object_close_v1(&object) == 0);
     }
     ge_attach_fault(0, 0);

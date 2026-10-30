@@ -25,11 +25,11 @@ static struct lmb_buffer *open_ring(struct lmb_object *object) {
 }
 static void refused(struct lmb_object *object, const struct lmb_buffer_options_v1 *opts, int code) {
     uint64_t calls = lmb_events_call_count(GE_NEW);
-    unsigned refs = object ? object->refs : 0;
+    unsigned refs = object ? atomic_load(&object->refs) : 0;
     struct lmb_buffer *ring = (void *)1;
     CHECK(lmb_buffer_open_v1(object, opts, &ring) == code && !ring);
     CHECK(lmb_events_call_count(GE_NEW) == calls);
-    CHECK(!object || object->refs == refs); ge_diagnostic(12, 4, code);
+    CHECK(!object || atomic_load(&object->refs) == refs); ge_diagnostic(12, 4, code);
 }
 static void validation(const char *fixture) {
     struct lmb_object *object = ge_object(fixture, 0);
@@ -118,18 +118,18 @@ static void rollback(const char *fixture) {
     struct lmb_buffer *ring = NULL;
     struct lmb_link *sibling = NULL; struct lmb_attach_options_v1 attach = ge_attach_options();
     CHECK(lmb_object_attach_v1(object, &attach, &sibling) == 0);
-    unsigned refs = object->refs, fds = ge_fd_count();
+    unsigned refs = atomic_load(&object->refs), fds = ge_fd_count();
     ge_alloc_fault(0); CHECK(lmb_buffer_open_v1(object, &opts, &ring) == 0);
     unsigned boundaries = ge_alloc_finish(); CHECK(boundaries >= 5);
     CHECK(lmb_buffer_close_v1(&ring) == 0);
     for (unsigned n = 1; n <= boundaries; n++) {
         ge_alloc_fault(n); CHECK(lmb_buffer_open_v1(object, &opts, &ring) == -ENOMEM && !ring);
         CHECK(ge_alloc_finish() == n); ge_diagnostic(12, n == 1 ? 1 : 2, -ENOMEM);
-        CHECK(object->refs == refs && ge_fd_count() == fds && !lmb_events_call_count(GE_MAPS));
+        CHECK(atomic_load(&object->refs) == refs && ge_fd_count() == fds && !lmb_events_call_count(GE_MAPS));
     }
     for (unsigned n = 1; n <= 2; n++) {
         ge_map_fault(n); CHECK(lmb_buffer_open_v1(object, &opts, &ring) == -ENOMEM && !ring);
-        CHECK(object->refs == refs && ge_fd_count() == fds && !lmb_events_call_count(GE_MAPS));
+        CHECK(atomic_load(&object->refs) == refs && ge_fd_count() == fds && !lmb_events_call_count(GE_MAPS));
         ge_diagnostic(12, 2, -ENOMEM);
     }
     ge_map_fault(0);
@@ -139,19 +139,19 @@ static void rollback(const char *fixture) {
         if (n == 2) ge_epoll_fault(0, -EPERM);
         int codes[] = {-EBADF, -EMFILE, -EPERM};
         CHECK(lmb_buffer_open_v1(object, &opts, &ring) == codes[n] && !ring);
-        CHECK(object->refs == refs && ge_fd_count() == fds && !lmb_events_call_count(GE_MAPS));
+        CHECK(atomic_load(&object->refs) == refs && ge_fd_count() == fds && !lmb_events_call_count(GE_MAPS));
         ge_diagnostic(12, 2, codes[n]); ge_info_fault(0); ge_epoll_fault(0, 0);
     }
     for (int null_result = 0; null_result < 2; null_result++) {
         ge_new_fault(-EACCES, null_result);
         CHECK(lmb_buffer_open_v1(object, &opts, &ring) == -EACCES && !ring);
-        CHECK(object->refs == refs && ge_fd_count() == fds); ge_diagnostic(12, 2, -EACCES);
+        CHECK(atomic_load(&object->refs) == refs && ge_fd_count() == fds); ge_diagnostic(12, 2, -EACCES);
     }
     ge_new_fault(0, 0);
-    object->refs = UINT_MAX; uint64_t calls = lmb_events_call_count(GE_NEW);
+    atomic_store(&object->refs, UINT_MAX); uint64_t calls = lmb_events_call_count(GE_NEW);
     CHECK(lmb_buffer_open_v1(object, &opts, &ring) == -EOVERFLOW && !ring);
-    CHECK(object->refs == UINT_MAX && lmb_events_call_count(GE_NEW) == calls); ge_diagnostic(12, 4, -EOVERFLOW);
-    object->refs = refs;
+    CHECK(atomic_load(&object->refs) == UINT_MAX && lmb_events_call_count(GE_NEW) == calls); ge_diagnostic(12, 4, -EOVERFLOW);
+    atomic_store(&object->refs, refs);
     ring = open_ring(object);
     CHECK(lmb_object_close_v1(&object) == -EBUSY && object);
     uint64_t before = lmb_events_close_count();
@@ -163,6 +163,7 @@ static void rollback(const char *fixture) {
     CHECK(lmb_buffer_close_v1(&ring) == 0 && !ring && lmb_events_close_count() == before + 1);
     CHECK(lmb_buffer_close_v1(&ring) == 0); ge_diagnostic(0, 0, 0);
     CHECK(lmb_buffer_close_v1(NULL) == -EINVAL); ge_diagnostic(14, 4, -EINVAL);
+    CHECK(lmb_buffer_poll_v1(NULL, frame, 24, 0, &used, &needed) == -EINVAL); ge_diagnostic(13, 4, -EINVAL);
     printf("ring rollback: %u allocation boundaries, both maps, info/epoll/register, signed NULL/error-pointer and final-release checked\n", boundaries);
 }
 static void framing(struct lmb_buffer *ring) {

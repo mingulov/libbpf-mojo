@@ -214,6 +214,12 @@ struct Object(Movable):
     def open(
         elf: Span[UInt8, _], options: ObjectOptions = ObjectOptions()
     ) raises LmbError -> Object:
+        """Open on the environment library path.
+
+        Refused with EPERM when privileged; see
+        ``native_lib_path``. Privileged callers pass an
+        explicit path to ``open_with_lib``.
+        """
         return Object.open_with_lib(elf, native_lib_path(), options)
 
     @staticmethod

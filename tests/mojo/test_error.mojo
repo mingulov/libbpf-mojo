@@ -45,6 +45,7 @@ from libbpf_mojo.session import AttachSpec, Session, checked_u32
 from testutil import (
     must_close,
     must_open,
+    open_explicit,
     read_fixture_elf,
     stub_lib_path,
 )
@@ -121,7 +122,7 @@ def test_open_error_structured() raises:
     var msg_len = 0
     var raised = False
     try:
-        var s = Session.open(
+        var s = open_explicit(
             Span(elf), String("events"), UInt32(0)
         )
         s.close()

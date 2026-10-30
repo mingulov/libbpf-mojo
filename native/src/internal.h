@@ -42,8 +42,8 @@ int lmb_check_header(uint32_t abi_version, uint32_t struct_size,
 int lmb_check_bytes(const struct lmb_bytes_v1 *in, uint32_t max,
                     int required);
 int lmb_copy_name(const struct lmb_bytes_v1 *in, char **out);
-int lmb_ranges_overlap(const void *a, uint32_t a_len, const void *b,
-                       uint32_t b_len);
+int lmb_ranges_overlap(const void *a, uint64_t a_len, const void *b,
+                       uint64_t b_len);
 
 /* ring.c: single-record staging callback. */
 int lmb_ring_sample(void *ctx, void *data, size_t size);

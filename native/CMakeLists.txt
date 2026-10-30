@@ -252,7 +252,7 @@ lmb_test(map_access)
 add_executable(test_generic_object ${LMB_ROOT}/tests/native/generic_object.c)
 target_include_directories(test_generic_object PRIVATE
   ${CMAKE_CURRENT_SOURCE_DIR}/include ${LIBBPF_ROOT}/include)
-target_link_libraries(test_generic_object PRIVATE lmb_static)
+target_link_libraries(test_generic_object PRIVATE lmb_static pthread)
 target_link_options(test_generic_object PRIVATE
   "LINKER:--wrap=bpf_object__load" "LINKER:--wrap=bpf_object__close"
   "LINKER:--wrap=bpf_object__open_mem" "LINKER:--wrap=bpf_program__set_attach_target"
