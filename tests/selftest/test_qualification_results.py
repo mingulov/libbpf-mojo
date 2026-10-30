@@ -145,4 +145,69 @@ class TermHandler(unittest.TestCase):
                 self.assertEqual(receipt['lanes'][-1]['native_exit'],0)
                 self.assertEqual(receipt['lanes'][-1]['cleanup']['remaining_owned'],0)
 
+class Provenance(unittest.TestCase):
+    def load(self):
+        loader=SourceFileLoader('results_prov',str(Path(__file__).resolve().parents[2]/'tools/qualification-results'))
+        spec=importlib.util.spec_from_loader(loader.name,loader)
+        module=importlib.util.module_from_spec(spec);loader.exec_module(module)
+        return module
+
+    def test_results_carry_build_linkage(self):
+        module=self.load()
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp);(root/'tools').mkdir();(root/'build').mkdir()
+            tool=root/'tools/test'
+            tool.write_text('#!/bin/sh\nexit 0\n');tool.chmod(0o755)
+            build={'git':'abc123','sources':{'digest':'d'*64},
+                   'toolchain_observed':{'mojo':'mojo 1.2.0'},
+                   'artifacts':{'libbpf_mojo.so.1':'e'*64}}
+            (root/'build/build-receipt.json').write_text(json.dumps(build))
+            rc=module.run_suites(root,root/'out',['a'])
+            self.assertEqual(rc,0)
+            report=json.loads((root/'out/results.json').read_text())
+            self.assertEqual(report['schema'],'qualification-results/2')
+            self.assertEqual(report['source']['commit'],'unknown')
+            self.assertTrue(report['source']['dirty'])
+            self.assertTrue(report['build']['present'])
+            self.assertEqual(report['build']['git'],'abc123')
+            self.assertEqual(report['build']['sources_digest'],'d'*64)
+            self.assertEqual(report['toolchain'],{'mojo':'mojo 1.2.0'})
+            self.assertEqual(report['kernel'],os.uname().release)
+            self.assertEqual(report['command'],{'tool':'tools/qualification-results','suites':['a']})
+            self.assertEqual(report['required'],['a'])
+            module.validate_results(report)
+
+    def test_results_without_build_record_absence(self):
+        module=self.load()
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp);(root/'tools').mkdir()
+            tool=root/'tools/test'
+            tool.write_text('#!/bin/sh\nexit 0\n');tool.chmod(0o755)
+            rc=module.run_suites(root,root/'out',['a'])
+            self.assertEqual(rc,0)
+            report=json.loads((root/'out/results.json').read_text())
+            self.assertEqual(report['schema'],'qualification-results/2')
+            self.assertEqual(report['build'],{'present':False})
+            self.assertIsNone(report['toolchain'])
+            module.validate_results(report)
+
+    def test_validate_results_refuses_drift(self):
+        module=self.load()
+        good={'schema':'qualification-results/2','status':'PASS',
+              'required':['a'],'kernel':'7.2.13','command':{'tool':'tools/qualification-results','suites':['a']},
+              'source':{'commit':'unknown','dirty':True},'build':{'present':False},'toolchain':None,
+              'lanes':[{'suite':'a','native_exit':0,'status':'PASS','timed_out':False,'timeout_seconds':1800,
+                        'cleanup':None,'leaked_processes':False,'raw_log_sha256':'f'*64}]}
+        module.validate_results(good)
+        for key in ('schema','status','required','kernel','command','source','build','toolchain','lanes'):
+            bad=dict(good);del bad[key]
+            with self.assertRaises(ValueError,msg=key):
+                module.validate_results(bad)
+        bad=dict(good,schema='qualification-results/1')
+        with self.assertRaises(ValueError):
+            module.validate_results(bad)
+        bad=dict(good,status='PASS',lanes=[dict(good['lanes'][0],status='FAIL')])
+        with self.assertRaises(ValueError):
+            module.validate_results(bad)
+
 if __name__=='__main__':unittest.main()
