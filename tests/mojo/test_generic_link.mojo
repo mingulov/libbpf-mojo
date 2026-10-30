@@ -3,7 +3,14 @@
 from std.os import getenv
 from std.pathlib import Path
 from std.testing import TestSuite, assert_equal, assert_true
-from libbpf_mojo._ffi import AUTOLOAD_DISABLE, AttachOptionsV1, GenericLib, GenericSpanV1
+from libbpf_mojo import (
+    AUTOLOAD_DISABLE,
+)
+from libbpf_mojo._ffi import (
+    AttachOptionsV1,
+    GenericLib,
+    GenericSpanV1,
+)
 from libbpf_mojo.link import Link, attach_tracepoint
 from libbpf_mojo.object import Object, ProgramView
 

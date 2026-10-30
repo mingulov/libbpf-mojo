@@ -3,7 +3,9 @@
 from std.os import getenv
 from std.pathlib import Path
 from std.testing import TestSuite, assert_equal, assert_true
-from libbpf_mojo._ffi import AUTOLOAD_DISABLE
+from libbpf_mojo import (
+    AUTOLOAD_DISABLE,
+)
 from libbpf_mojo.maps import lookup, update, lookup_u64, update_u64
 from libbpf_mojo.object import Object, MapView
 

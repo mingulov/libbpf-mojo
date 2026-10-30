@@ -9,7 +9,7 @@ reading raw bytes back through the FFI readers.
 from std.sys import align_of, exit, size_of
 from std.testing import TestSuite, assert_equal
 
-from libbpf_mojo._ffi import (
+from libbpf_mojo import (
     AttachV1,
     BytesV1,
     ErrorV1,

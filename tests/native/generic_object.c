@@ -715,8 +715,9 @@ static void lifetime(const uint8_t *elf, size_t size) {
     lmb_object_unref_v1(obj);
     CHECK(lmb_object_close_v1(&obj) == 0 && !obj);
     CHECK(lmb_object_close_v1(&obj) == 0);
-    CHECK(lmb_object_close_v1(NULL) == -EINVAL);
     CHECK(lmb_object_ref_v1(NULL) == -EINVAL);
+    error_is(15, 4, -EINVAL);
+    CHECK(lmb_object_close_v1(NULL) == 0);
     error_is(15, 4, -EINVAL);
     lmb_object_release_v1(&obj);
     lmb_object_release_v1(NULL);

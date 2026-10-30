@@ -162,8 +162,8 @@ static void rollback(const char *fixture) {
     CHECK(lmb_buffer_poll_v1(ring, frame, 24, 0, &used, &needed) == 0 && used == 24); ge_frame(frame, 42);
     CHECK(lmb_buffer_close_v1(&ring) == 0 && !ring && lmb_events_close_count() == before + 1);
     CHECK(lmb_buffer_close_v1(&ring) == 0); ge_diagnostic(0, 0, 0);
-    CHECK(lmb_buffer_close_v1(NULL) == -EINVAL); ge_diagnostic(14, 4, -EINVAL);
     CHECK(lmb_buffer_poll_v1(NULL, frame, 24, 0, &used, &needed) == -EINVAL); ge_diagnostic(13, 4, -EINVAL);
+    CHECK(lmb_buffer_close_v1(NULL) == 0); ge_diagnostic(13, 4, -EINVAL);
     printf("ring rollback: %u allocation boundaries, both maps, info/epoll/register, signed NULL/error-pointer and final-release checked\n", boundaries);
 }
 static void framing(struct lmb_buffer *ring) {

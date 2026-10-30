@@ -116,8 +116,8 @@ static void ownership(const char *fixture) {
     CHECK(atomic_load(&view->refs) == 1 && lmb_events_close_count() == before);
     lmb_object_unref_v1(view); CHECK(lmb_events_close_count() == before + 1);
     CHECK(lmb_link_close_v1(&a) == 0); ge_diagnostic(0, 0, 0);
-    CHECK(lmb_link_close_v1(NULL) == -EINVAL); ge_diagnostic(11, 4, -EINVAL);
     refused(NULL, &opts, -EINVAL);
+    CHECK(lmb_link_close_v1(NULL) == 0); ge_diagnostic(10, 4, -EINVAL);
     /* Cancellation after successful link creation and later setup refusal. */
     object = ge_object(fixture, 1);
     CHECK(lmb_object_attach_v1(object, &opts, &a) == 0);

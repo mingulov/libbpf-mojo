@@ -1,9 +1,12 @@
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
-"""Mojo ownership wrappers for the libbpf-mojo native bridge.
+"""Public constants, read helpers, and ownership wrappers.
 
-The native library owns loading, attaching, and event transport; this
-package owns session lifetime, error surfacing, and batch parsing.
+Diagnostic codes, log/autoload/map-update options, frame bounds,
+and little-endian readers resolve here so downstream consumers
+never import the private ``_ffi`` module. FFI layout structs and
+raw native handles stay private except for the re-exported
+ownership-facing shapes below.
 """
 
 from libbpf_mojo._ffi import (
@@ -14,6 +17,73 @@ from libbpf_mojo._ffi import (
     NameV1,
     OptionsV1,
     StatsV1,
+)
+from libbpf_mojo._ffi import (
+    OP_NONE,
+    OP_OPEN,
+    OP_LOAD,
+    OP_ATTACH,
+    OP_POLL,
+    OP_MAP_INFO,
+    OP_MAP_READ,
+    OP_MAP_WRITE,
+    OP_STATS,
+    OP_DETACH,
+    OP_CLOSE,
+    DOMAIN_NONE,
+    DOMAIN_POSIX,
+    DOMAIN_LIBBPF,
+    DOMAIN_KERNEL,
+    DOMAIN_BRIDGE,
+    ATTACH_TRACEPOINT,
+    ATTACH_TRACING,
+    FRAME_HEADER_SIZE,
+    FRAME_VERSION,
+    MAX_RAW_BYTES,
+    MAX_FRAME_BYTES,
+    GENERIC_OP_NONE,
+    GENERIC_OP_OBJECT_OPEN,
+    GENERIC_OP_PROGRAM_CONFIGURE,
+    GENERIC_OP_OBJECT_LOAD,
+    GENERIC_OP_PROGRAM_INFO,
+    GENERIC_OP_MAP_INFO,
+    GENERIC_OP_OBJECT_CLOSE,
+    GENERIC_OP_MAP_LOOKUP,
+    GENERIC_OP_MAP_UPDATE,
+    GENERIC_OP_MAP_DELETE,
+    GENERIC_OP_MAP_NEXT_KEY,
+    GENERIC_OP_TEST_RUN,
+    GENERIC_OP_ATTACH,
+    GENERIC_OP_LINK_CLOSE,
+    GENERIC_OP_BUFFER_OPEN,
+    GENERIC_OP_BUFFER_POLL,
+    GENERIC_OP_BUFFER_CLOSE,
+    GENERIC_OP_VIEW_REF,
+    GENERIC_OP_VIEW_GEN,
+    GENERIC_OP_VIEW_CHECK,
+    GENERIC_OP_BUFFER_STATS,
+    GENERIC_DOMAIN_NONE,
+    GENERIC_DOMAIN_POSIX,
+    GENERIC_DOMAIN_LIBBPF,
+    GENERIC_DOMAIN_KERNEL,
+    GENERIC_DOMAIN_BRIDGE,
+    ATTACH_FAMILY_TRACEPOINT,
+    AUTOLOAD_UNCHANGED,
+    AUTOLOAD_ENABLE,
+    AUTOLOAD_DISABLE,
+    LOG_DISCARD,
+    LOG_ON_FAILURE,
+    LOG_ALWAYS,
+    MAP_UPDATE_ANY,
+    MAP_UPDATE_NOEXIST,
+    MAP_UPDATE_EXIST,
+    MAP_UPDATE_LOCK,
+    GENERIC_MAX_LOG_BYTES,
+    GENERIC_MAX_TEST_BYTES,
+    read_u8_le,
+    read_u16_le,
+    read_u32_le,
+    read_u64_le,
 )
 from libbpf_mojo.batch import Frame, PollResult, decode_frame
 from libbpf_mojo.error import LmbError

@@ -3,7 +3,9 @@
 from std.os import getenv
 from std.pathlib import Path
 from std.testing import TestSuite, assert_equal, assert_true
-from libbpf_mojo._ffi import AUTOLOAD_DISABLE
+from libbpf_mojo import (
+    AUTOLOAD_DISABLE,
+)
 from libbpf_mojo.object import Object, ProgramView
 from libbpf_mojo.program import ProgramTestResult, test_run
 

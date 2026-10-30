@@ -10,7 +10,7 @@ from std.os import getenv
 from std.sys import exit
 from std.testing import TestSuite, assert_equal, assert_false, assert_true
 
-from libbpf_mojo._ffi import (
+from libbpf_mojo import (
     ATTACH_TRACEPOINT,
     DOMAIN_BRIDGE,
     DOMAIN_LIBBPF,

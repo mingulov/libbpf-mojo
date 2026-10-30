@@ -8,7 +8,7 @@ test-support library; no privileges needed.
 from std.sys import exit
 from std.testing import TestSuite, assert_equal, assert_true
 
-from libbpf_mojo._ffi import (
+from libbpf_mojo import (
     DOMAIN_BRIDGE,
     FRAME_HEADER_SIZE,
     FRAME_VERSION,
@@ -18,7 +18,7 @@ from libbpf_mojo._ffi import (
 )
 from libbpf_mojo.batch import POLL_BATCH, POLL_ERROR, POLL_SHORT, POLL_TIMEOUT
 from libbpf_mojo.batch import Frame, PollResult, decode_frame
-from libbpf_mojo.error import EBADMSG, EINVAL, LmbError
+from libbpf_mojo.error import EBADMSG, EINVAL, ENOSPC, LmbError
 from libbpf_mojo.session import BridgeStats
 from testutil import (
     TestFake,
@@ -258,6 +258,12 @@ def test_short_buffer_23_24() raises:
         assert_true(short.is_short())
         assert_equal(short.written, UInt32(0))
         assert_equal(short.required, UInt32(24))
+        assert_true(short.required > UInt32(23))
+        assert_true(short.required >= FRAME_HEADER_SIZE + UInt32(1))
+        assert_true(short.required <= MAX_FRAME_BYTES)
+        assert_equal(short.error.operation, OP_POLL)
+        assert_equal(short.error.domain, DOMAIN_BRIDGE)
+        assert_equal(short.error.code, ENOSPC)
         assert_true(check_guards(zone, 23))
         assert_true(check_dst_clean(zone, 23))
         var zone2 = List[UInt8](length=24, fill=UInt8(0))

@@ -116,7 +116,10 @@ int32_t lmb_buffer_poll_v1(struct lmb_buffer *buffer, uint8_t *dst,
 
 int32_t lmb_buffer_close_v1(struct lmb_buffer **cell) {
     const uint32_t op = LMB_GENERIC_OP_BUFFER_CLOSE;
-    if (!cell || !lmb_generic_check_span(cell, sizeof(*cell)))
+    /* Closing nothing succeeds: a null cell is a no-op that neither
+     * records nor clears the thread diagnostic, matching lmb_close. */
+    if (!cell) return 0;
+    if (!lmb_generic_check_span(cell, sizeof(*cell)))
         return fail(op, LMB_GENERIC_DOMAIN_BRIDGE, -EINVAL, "invalid buffer cell");
     if (*cell) {
         struct lmb_buffer *buffer = *cell; struct lmb_object *parent = buffer->parent;

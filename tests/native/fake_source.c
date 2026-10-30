@@ -313,6 +313,18 @@ int main(int argc, char **argv) {
     disarm(s);
     LMB_CHECK(lmb_close(&s) == 0 && s == NULL, "close-ok",
               "close after disarm must succeed");
+    LMB_CHECK(lmb_load(NULL) == -EINVAL, "null-probe",
+              "null load must fail closed");
+    LMB_CHECK(lmb_close(NULL) == 0 && lmb_close(&s) == 0 && s == NULL,
+              "close-null", "null close must succeed as a no-op");
+    memset(&err, 0, sizeof(err));
+    err.abi_version = LMB_ABI_VERSION;
+    err.struct_size = sizeof(err);
+    LMB_CHECK(lmb_last_error(&err) == 0 &&
+                  err.operation == LMB_OP_LOAD &&
+                  err.domain == LMB_DOMAIN_BRIDGE && err.code == -EINVAL,
+              "close-null-undisturbed",
+              "null close must not record or clear the diagnostic");
 
     free(elf);
     return lmb_failures ? 1 : 0;

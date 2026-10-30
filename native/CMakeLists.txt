@@ -1,6 +1,8 @@
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
-cmake_minimum_required(VERSION 3.25)
+# Floor matches toolchain.lock.json minimum_versions.cmake; the
+# selftest test_cmake_floor_matches_lock rejects drift.
+cmake_minimum_required(VERSION 4.2.3)
 project(libbpf_mojo C)
 
 set(LMB_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/..)

@@ -3,6 +3,7 @@
 """Build receipts retain every checked tool version and pin."""
 
 import json
+import re
 import sys
 import tempfile
 import unittest
@@ -20,6 +21,16 @@ class ToolchainReceipt(unittest.TestCase):
                      "ninja", "make", "gcc", "pkg-config",
                      "zlib", "python"):
             self.assertIn(name, names, names)
+
+    def test_cmake_floor_matches_lock(self):
+        lock = json.loads(
+            (ROOT / "toolchain.lock.json").read_text())
+        pinned = lock["minimum_versions"]["cmake"]
+        text = (ROOT / "native/CMakeLists.txt").read_text()
+        match = re.search(
+            r"cmake_minimum_required\(VERSION ([0-9.]+)\)", text)
+        self.assertIsNotNone(match, "no cmake_minimum_required")
+        self.assertEqual(match.group(1), pinned)
 
     def test_dependency_identities_read_lock_pin(self):
         with tempfile.TemporaryDirectory() as tmp:

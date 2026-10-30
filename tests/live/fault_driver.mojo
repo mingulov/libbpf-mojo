@@ -27,7 +27,7 @@ from std.sys import argv, exit
 from std.pathlib import Path
 from std.time import perf_counter_ns, sleep
 
-from libbpf_mojo._ffi import (
+from libbpf_mojo import (
     ATTACH_TRACEPOINT,
     DOMAIN_BRIDGE,
     OP_ATTACH,

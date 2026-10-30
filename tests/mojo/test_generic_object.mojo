@@ -3,7 +3,10 @@
 from std.os import getenv, listdir
 from std.pathlib import Path
 from std.testing import TestSuite, assert_equal, assert_false, assert_true
-from libbpf_mojo._ffi import AUTOLOAD_DISABLE, AUTOLOAD_ENABLE
+from libbpf_mojo import (
+    AUTOLOAD_DISABLE,
+    AUTOLOAD_ENABLE,
+)
 from libbpf_mojo.error import EBUSY, EINVAL, ENOSYS
 from libbpf_mojo.object import Object, ObjectOptions, ProgramView, MapView
 

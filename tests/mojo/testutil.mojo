@@ -11,7 +11,7 @@ from std.os import getenv
 from std.pathlib import Path
 from std.testing import assert_true
 
-from libbpf_mojo._ffi import (
+from libbpf_mojo import (
     DOMAIN_BRIDGE,
     OP_OPEN,
     read_u64_le,

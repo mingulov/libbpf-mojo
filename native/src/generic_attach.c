@@ -60,7 +60,10 @@ int32_t lmb_object_attach_v1(struct lmb_object *object,
 
 int32_t lmb_link_close_v1(struct lmb_link **cell) {
     const uint32_t op = LMB_GENERIC_OP_LINK_CLOSE;
-    if (!cell || !lmb_generic_check_span(cell, sizeof(*cell)))
+    /* Closing nothing succeeds: a null cell is a no-op that neither
+     * records nor clears the thread diagnostic, matching lmb_close. */
+    if (!cell) return 0;
+    if (!lmb_generic_check_span(cell, sizeof(*cell)))
         return fail(op, LMB_GENERIC_DOMAIN_BRIDGE, -EINVAL, "invalid link cell");
     if (*cell) {
         struct lmb_link *child = *cell;

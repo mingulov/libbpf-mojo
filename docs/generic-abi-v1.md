@@ -488,8 +488,9 @@ reference is alive.
 children or views it returns `-EBUSY` and preserves the non-null,
 usable owner handle; with no children it releases everything
 exactly once, nulls the caller's handle, and reports the first
-teardown error or 0. A null argument fails; a null pointee
-succeeds trivially (and, like every success, clears the generic
+teardown error or 0. A null argument is a no-op success that
+leaves the generic record untouched; a null pointee succeeds
+trivially (and, like every success, clears the generic
 record). `lmb_object_release_v1` is the infallible destructor
 path: it nulls the caller's handle and drops the external
 reference even with live children, each of which retains its own
@@ -497,9 +498,10 @@ native and library references; the last release performs native
 destruction exactly once. A moved-from or null owner release is
 a no-op. Link and buffer closes detach and free their own
 resource, drop their object reference, null the handle, then
-report the first teardown error; null pointees succeed
-trivially. Partial load/attach failures roll back only the
-calling handle's resources.
+report the first teardown error; null arguments are no-op
+successes that leave the record untouched, and null pointees
+succeed trivially (clearing the record). Partial load/attach
+failures roll back only the calling handle's resources.
 
 `ProgramView` and `MapView` are retained owner-bound views,
 not free pointers: each view holds one native object reference
@@ -565,8 +567,13 @@ pointers-before-state position.
   report `BRIDGE`/`-ENOENT`; post-load calls report
   `BRIDGE`/`-EINVAL`.
 - `object_load`: no outputs; the object stays usable for
-  info and close. Second loads report `BRIDGE`/`-EINVAL`.
-  Loading never attaches and never requires a ring.
+  info and close. Load is one-shot: the first attempt latches,
+  so a second call reports `BRIDGE`/`-EINVAL` even when the
+  first attempt failed; reopen to try again. (v1 differs
+  deliberately: a failed `lmb_load` leaves the session
+  retryable, and only a load of an already-loaded session
+  reports `-EINVAL`.) Loading never attaches and never
+  requires a ring.
 - `program_info`: caller header plus `log` span are inputs;
   validation failure leaves the whole struct unchanged.
   Success overwrites every field (pads and reserved read
@@ -576,7 +583,10 @@ pointers-before-state position.
   `BRIDGE`/`-EINVAL`.
 - `object_close`: BUSY preserves the handle and reports
   `BRIDGE`/`-EBUSY`; otherwise frees everything, nulls the
-  handle, and reports the first teardown error or 0.
+  handle, and reports the first teardown error or 0. A null
+  cell is a no-op success that leaves the record untouched,
+  matching `lmb_close`; an already-null handle succeeds and
+  clears the record.
 - `object_release`: infallible; always nulls a valid
   argument. No diagnostic record is written.
 - `generic_last_error`: invalid headers fail without
@@ -617,7 +627,8 @@ pointers-before-state position.
   `BRIDGE`/`-ENOENT`.
 - `link_close`, `buffer_close`: free own resource, drop
   the object reference, null the handle, then report the
-  first teardown error or 0.
+  first teardown error or 0. Null cells are no-op successes
+  that leave the record untouched, matching `lmb_close`.
 - `buffer_open`: `*out` cleared first, null on failure.
   Unknown rings report `BRIDGE`/`-ENOENT`; unloaded
   objects report `BRIDGE`/`-EINVAL`.

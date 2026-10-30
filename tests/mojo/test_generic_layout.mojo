@@ -24,10 +24,8 @@ from libbpf_mojo._ffi import (
     ProgramOptionsV1,
     TestOptionsV1,
     TestResultV1,
-    read_u8_le,
-    read_u32_le,
-    read_u64_le,
 )
+from libbpf_mojo import read_u32_le, read_u64_le, read_u8_le
 
 
 def test_sizes() raises:

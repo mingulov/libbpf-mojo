@@ -24,6 +24,8 @@ from std.os import getenv
 
 from libbpf_mojo._ffi import (
     DOMAIN_BRIDGE,
+    FRAME_HEADER_SIZE,
+    MAX_FRAME_BYTES,
     OP_ATTACH,
     OP_CLOSE,
     OP_DETACH,
@@ -380,11 +382,21 @@ struct Session(Movable):
                 ),
             )
         if rc == ENOSPC:
+            var error = capture_error(self._lib, OP_POLL, rc)
+            if (
+                error.operation == OP_POLL
+                and error.domain == DOMAIN_BRIDGE
+                and error.code == ENOSPC
+                and written == 0
+                and required >= FRAME_HEADER_SIZE + UInt32(1)
+                and required <= MAX_FRAME_BYTES
+                and required > capacity
+            ):
+                return PollResult(
+                    POLL_SHORT, UInt32(0), required, error^
+                )
             return PollResult(
-                POLL_SHORT, UInt32(0), required,
-                LmbError(
-                    OP_POLL, DOMAIN_BRIDGE, Int32(0), String("")
-                ),
+                POLL_ERROR, UInt32(0), UInt32(0), error^
             )
         return PollResult(
             POLL_ERROR, UInt32(0), UInt32(0),

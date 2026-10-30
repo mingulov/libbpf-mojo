@@ -453,7 +453,9 @@ void lmb_object_release_v1(struct lmb_object **cell) {
 }
 
 int32_t lmb_object_close_v1(struct lmb_object **cell) {
-    if (!cell) return fail(6, 4, -EINVAL, "null owner cell");
+    /* Closing nothing succeeds: a null cell is a no-op that neither
+     * records nor clears the thread diagnostic, matching lmb_close. */
+    if (!cell) return 0;
     if (*cell && lmb_object_live_children(*cell))
         return fail(6, 4, -EBUSY, "object still has live children or views");
     lmb_object_release_v1(cell); lmb_generic_clear(); return 0;

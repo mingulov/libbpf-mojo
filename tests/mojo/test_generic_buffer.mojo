@@ -4,7 +4,16 @@ from std.os import getenv
 from std.pathlib import Path
 from std.sys import argv
 from std.testing import TestSuite, assert_equal, assert_true
-from libbpf_mojo._ffi import AUTOLOAD_DISABLE, BufferOptionsV1, BufferStatsV1, GenericLib, GenericSpanV1, read_u64_le
+from libbpf_mojo import (
+    AUTOLOAD_DISABLE,
+    read_u64_le,
+)
+from libbpf_mojo._ffi import (
+    BufferOptionsV1,
+    BufferStatsV1,
+    GenericLib,
+    GenericSpanV1,
+)
 from libbpf_mojo.batch import decode_frame
 from libbpf_mojo.buffer import Buffer, BufferPollResult, open_ring
 from libbpf_mojo.object import Object, MapView

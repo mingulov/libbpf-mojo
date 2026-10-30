@@ -12,8 +12,10 @@ owned storage and heap-allocates an opaque session. A failed
 open clears its output handle. `lmb_close` takes the caller's
 handle pointer, frees everything the session owns (objects,
 links, ring state, staged records), nulls the pointer, and
-tolerates an already-null pointee, so explicit close and
-deterministic destruction compose without double-free.
+tolerates an already-null pointee; a null cell is a no-op
+success that leaves the diagnostic untouched, so explicit
+close and deterministic destruction compose without
+double-free.
 
 The Mojo `Session` owner is movable but not duplicable: raw
 handles, map pointers, and borrowed callback data cannot
@@ -157,6 +159,13 @@ retry with room delivers it exactly once. Timeout yields
 success with zero bytes. A negative libbpf callback return
 consumes the borrowed record, so the bridge copies each record
 into its owned staging slot before returning.
+
+Both Mojo owners classify short identically: `Session.poll`
+reports `POLL_SHORT` only for the expected
+`POLL`/`BRIDGE`/`-ENOSPC` diagnostic with zero written and a
+required extent inside the frame bounds that exceeds the
+capacity; anything else on that path is `POLL_ERROR` carrying
+the captured diagnostic, matching `Buffer.poll`.
 
 Library statistics (`lmb_stats`: received, delivered, held,
 malformed, dropped) describe the bridge only. Malformed and

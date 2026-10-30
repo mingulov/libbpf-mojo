@@ -335,15 +335,22 @@ to fit.
   quiescence. A detached session may attach again.
 - `lmb_close` destroys owned objects, links, maps, ring consumers, and
   staged state, nulls the caller's handle, and tolerates an already-null
-  pointee. Partial load/attach failures roll back only this handle's
+  pointee. A null cell is a no-op success that neither records nor
+  clears the thread-local diagnostic, matching the generic closes.
+  Partial load/attach failures roll back only this handle's
   resources. Close releases everything even when a teardown step
   fails, then reports the first teardown error.
 - `lmb_load` prepares every program in the object; no program executes
-  until an explicit `lmb_attach`. Map pin metadata in the object is
-  disabled before loading: the bridge never creates, reuses, or
-  leaves behind filesystem pins.
-- The dynamic library exports only the eleven `lmb_*` operations; the
-  bundled libbpf and all bridge internals stay local. It outlives all
+  until an explicit `lmb_attach`. A failed load leaves the session
+  unloaded and retryable; only loading an already-loaded session
+  reports `-EINVAL`. (The generic surface differs deliberately:
+  `object_load` latches on the first attempt and refuses retries.)
+  Map pin metadata in the object is disabled before loading: the
+  bridge never creates, reuses, or leaves behind filesystem pins.
+- The dynamic library exports 34 `lmb_*` operations: the eleven v1
+  session operations plus 23 generic operations under symbol version
+  `LIBBPF_MOJO_GENERIC_1` (see `generic-abi-v1.md`); the bundled
+  libbpf and all bridge internals stay local. It outlives all
   owners and foreign callables. Signal handlers set a flag; ordinary
   control flow performs teardown. The bridge silences its private
   libbpf log channel; diagnostics flow only through the sanitized

@@ -3,7 +3,9 @@
 from std.os import getenv
 from std.pathlib import Path
 from std.sys import argv, exit
-from libbpf_mojo._ffi import AUTOLOAD_DISABLE
+from libbpf_mojo import (
+    AUTOLOAD_DISABLE,
+)
 from libbpf_mojo.object import Object
 from libbpf_mojo.program import ProgramTestResult, test_run
 
