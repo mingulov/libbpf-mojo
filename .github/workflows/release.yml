@@ -5,12 +5,16 @@
 # workflows, runs the offline gate suites plus the
 # clean-room package lane, builds
 # dist/libbpf-mojo-<version>.tar.gz from the clean tag
-# tree, and uploads the tarball plus a sha256 file to the
-# tag's GitHub Release. Dispatch runs build everything but
-# publish nothing. MemVeil consumes releases by exact
-# version plus tarball hash in its toolchain lock, so a
-# libbpf-mojo release never changes MemVeil until MemVeil's
-# pin is deliberately updated. Rollback is a new tag.
+# tree, attests build provenance for it, and uploads the
+# tarball plus a sha256 file to the tag's GitHub Release.
+# Dispatch runs build everything, keep the set as a
+# workflow artifact and publish nothing. MemVeil consumes
+# releases by exact version plus tarball hash in its
+# toolchain lock, so a libbpf-mojo release never changes
+# MemVeil until MemVeil's pin is deliberately updated.
+# Rollback is a new tag; a rerun of the same tag fails
+# instead of replacing uploaded files. v0.* and hyphenated
+# tags publish as prereleases.
 name: release
 
 on:
@@ -21,6 +25,8 @@ on:
 
 permissions:
   contents: write
+  id-token: write
+  attestations: write
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -67,15 +73,45 @@ jobs:
           cd dist
           sha256sum libbpf-mojo-*.tar.gz > SHA256SUMS.txt
           cat SHA256SUMS.txt
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@96278af6caaf10aea03fd8d33a09a777ca52d62f  # v3.2.0
+        with:
+          subject-path: |
+            dist/libbpf-mojo-*.tar.gz
+            dist/SHA256SUMS.txt
+      - name: Upload dry-run artifacts
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4.6.2
+        with:
+          name: release-dry-run
+          path: |
+            dist/libbpf-mojo-*.tar.gz
+            dist/SHA256SUMS.txt
+          if-no-files-found: error
       - name: Publish GitHub Release
         if: startsWith(github.ref, 'refs/tags/')
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           TAG="${GITHUB_REF#refs/tags/}"
-          if ! gh release view "$TAG" >/dev/null 2>&1; then
-            gh release create "$TAG" --title "$TAG" \
+          PRE=""
+          case "$TAG" in
+            v0.*|*-*) PRE="--prerelease";;
+          esac
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            HAVE="$(gh release view "$TAG" --json assets \
+              --jq '.assets | length')"
+            if [ "$HAVE" != "0" ]; then
+              echo "refusing to overwrite $HAVE published assets" >&2
+              exit 1
+            fi
+          else
+            # No committed notes file in this repository;
+            # generated notes from the tag diff stay honest
+            # for a dependency-only release.
+            # shellcheck disable=SC2086
+            gh release create "$TAG" --title "$TAG" $PRE \
               --generate-notes
           fi
-          gh release upload "$TAG" --clobber \
+          gh release upload "$TAG" \
             dist/libbpf-mojo-*.tar.gz dist/SHA256SUMS.txt
