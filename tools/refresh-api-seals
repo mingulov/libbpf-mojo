@@ -1,0 +1,106 @@
+#!/usr/bin/env python3
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+"""Refresh explicitly reviewed source hashes; preserve frozen API meaning."""
+import argparse
+import copy
+import importlib.util
+import json
+from pathlib import Path
+import pprint
+import re
+import sys
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    mode = parser.add_mutually_exclusive_group(required=True)
+    mode.add_argument('--check', action='store_true', help='validate without writes')
+    mode.add_argument('--write', action='store_true', help='refresh reviewed source hashes')
+    parser.add_argument('--reviewed-source', action='append', default=[], metavar='PATH',
+                        help='existing repository-relative source reviewed for this refresh')
+    args = parser.parse_args()
+    root = Path(__file__).resolve().parents[1]
+    validator_path = root / 'tests/selftest/test_api_coverage.py'
+    spec = importlib.util.spec_from_file_location('api_coverage', validator_path)
+    validator = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(validator)
+    inventory_path = root / 'docs/api-coverage.json'
+    inventory = json.loads(inventory_path.read_text())
+    denominator = json.loads((root / validator.SNAPSHOT_PATH).read_text())
+    reviewed = set(args.reviewed_source)
+    abi_sources = {
+        path for path in validator.IMPLEMENTATION_SOURCES
+        if path.startswith('native/include/') or path in {
+            'native/libbpf_mojo.map', 'tests/native/abi_v1_frozen.h'}
+    }
+    if reviewed & abi_sources:
+        parser.exit(1, 'refresh: ABI sources require contract review; '
+                    'update declarations, inventory and signature expectations deliberately\n')
+    if reviewed - set(validator.IMPLEMENTATION_SOURCES):
+        parser.exit(1, 'refresh: review required for unlisted sources\n')
+    errors = validator.validate_inventory(inventory, denominator, root)
+    if args.check:
+        if errors:
+            parser.exit(1, '\n'.join(errors) + '\n')
+        print('API source seals verified')
+        return
+    allowed = {
+        prefix + path for path in reviewed for prefix in (
+            'implementation_snapshot: source changed ',
+        )
+    }
+    unexpected = [error for error in errors if error not in allowed and not any(
+        error.endswith(': source anchor hash/lines changed ' + path)
+        for path in reviewed)]
+    if unexpected:
+        parser.exit(1, 'refresh: review required; semantic or unreviewed drift:\n' +
+                    '\n'.join(unexpected) + '\n')
+    updated = copy.deepcopy(inventory)
+
+    def refresh(value):
+        if isinstance(value, dict):
+            if value.get('path') in reviewed and 'sha256' in value:
+                raw = validator._read(root, value['path'])
+                value['sha256'] = validator._sha(raw)
+                if 'span_sha256' in value:
+                    lines = raw.splitlines(keepends=True)
+                    a, b = value['start_line'], value['end_line']
+                    if not 1 <= a <= b <= len(lines):
+                        parser.exit(1, 'refresh: review required for changed anchor extent\n')
+                    value['span_sha256'] = validator._sha(b''.join(lines[a-1:b]))
+            for child in value.values():
+                refresh(child)
+        elif isinstance(value, list):
+            for child in value:
+                refresh(child)
+
+    refresh(updated)
+    replacements = {
+        'SOURCE_MANIFEST_SHA256': validator._sha(validator._canonical(
+            updated['implementation_snapshot']['sources'])),
+        'BRIDGE_SHA256': validator._sha(validator._canonical(updated['bridge_abi'])),
+        'ROW_MAPPING_SEALS': {
+            row['id']: validator._sha(validator._canonical({key: row[key] for key in (
+                'raw_declaration', 'forwarding_adapter', 'typed_workflow')}))
+            for row in updated['rows']
+        },
+    }
+    for name, value in replacements.items():
+        setattr(validator, name, value)
+    errors = validator.validate_inventory(updated, denominator, root)
+    if errors:
+        parser.exit(1, 'refresh: review required:\n' + '\n'.join(errors) + '\n')
+    text = validator_path.read_text()
+    for name, value in replacements.items():
+        pattern = r'^' + name + r' = .*?(?=\n[A-Z_][A-Z_0-9]* = |\n# FROZEN_SEALS_END)'
+        text, count = re.subn(pattern, lambda _: name + ' = ' + pprint.pformat(
+            value, width=100, sort_dicts=True), text, flags=re.MULTILINE | re.DOTALL)
+        if count != 1:
+            parser.exit(1, 'refresh: ambiguous frozen seal boundary\n')
+    inventory_path.write_bytes(validator._formatted(updated))
+    validator_path.write_text(text)
+    print('Refreshed reviewed source seals; inspect and commit both generated diffs')
+
+
+if __name__ == '__main__':
+    main()

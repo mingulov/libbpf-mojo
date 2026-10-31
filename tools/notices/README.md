@@ -4,7 +4,7 @@
 These files are the canonical license texts that `tools/package`
 stages into binary distributions under `licenses/`. They are
 **third-party material**, not this repository's own license
-(which is still undecided): do not move them to the repository
+(Apache-2.0 WITH LLVM-exception): do not move them to the repository
 root or rename them to look like project license files.
 
 | File | Text | Provenance |

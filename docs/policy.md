@@ -8,6 +8,12 @@ Every `vX.Y.Z` named here must exist as a git tag
 (pinned by the provenance gate); future releases are
 named without the `v` prefix until they are tagged.
 
+The 0.2.3 hardening candidate keeps both ABI major 1 contracts and the
+existing soname. Its version does not qualify new kernel environments or
+replace historical runtime evidence. Consumers bind its clean source revision,
+runtime archive digest, corresponding source archive digest and dependency
+source/license identities before admitting the exact artifact.
+
 ## ABI and framing windows
 
 The native ABI major 1 ([abi-v1](abi-v1.md)) and the

@@ -65,6 +65,7 @@ their own identities even when `.git` is a file.
 | `tools/build` | Single supported build path; also `--check-toolchain` |
 | `tools/test <suite>` | Suite runner; `--help` lists suites |
 | `tools/package` | Standalone artifact builder |
+| `tools/refresh-api-seals` | Explicitly reviewed source-hash refresh and read-only validation |
 | `native/` | C bridge sources and the one public ABI header |
 | `src/libbpf_mojo/` | Typed Mojo owners and one internal FFI module |
 | `tests/native/`, `tests/mojo/`, `tests/live/` | ABI, boundary, and live-kernel evidence |
@@ -75,6 +76,20 @@ nonzero on failure. A skipped selected test fails its suite, never
 success evidence: host-only lanes declare live omissions as `NOT_RUN`
 before selection, and privileged live suites report skip (exit 77),
 which blocks qualification instead of passing.
+
+After reviewing a change to a source listed in the API inventory, run
+`./tools/refresh-api-seals --reviewed-source README.md --write`, substituting
+the reviewed path and repeating `--reviewed-source` for each changed source.
+Inspect the generated inventory and validator diffs, then run
+`./tools/refresh-api-seals --check` and `./tools/test selftest` before committing.
+The helper updates source and existing line-span hashes deterministically.
+It refuses unreviewed source drift, changed anchor extents, and changes to the
+frozen inventory's signatures, coverage mappings, upstream snapshot or schema.
+It does not extract API declarations or certify that a source change preserves
+semantics. Reviewers must check the source diff and anchor locations; API
+meaning changes need a separate contract review and deliberate validator edits.
+Public native headers, the native export map and the frozen old-consumer header
+are excluded from automated refresh, even with an explicit reviewed-source flag.
 
 ## Verified toolchain probes
 

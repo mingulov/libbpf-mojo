@@ -8,7 +8,10 @@ pin the exact version plus tarball hash.
 Entries name user-visible changes only;
 commit history has the rest.
 
-## Unreleased
+## 0.2.3 candidate
+
+- Deterministic reviewed source-seal refresh
+  preserves frozen API meanings.
 
 - Qualification results route through
   self-sufficient receipts.

@@ -1,5 +1,8 @@
 <!-- SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception -->
-# Support envelope (0.2.2, ABI v1)
+# Support envelope (0.2.3 candidate, ABI v1)
+
+The candidate retains the historical evidence below; it has no new exact-artifact
+live qualification until its packaged bytes pass the corresponding gates.
 
 ## Tested configuration
 
