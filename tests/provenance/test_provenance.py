@@ -288,9 +288,14 @@ def main():
           in support_norm)
     policy_doc = os.path.join(ROOT, "docs", "policy.md")
     check("policy-doc-present", os.path.isfile(policy_doc))
-    with open(policy_doc) as handle:
-        versions = sorted(set(re.findall(r"v\d+\.\d+\.\d+",
-                                         handle.read())))
+    changelog = os.path.join(ROOT, "CHANGELOG.md")
+    check("changelog-present", os.path.isfile(changelog))
+    versions = set()
+    for path in (policy_doc, changelog):
+        with open(path) as handle:
+            versions.update(re.findall(r"v\d+\.\d+\.\d+",
+                                       handle.read()))
+    versions = sorted(versions)
     check("policy-names-versions", len(versions) >= 1,
           "no vX.Y.Z named")
     tags = git_tags()

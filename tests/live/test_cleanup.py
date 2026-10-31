@@ -79,10 +79,14 @@ def is_zombie(pid):
 def fds_of(pid):
     """Exact FD set of a live process, or None if it is gone.
 
-    A zombie counts as gone (its fd directory denies listing);
-    a momentary denial on a live process is retried, and only
-    a persistent one fails (hidepid?).
+    A zombie counts as gone: some kernels deny listing its
+    fd directory while others list it empty, so the state
+    check decides, not the listing outcome. A momentary
+    denial on a live process is retried, and only a
+    persistent one fails (hidepid?).
     """
+    if is_zombie(pid):
+        return None
     deadline = time.monotonic() + 1.0
     while True:
         try:
@@ -149,6 +153,12 @@ def wait_writer_closed(pid, path, label):
     real = os.path.realpath(path)
     deadline = time.monotonic() + WRITER_TIMEOUT
     while True:
+        # A zombie is gone even where its fd directory lists
+        # empty instead of denying access: the state check
+        # decides before the listing outcome can misread an
+        # empty set as a closed writer.
+        if is_zombie(pid):
+            return False
         try:
             names = os.listdir("/proc/%d/fd" % pid)
         except (FileNotFoundError, NotADirectoryError):

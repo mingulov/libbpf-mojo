@@ -6,7 +6,7 @@ from libbpf_mojo._ffi import (
     GENERIC_OP_VIEW_CHECK, GENERIC_OP_MAP_DELETE, GENERIC_OP_MAP_NEXT_KEY,
     GENERIC_DOMAIN_KERNEL, MapInfoV1,
 )
-from libbpf_mojo.error import EINVAL, ENOENT, EOVERFLOW, LmbError
+from libbpf_mojo.error import EINVAL, ENOENT, EOPNOTSUPP, EOVERFLOW, LmbError
 from libbpf_mojo.object import MapView, _query_name, capture_generic_error
 
 
@@ -82,7 +82,7 @@ def update(
 
 
 def _scalar_geometry(info: MapInfoV1, operation: UInt32) raises LmbError:
-    if info.key_size != 4 or info.value_size != 8 or info.stride != 0 or _percpu(info.map_type):
+    if info.key_size != UInt32(size_of[UInt32]()) or info.value_size != UInt32(size_of[UInt64]()) or info.stride != 0 or _percpu(info.map_type):
         raise LmbError(operation, GENERIC_DOMAIN_BRIDGE, EINVAL,
                        "u64 helpers require an ordinary u32-key/u64-value map")
 
@@ -103,7 +103,7 @@ def lookup_u64(mut view: MapView, key: UInt32) raises LmbError -> UInt64:
     var bytes = _lookup(view, Span(key_bytes), info)
     var value = UInt64(0)
     var pointer = Pointer(to=value).unsafe_bitcast[UInt8]()
-    for i in range(8):
+    for i in range(size_of[UInt64]()):
         pointer.unsafe_offset(i).unsafe_store(bytes[i])
     return value
 
@@ -149,7 +149,7 @@ def _key(
     var info = view.info()
     if info.key_size == 0:
         raise LmbError(GENERIC_OP_MAP_NEXT_KEY, GENERIC_DOMAIN_BRIDGE,
-                       Int32(-95), "map has no key")
+                       EOPNOTSUPP, "map has no key")
     if has_current == 1 and current_bytes != UInt64(info.key_size):
         raise LmbError(GENERIC_OP_MAP_NEXT_KEY, GENERIC_DOMAIN_BRIDGE,
                        EINVAL, "current key has the wrong extent")

@@ -10,7 +10,8 @@
 # optionally supplies its hash-checked local libbpf source archive.
 #
 # Implemented suites: native, mojo, live-tracepoint, cleanup, package,
-# package-consumer, source-export, contracts, runner, selftest, provenance.
+# package-consumer, source-export, contracts, runner, selftest, provenance,
+# docs.
 # contracts requires explicit offline LMB_TEST_CONTRACT_BUNDLE data.
 # LMB_PACKAGE_CONSUMER_OUT optionally retains installed-consumer attempts.
 # The runner suite
@@ -308,6 +309,11 @@ case "$1" in
             || exit 1
         echo "+ python3 tests/provenance/test_input_pins.py" >&2
         (cd "$ROOT" && python3 tests/provenance/test_input_pins.py)
+        exit "$?"
+        ;;
+    docs)
+        echo "+ python3 tests/docs/test_docs.py" >&2
+        (cd "$ROOT" && python3 tests/docs/test_docs.py)
         exit "$?"
         ;;
     source-export)

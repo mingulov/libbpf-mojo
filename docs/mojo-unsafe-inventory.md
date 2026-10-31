@@ -41,7 +41,7 @@ Conventions used below:
 |---|---|---|---|---|---|
 | `OwnedDLHandle(path)` | N/A (loader path) | N/A | N/A | Owned; closed on drop. The `Session` owns its `NativeLib`, so the library outlives every call and handle. | One owner; no sharing. |
 | Symbol validation in `__init__` | N/A (symbol lookup) | N/A | Handle must be open. | All 11 ABI symbols resolve before any handle exists, so a partial library fails before acquiring state. | Owner thread only. |
-| `get_function[Int32](name)` per call | N/A (symbol lookup) | N/A | Handle must be open. | Callable used immediately; never stored. | Owner thread only. |
+| `get_function[Int32]` per call by name | N/A (symbol lookup) | N/A | Handle must be open. | Callable used immediately; never stored. | Owner thread only. |
 | `extern` call with `Pointer` args | Non-null `Pointer` per parameter: struct locals (`Pointer(to=x)`) or span data (`span.unsafe_ptr()`, possibly offset). | Pointee capacity exact: ABI structs are `size_of`-verified mirrors; spans carry caller length plus the wrapper's range check. | Input structs fully initialized before the call; out-cells are plain locals the call fills. | Every pointee outlives the call (locals and caller spans in enclosing frames). No pointer is retained. | Owner thread only. |
 | `f(session)` with `UInt64` handle | Opaque native handle, 0 when closed. | N/A (not dereferenced by Mojo). | Set by `lmb_open`, cleared by `lmb_close`. | Valid between open and close; native calls reject 0/closed handles with `-EINVAL`. | Owner thread only. |
 

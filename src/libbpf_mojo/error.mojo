@@ -16,6 +16,7 @@ comptime ENOSPC = Int32(-28)
 comptime ENOSYS = Int32(-38)
 comptime EBADMSG = Int32(-74)
 comptime EOVERFLOW = Int32(-75)
+comptime EOPNOTSUPP = Int32(-95)
 
 
 @fieldwise_init

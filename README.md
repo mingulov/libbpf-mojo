@@ -62,8 +62,12 @@ see `docs/build.md` and `toolchain.lock.json`.
 `docs/abi-v1.md` is the normative C boundary contract;
 `docs/ownership.md` states lifetimes, errors, and transport in
 prose; `docs/support.md` states the tested envelope;
+`docs/policy.md` states the evolution and support policy;
 `examples/tracepoint/` is a small real collection through the
-whole stack.
+whole stack. `CONTRIBUTING.md` is the contributor
+workflow, `RELEASING.md` the release process,
+`SECURITY.md` the vulnerability route, and
+`CHANGELOG.md` the version history.
 
 ## Licensing
 
@@ -77,4 +81,5 @@ the wire header shared by BPF and userspace
 (`examples/tracepoint/event.h`) carries the default id, whose
 exception permits the GPLv2 combination in the built object.
 Third-party redistribution notices ship in release tarballs
-under `licenses/` with `THIRD-PARTY-NOTICES.md`.
+under `licenses/`, alongside the tarball's
+THIRD-PARTY-NOTICES.md.

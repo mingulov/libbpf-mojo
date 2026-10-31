@@ -48,6 +48,9 @@ struct Link(Movable):
             try:
                 _ = self._lib[].close_link(Pointer(to=handle))
             except e:
+                # Destructors cannot raise. A teardown failure stays in
+                # the native last-error record; only the observation here
+                # is dropped.
                 pass
 
     def is_closed(self) -> Bool:

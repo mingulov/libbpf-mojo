@@ -254,6 +254,9 @@ struct Session(Movable):
             try:
                 _ = lib.close_session(Pointer(to=cell))
             except e:
+                # Destructors cannot raise. A teardown failure stays in
+                # the native last-error record; only the observation here
+                # is dropped.
                 pass
 
     def is_closed(ref self) -> Bool:

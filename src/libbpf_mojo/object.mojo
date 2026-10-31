@@ -208,6 +208,8 @@ struct Object(Movable):
             try:
                 self._lib[].release_object(Pointer(to=cell))
             except e:
+                # Release is infallible natively; the guard covers only
+                # loader-level faults, and destructors cannot raise.
                 pass
 
     @staticmethod
@@ -327,6 +329,8 @@ struct ProgramView(Movable):
             try:
                 self._lib[].object_unref(self._handle)
             except e:
+                # Unref is infallible natively; the guard covers only
+                # loader-level faults, and destructors cannot raise.
                 pass
 
     def info(
@@ -359,6 +363,10 @@ struct MapView(Movable):
     var _name: String
 
     def __init__(out self, object: Object, name: String) raises LmbError:
+        # Construction validates name bytes only. Map existence stays
+        # lazy on purpose: map info is load-gated, so an eager probe
+        # here would refuse the open-view-load-use order that program
+        # views allow because program metadata is available pre-load.
         _ = _query_name(name, GENERIC_OP_MAP_INFO)
         var lib = object._lib.copy()
         var generation = _retain_view(lib[], object._handle)
@@ -378,6 +386,8 @@ struct MapView(Movable):
             try:
                 self._lib[].object_unref(self._handle)
             except e:
+                # Unref is infallible natively; the guard covers only
+                # loader-level faults, and destructors cannot raise.
                 pass
 
     def info(mut self) raises LmbError -> MapInfoV1:
