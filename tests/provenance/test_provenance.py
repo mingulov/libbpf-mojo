@@ -8,8 +8,9 @@ verbatim and untagged; the toolchain lock pins libbpf by hash with
 no unknown origins and agrees with the pixi manifest; the package
 version, native ABI version, and wire framing version stay
 distinct; the support envelope carries the ratified floor
-sentence; and every static input tools/package needs from this
-tree exists. Exits nonzero on the first failure.
+sentence; every released version the policy names resolves
+to a git tag; and every static input tools/package needs
+from this tree exists. Exits nonzero on the first failure.
 Standard library only.
 """
 
@@ -17,6 +18,7 @@ import glob
 import json
 import os
 import re
+import subprocess
 import sys
 
 ROOT = os.path.dirname(os.path.dirname(
@@ -48,6 +50,22 @@ def check(name, cond, detail=""):
         print("FAIL %s %s" % (name, detail))
         sys.exit(1)
     print("ok %s" % name)
+
+
+def git_tags():
+    """Tag set, or None when ROOT owns no git tree."""
+    if not provenance.owns_git_root(ROOT):
+        return None
+    try:
+        proc = subprocess.run(
+            ["git", "-C", ROOT, "tag", "--list"],
+            stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+            text=True)
+    except OSError:
+        return None
+    if proc.returncode != 0:
+        return None
+    return set(proc.stdout.split())
 
 
 def tracked_files():
@@ -268,6 +286,21 @@ def main():
           "7.0.0-38-generic, and memveil's booted matrix "
           "qualifies the 6.0 through 6.10 attempt rows."
           in support_norm)
+    policy_doc = os.path.join(ROOT, "docs", "policy.md")
+    check("policy-doc-present", os.path.isfile(policy_doc))
+    with open(policy_doc) as handle:
+        versions = sorted(set(re.findall(r"v\d+\.\d+\.\d+",
+                                         handle.read())))
+    check("policy-names-versions", len(versions) >= 1,
+          "no vX.Y.Z named")
+    tags = git_tags()
+    if tags is None:
+        print("ok policy-tags-resolve "
+              "(not an owning checkout; skipped)")
+    else:
+        missing = [v for v in versions if v not in tags]
+        check("policy-tags-resolve", not missing,
+              "; ".join(missing))
 
     static_inputs = [
         "LICENSE",
