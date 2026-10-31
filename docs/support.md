@@ -3,7 +3,11 @@
 
 ## Tested configuration
 
-- x86-64 Linux, kernel >= 7.0 for live collection. A version
+- x86-64 Linux, kernel 6.0 or later for live collection.
+  Live bridge primitives (ratified 2026-10-31): Linux 6.0 or
+  later, BTF required; this repository's privileged suite
+  qualifies 7.0.0-38-generic, and MemVeil's booted matrix
+  qualifies the 6.0 through 6.10 attempt rows. A version
   string is eligibility only: each capability still needs its
   own functional check and live evidence. Passive inspection
   and offline work have no kernel floor.

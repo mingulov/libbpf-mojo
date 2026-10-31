@@ -7,7 +7,8 @@ known set with its license text staged; upstream notice texts stay
 verbatim and untagged; the toolchain lock pins libbpf by hash with
 no unknown origins and agrees with the pixi manifest; the package
 version, native ABI version, and wire framing version stay
-distinct; and every static input tools/package needs from this
+distinct; the support envelope carries the ratified floor
+sentence; and every static input tools/package needs from this
 tree exists. Exits nonzero on the first failure.
 Standard library only.
 """
@@ -252,6 +253,21 @@ def main():
     check("abi-versions-agree",
           mdoc_abi.group(1) == mabi.group(1)
           and mdoc_frame.group(1) == mframe.group(1))
+    support_doc = os.path.join(ROOT, "docs", "support.md")
+    check("support-doc-present", os.path.isfile(support_doc))
+    with open(support_doc) as handle:
+        support_norm = re.sub(r"\s+", " ",
+                              handle.read()).lower()
+    # The ratified floor sentence, normalized: the support
+    # envelope must carry it verbatim so the floor cannot
+    # drift from the product and spec statements.
+    check("support-floor-sentence",
+          "live bridge primitives (ratified 2026-10-31): "
+          "linux 6.0 or later, btf required; this "
+          "repository's privileged suite qualifies "
+          "7.0.0-38-generic, and memveil's booted matrix "
+          "qualifies the 6.0 through 6.10 attempt rows."
+          in support_norm)
 
     static_inputs = [
         "LICENSE",
