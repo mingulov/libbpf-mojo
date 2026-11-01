@@ -4,7 +4,9 @@ import copy
 import importlib.util
 from pathlib import Path
 import sys
-import pytest
+import unittest
+import tempfile
+from unittest.mock import patch
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'tools'))
 
@@ -15,27 +17,6 @@ def api():
     return release_custody
 
 
-def test_artifact_requires_exact_same_repository_source_and_live_retention():
-    record = {'id': 10, 'expired': False, 'digest': 'sha256:' + 'a'*64, 'name': 'candidate-' + 'b'*40,
-              'expires_at': '2099-01-01T00:00:00Z', 'workflow_run': {'id': 20, 'repository_id': 30,
-              'head_repository_id': 30, 'head_sha': 'b'*40}}
-    m = api(); m.verify_artifact(record, '10', '20', '30', 'b'*40, 'a'*64)
-    for key, value in [('id', 11), ('expired', True), ('digest', 'sha256:' + 'c'*64), ('expires_at', '2000-01-01T00:00:00Z')]:
-        bad = copy.deepcopy(record); bad[key] = value
-        with pytest.raises(ValueError): m.verify_artifact(bad, '10', '20', '30', 'b'*40, 'a'*64)
-    bad = copy.deepcopy(record); bad['workflow_run']['head_repository_id'] = 40
-    with pytest.raises(ValueError): m.verify_artifact(bad, '10', '20', '30', 'b'*40, 'a'*64)
-
-
-def test_tag_alone_never_rebuilds_or_publishes():
-    workflow = (ROOT / '.github/workflows/release.yml').read_text()
-    assert '\n  push:' not in workflow
-    assert 'workflow_dispatch:' in workflow and 'ARM-' in workflow
-    assert 'retention-days: 90' in workflow
-    assert 'release-custody' in workflow
-    assert 'build-candidate' in workflow
-    promote = workflow.split('  promote:')[1]
-    assert 'tools/build' not in promote and 'tools/package' not in promote
 
 
 def bundle(tmp_path, damage=None):
@@ -56,17 +37,52 @@ def bundle(tmp_path, damage=None):
     return path
 
 
-def test_complete_bundle_closure(tmp_path):
-    assert api().verify_bundle(bundle(tmp_path), 'b'*40)['version'] == '0.0.0'
+class CustodyTests(unittest.TestCase):
+    def setUp(self):
+        self.owner = tempfile.TemporaryDirectory()
+        self.tmp_path = Path(self.owner.name)
+
+    def tearDown(self):
+        self.owner.cleanup()
+
+    def test_artifact_requires_exact_same_repository_source_and_live_retention(self):
+        record = {'id': 10, 'expired': False, 'digest': 'sha256:' + 'a'*64, 'name': 'candidate-' + 'b'*40,
+                  'expires_at': '2099-01-01T00:00:00Z', 'workflow_run': {'id': 20, 'repository_id': 30,
+                  'head_repository_id': 30, 'head_sha': 'b'*40}}
+        m = api(); m.verify_artifact(record, '10', '20', '30', 'b'*40, 'a'*64)
+        for key, value in [('id', 11), ('expired', True), ('digest', 'sha256:' + 'c'*64), ('expires_at', '2000-01-01T00:00:00Z')]:
+            bad = copy.deepcopy(record); bad[key] = value
+            with self.assertRaises(ValueError): m.verify_artifact(bad, '10', '20', '30', 'b'*40, 'a'*64)
+        bad = copy.deepcopy(record); bad['workflow_run']['head_repository_id'] = 40
+        with self.assertRaises(ValueError): m.verify_artifact(bad, '10', '20', '30', 'b'*40, 'a'*64)
+
+    def test_tag_alone_never_rebuilds_or_publishes(self):
+        workflow = (ROOT / '.github/workflows/release.yml').read_text()
+        self.assertNotIn('\n  push:', workflow)
+        self.assertTrue('workflow_dispatch:' in workflow and 'ARM-' in workflow)
+        self.assertIn('retention-days: 90', workflow)
+        self.assertIn('release-custody', workflow)
+        self.assertIn('build-candidate', workflow)
+        promote = workflow.split('  promote:')[1]
+        self.assertNotIn('tools/build', promote)
+        self.assertNotIn('tools/package', promote)
+
+    def test_complete_bundle_closure(self):
+        self.assertEqual(api().verify_bundle(bundle(self.tmp_path), 'b'*40)['version'], '0.0.0')
+
+    def check_damage(self, damage):
+        with self.assertRaises(ValueError): api().verify_bundle(bundle(self.tmp_path, damage), 'b'*40)
+
+    def test_duplicate(self): self.check_damage('duplicate')
+    def test_substitution(self): self.check_damage('substitution')
+    def test_extra(self): self.check_damage('extra')
+    def test_source(self): self.check_damage('source')
+
+    def test_unarmed_promote_does_not_touch_remote_or_files(self):
+        with patch.dict('os.environ', {}, clear=True):
+            with self.assertRaisesRegex(ValueError, 'dispatch'):
+                api().promote('promote', {}, self.tmp_path / 'out')
+        self.assertFalse((self.tmp_path / 'out').exists())
 
 
-@pytest.mark.parametrize('damage', ['duplicate', 'substitution', 'extra', 'source'])
-def test_changed_bundle_refuses(tmp_path, damage):
-    with pytest.raises(ValueError): api().verify_bundle(bundle(tmp_path, damage), 'b'*40)
-
-
-def test_unarmed_promote_does_not_touch_remote_or_files(tmp_path, monkeypatch):
-    monkeypatch.delenv('RELEASE_ARM', raising=False)
-    with pytest.raises(ValueError, match='dispatch'):
-        api().promote('promote', {}, tmp_path / 'out')
-    assert not (tmp_path / 'out').exists()
+if __name__ == '__main__': unittest.main(verbosity=2)
