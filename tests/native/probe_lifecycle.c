@@ -43,6 +43,11 @@ int main(int argc, char **argv) {
     struct lmb_session *s = calloc(1, sizeof(*s));
     s->obj = bpf_object__open_mem(elf, size, NULL); s->loaded = 1;
     if (libbpf_get_error(s->obj)) return 2;
+    struct bpf_program *tracing = bpf_object__find_program_by_name(s->obj, "probe_tracing");
+    LMB_CHECK(tracing && bpf_program__type(tracing)==BPF_PROG_TYPE_TRACING &&
+        bpf_program__expected_attach_type(tracing)==BPF_TRACE_FENTRY &&
+        !strcmp(bpf_program__section_name(tracing), "fentry/__do_sys_getpid"),
+        "tracing-target", "compiled fentry target matches the selected kernel BTF function");
     long object_fds = lmb_count_fds();
     _Static_assert(LMB_ATTACH_KPROBE == 3 && LMB_ATTACH_KRETPROBE == 4, "session kinds");
     _Static_assert(LMB_ATTACH_FAMILY_KPROBE == 3 && LMB_ATTACH_FAMILY_KRETPROBE == 4, "generic kinds");

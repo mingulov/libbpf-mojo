@@ -14148,7 +14148,7 @@
       },
       {
         "path": "docs/build.md",
-        "sha256": "c26f2b6e8f38fb1b97dcad89a42cc3e120b870cf8042ac821104517014b880a9"
+        "sha256": "4c0180ff46b0e88f9adcab402eb875363d5ffd310f131ef2870bd682a99790d2"
       },
       {
         "path": "docs/generic-abi-v1.md",
@@ -14276,11 +14276,11 @@
       },
       {
         "path": "tests/fixtures/bpf/probe_lifecycle.bpf.c",
-        "sha256": "ff6012abc8daad16af2efa1bb0d047b05e812495613bad9ff880f1fd19e3968c"
+        "sha256": "061e887a23465c39120a86b1b610fb23c760716f556e60c245668cec2c1496ad"
       },
       {
         "path": "tests/live/probe_lifecycle.c",
-        "sha256": "133222735276c5928cfc7423bf7bd64f054561620ff8fc161acd3ed29f3a0dba"
+        "sha256": "793ff1f4d6146c1b6614fc78e605db9f81847fd0330171e23573eac60a49a299"
       },
       {
         "path": "tests/live/probe_lifecycle.mojo",
@@ -14324,7 +14324,7 @@
       },
       {
         "path": "tests/native/probe_lifecycle.c",
-        "sha256": "1219cdcc4041218222053ed8533f1dca6b57ec3ea46bd2c0f9de125ddfe3b2d7"
+        "sha256": "caa2b7a2b625a1b99f3895bc1a07735554ed0f9f7d9ac0ec815806f158f661bb"
       },
       {
         "path": "tests/package/consumer_link.mojo",
@@ -69407,8 +69407,8 @@
           {
             "end_line": 129,
             "path": "tests/live/probe_lifecycle.c",
-            "sha256": "133222735276c5928cfc7423bf7bd64f054561620ff8fc161acd3ed29f3a0dba",
-            "span_sha256": "d97f0095c7402784739ad0e6f4a6fc76ccaa01204d29361588b9883105670d08",
+            "sha256": "793ff1f4d6146c1b6614fc78e605db9f81847fd0330171e23573eac60a49a299",
+            "span_sha256": "9faed73d555d45f5619cd8a76dce225ba94956f0d895525efe599158158be0b1",
             "start_line": 1,
             "symbol": "probe lifecycle"
           },
@@ -69423,10 +69423,10 @@
         ],
         "negative_refs": [
           {
-            "end_line": 157,
+            "end_line": 162,
             "path": "tests/native/probe_lifecycle.c",
-            "sha256": "1219cdcc4041218222053ed8533f1dca6b57ec3ea46bd2c0f9de125ddfe3b2d7",
-            "span_sha256": "6fccc31fdea6484f6438b09e1182f946223f736c1e19f8057f7139a47ea406f2",
+            "sha256": "caa2b7a2b625a1b99f3895bc1a07735554ed0f9f7d9ac0ec815806f158f661bb",
+            "span_sha256": "a32ee6904d49f43eb9a671c5d957d894d8d860ffdceeeacc1a06c0864037805e",
             "start_line": 1,
             "symbol": "probe lifecycle"
           },
@@ -69449,10 +69449,10 @@
         ],
         "positive_refs": [
           {
-            "end_line": 157,
+            "end_line": 162,
             "path": "tests/native/probe_lifecycle.c",
-            "sha256": "1219cdcc4041218222053ed8533f1dca6b57ec3ea46bd2c0f9de125ddfe3b2d7",
-            "span_sha256": "6fccc31fdea6484f6438b09e1182f946223f736c1e19f8057f7139a47ea406f2",
+            "sha256": "caa2b7a2b625a1b99f3895bc1a07735554ed0f9f7d9ac0ec815806f158f661bb",
+            "span_sha256": "a32ee6904d49f43eb9a671c5d957d894d8d860ffdceeeacc1a06c0864037805e",
             "start_line": 1,
             "symbol": "probe lifecycle"
           },

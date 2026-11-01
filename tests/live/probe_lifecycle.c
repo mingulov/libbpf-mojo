@@ -114,7 +114,7 @@ int main(int argc, char **argv) {
             struct lmb_name_v1 n=name(); uint32_t key=3; uint64_t pid=getpid(); uint64_t tid=(uint64_t)syscall(SYS_gettid);
             struct lmb_attach_v1 sites[3];
             lmb_make_attach(&sites[0],"probe_return",4,"__x64_sys_getpid","");
-            lmb_make_attach(&sites[1],"probe_tracing",2,"__x64_sys_getpid","");
+            lmb_make_attach(&sites[1],"probe_tracing",2,"__do_sys_getpid","");
             lmb_make_attach(&sites[2],"probe_entry",3,"__x64_sys_getpid","");
             LMB_CHECK(lmb_attach(session,sites,3)==0,"session-attach","tracing and typed probes");
             LMB_CHECK(lmb_map_write(session,&n,(void *)&key,4,(void *)&tid,8)==0,"session-filter","process scope");

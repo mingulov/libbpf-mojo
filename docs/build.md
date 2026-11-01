@@ -357,7 +357,13 @@ In an isolated x86-64 guest, set LMB_ISOLATED_TEST_GUEST=1 and run
 session tracing/probe transactions and the Mojo pair to reconcile exactly 257
 explicit getpid syscalls. The fixture filters by the controller's initial-namespace thread ID and
 keeps only counts. Native descriptor counts must return to their original
-baseline after unload. The named tracing target is __x64_sys_getpid.
+baseline after unload. Entry and return probes target `__x64_sys_getpid`; the
+fentry fixture and session site target `__do_sys_getpid`, the BTF/ftrace function
+on the selected Linux 7.0.14 test kernel. These are kernel-specific fixture
+names, not a portable target guarantee. Before selecting a different kernel,
+verify its exact BTF function and ftrace eligibility; a kallsyms entry alone
+does not establish fentry eligibility. A target correction still needs fresh
+load, attachment, ledger and cleanup evidence for that kernel and artifact.
 
 Run the separate required negative modes with LMB_PROBE_MODE=blacklist plus
 LMB_PROBE_BLACKLIST_SYMBOL set to an exact symbol from the guest's readable

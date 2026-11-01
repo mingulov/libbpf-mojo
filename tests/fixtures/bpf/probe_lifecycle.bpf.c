@@ -14,5 +14,5 @@ static __always_inline int count(__u32 key) {
 SEC("kprobe") int probe_entry(void *ctx) { (void)ctx; return count(0); }
 SEC("kretprobe") int probe_return(void *ctx) { (void)ctx; return count(1); }
 struct { __uint(type, BPF_MAP_TYPE_RINGBUF); __uint(max_entries, 4096); } events SEC(".maps");
-SEC("fentry/__x64_sys_getpid") int probe_tracing(void *ctx) { (void)ctx; return count(2); }
+SEC("fentry/__do_sys_getpid") int probe_tracing(void *ctx) { (void)ctx; return count(2); }
 char LICENSE[] SEC("license") = "GPL";
