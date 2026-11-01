@@ -33,7 +33,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
-            clang bpftool cmake ninja-build make pkg-config \
+            clang bpftool cmake ninja-build make pkg-config patchelf \
             libelf-dev zlib1g-dev
       - name: Build
         run: ./tools/build

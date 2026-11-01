@@ -51,6 +51,7 @@ checks = [
     ("pkg-config", ["pkg-config", "--version"]),
     ("zlib", ["pkg-config", "--modversion", "zlib"]),
     ("python", ["python3", "--version"]),
+    ("patchelf", ["patchelf", "--version"]),
 ]
 
 failed = 0
@@ -156,6 +157,11 @@ main() {
                     --target-cpu x86-64-v2 \
                     -o "$BUILD_DIR/examples/tracepoint_main" \
                     examples/tracepoint/main.mojo || return 1
+                # Normalize the shipped executable before sealing final bytes.
+                log patchelf --set-rpath '$ORIGIN/../lib' \
+                    "$BUILD_DIR/examples/tracepoint_main"
+                patchelf --set-rpath '$ORIGIN/../lib' \
+                    "$BUILD_DIR/examples/tracepoint_main" || return 1
                 log pixi run --frozen mojo build -I src \
                     --target-cpu x86-64-v2 \
                     -o "$BUILD_DIR/examples/fault_driver" \

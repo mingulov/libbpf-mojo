@@ -234,6 +234,11 @@ def verify_manifest(tarball, version):
                   manifest["bpf"]["sha256"][:16], len(coverage),
                   len(verified)))
         tamper_negatives(top, version)
+        result = run([sys.executable, os.path.join(HERE, "test_loader.py"),
+                      "--archive", tarball], cwd=ROOT, timeout=120)
+        print(result.stdout, end="")
+        if result.returncode:
+            raise Fail("shipped collector loader checks failed")
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
 

@@ -24,6 +24,9 @@ conda package hashes.
   or `dnf install elfutils-libelf-devel zlib-ng-compat-devel`
   (plus dependencies) before building native targets.
 - `python3` for development-only validation tooling.
+- `patchelf` >= 0.18.0 for the shipped collector's relative ELF RUNPATH
+  (`apt-get install patchelf` or `dnf install patchelf`). The build checks
+  its version and records it in the build receipt; it is never needed at runtime.
 
 Run `pixi install` once after cloning. Every Mojo command below runs inside
 that environment; the `tools/` wrappers do this for you.
@@ -59,6 +62,24 @@ revision or using the current clock. Real Git worktrees and submodules keep
 their own identities even when `.git` is a file.
 
 ## Layout and wrappers
+
+After compiling the shipped tracepoint collector, `tools/build` replaces the
+compiler's environment-specific RUNPATH with `$ORIGIN/../lib` using
+`patchelf --set-rpath`. This happens before the build receipt hashes the
+executable. Packaging copies those sealed bytes unchanged. Relative lookup
+resolves bundled startup libraries after relocation without a development
+environment or `LD_LIBRARY_PATH` override.
+
+`tools/test package-consumer` also checks the exact shipped collector with
+the system dynamic loader's `--list --inhibit-cache` mode, without entering
+the program or issuing BPF calls. It verifies all packaged ELF search paths
+stay within the package, checks relocated startup-library resolution with
+an empty runtime tool path and no library overrides, and requires loader
+refusal for missing Mojo runtimes and damaged bundled startup libraries.
+System libraries remain system prerequisites; this check does not execute
+collection or replace the privileged compiler-free clean-room gate.
+To check retained bytes directly, run
+`python3 tests/package/test_loader.py --archive /path/to/libbpf-mojo-0.2.3.tar.gz`.
 
 | Path | Purpose |
 |---|---|

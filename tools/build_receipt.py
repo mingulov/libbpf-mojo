@@ -39,6 +39,7 @@ PROBES = [
     ("pkg-config", ["pkg-config", "--version"]),
     ("zlib", ["pkg-config", "--modversion", "zlib"]),
     ("python", ["python3", "--version"]),
+    ("patchelf", ["patchelf", "--version"]),
 ]
 
 ARTIFACTS = [
