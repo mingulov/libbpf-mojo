@@ -90,6 +90,16 @@ struct AttachSpec(Copyable):
     var target_a: String
     var target_b: String
 
+    @staticmethod
+    def kprobe(program: String, symbol: String) -> Self:
+        """Request one entry probe with an explicit kernel symbol."""
+        return Self(program, 3, symbol, "")
+
+    @staticmethod
+    def kretprobe(program: String, symbol: String) -> Self:
+        """Request one return probe with an explicit kernel symbol."""
+        return Self(program, 4, symbol, "")
+
 
 @fieldwise_init
 struct MapReadResult(Copyable):

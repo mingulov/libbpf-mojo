@@ -3,7 +3,7 @@
 from std.os import getenv
 from std.pathlib import Path
 from std.sys import argv, exit
-from libbpf_mojo.link import Link, attach_tracepoint
+from libbpf_mojo.link import Link, attach_tracepoint, attach_kprobe, attach_kretprobe, attachment_capability
 from libbpf_mojo.object import Object
 
 
@@ -66,6 +66,20 @@ def main() raises:
                     raise e^
                 refused = True
             if not refused:
+                exit(1)
+        for kind in [UInt32(3), UInt32(4)]:
+            var capability = attachment_capability(kind)
+            if capability.minimum_kernel != "6.0" or not capability.requires_btf or not capability.requires_symbol or capability.qualification != "unqualified":
+                exit(1)
+            var denied = False
+            try:
+                var probe = attach_kprobe(program, "missing") if kind == 3 else attach_kretprobe(program, "missing")
+                _ = probe^
+            except error:
+                if error.operation != 10 or error.domain != 4 or error.code != -22:
+                    raise error^
+                denied = True
+            if not denied:
                 exit(1)
         program.close()
         var refused = False

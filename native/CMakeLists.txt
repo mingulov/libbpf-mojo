@@ -351,7 +351,7 @@ foreach(events_test generic_attach generic_ring ring_conformance)
     ${LIBBPF_ROOT}/include ${LMB_ROOT}/tests/support ${LMB_ROOT}/tests/fixtures/bpf)
   target_link_libraries(test_${events_test} PRIVATE lmb_static)
   foreach(seam bpf_object__load bpf_object__close bpf_program__fd bpf_map__fd
-      bpf_program__attach_tracepoint bpf_link__destroy ring_buffer__epoll_fd ring_buffer__new
+      bpf_program__attach_tracepoint bpf_program__attach_kprobe bpf_link__destroy ring_buffer__epoll_fd ring_buffer__new
       ring_buffer__consume_n ring_buffer__free malloc calloc realloc mmap mmap64 munmap epoll_create1
       epoll_ctl epoll_wait close syscall)
     target_link_options(test_${events_test} PRIVATE "LINKER:--wrap=${seam}")
@@ -520,7 +520,7 @@ foreach(variant testfake no_events no_attach no_link_close no_buffer_open no_buf
     "LINKER:--version-script,${events_map_path}" "LINKER:-Bsymbolic-functions"
     "LINKER:--wrap=bpf_prog_load")
   foreach(seam bpf_object__load bpf_object__close bpf_program__fd bpf_map__fd
-      bpf_program__attach_tracepoint bpf_link__destroy ring_buffer__epoll_fd ring_buffer__new
+      bpf_program__attach_tracepoint bpf_program__attach_kprobe bpf_link__destroy ring_buffer__epoll_fd ring_buffer__new
       ring_buffer__consume_n ring_buffer__free malloc calloc realloc mmap mmap64 munmap
       epoll_create1 epoll_ctl epoll_wait close syscall)
     target_link_options(lmb_events_${variant} PRIVATE "LINKER:--wrap=${seam}")
@@ -575,3 +575,32 @@ lmb_guarded_host_test(ring_conformance test_ring_conformance
 # operation except lmb_close. Test-only; never installed.
 add_library(lmb_stub SHARED ${LMB_ROOT}/tests/support/stub_partial.c)
 set_target_properties(lmb_stub PROPERTIES OUTPUT_NAME lmb_stub)
+
+add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/fixtures/probe_lifecycle.bpf.o
+  COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/fixtures
+  COMMAND ${CLANG_EXE} --target=bpf -O2 -g -Wall
+    -I${LIBBPF_ROOT}/include -I/usr/include/${CMAKE_SYSTEM_PROCESSOR}-linux-gnu
+    -c ${LMB_ROOT}/tests/fixtures/bpf/probe_lifecycle.bpf.c
+    -o ${CMAKE_BINARY_DIR}/fixtures/probe_lifecycle.bpf.o
+  DEPENDS ${LMB_ROOT}/tests/fixtures/bpf/probe_lifecycle.bpf.c VERBATIM)
+add_custom_target(probe_lifecycle_fixture ALL
+  DEPENDS ${CMAKE_BINARY_DIR}/fixtures/probe_lifecycle.bpf.o)
+add_dependencies(probe_lifecycle_fixture libbpf_external)
+add_executable(test_probe_lifecycle ${LMB_ROOT}/tests/native/probe_lifecycle.c
+  ${LMB_ROOT}/tests/support/generic_host_guard.c)
+target_include_directories(test_probe_lifecycle PRIVATE include src
+  ${LIBBPF_ROOT}/include ${LMB_ROOT}/tests/native)
+target_link_libraries(test_probe_lifecycle PRIVATE lmb_static)
+foreach(seam bpf_object__load bpf_program__fd bpf_program__attach_kprobe bpf_link__destroy syscall)
+  target_link_options(test_probe_lifecycle PRIVATE "LINKER:--wrap=${seam}")
+endforeach()
+add_dependencies(test_probe_lifecycle probe_lifecycle_fixture)
+add_test(NAME probe_lifecycle COMMAND test_probe_lifecycle
+  ${CMAKE_BINARY_DIR}/fixtures/probe_lifecycle.bpf.o)
+lmb_guarded_host_test(probe_lifecycle test_probe_lifecycle
+  ${CMAKE_BINARY_DIR}/fixtures/probe_lifecycle.bpf.o)
+add_executable(live_probe_lifecycle ${LMB_ROOT}/tests/live/probe_lifecycle.c)
+target_include_directories(live_probe_lifecycle PRIVATE include
+  ${LIBBPF_ROOT}/include ${LMB_ROOT}/tests/native)
+target_link_libraries(live_probe_lifecycle PRIVATE lmb_static)
+add_dependencies(live_probe_lifecycle probe_lifecycle_fixture)

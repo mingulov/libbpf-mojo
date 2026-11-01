@@ -28,8 +28,11 @@ int32_t lmb_object_attach_v1(struct lmb_object *object,
     if (!opts || !lmb_generic_check_span(opts, sizeof(*opts)) ||
         !lmb_check_header(opts->abi_version, opts->struct_size, sizeof(*opts)))
         return fail(op, LMB_GENERIC_DOMAIN_BRIDGE, -EINVAL, "invalid attach options header");
-    if (!text_valid(opts->program) || !text_valid(opts->target_a) || !text_valid(opts->target_b) ||
-        opts->family != LMB_ATTACH_FAMILY_TRACEPOINT || opts->flags || opts->_reserved)
+    int probe = opts->family == LMB_ATTACH_FAMILY_KPROBE || opts->family == LMB_ATTACH_FAMILY_KRETPROBE;
+    if (!text_valid(opts->program) || !text_valid(opts->target_a) ||
+        (probe ? opts->target_b.len != 0 || !lmb_probe_symbol_ok(opts->target_a.ptr, opts->target_a.len) :
+                 !text_valid(opts->target_b)) ||
+        (!probe && opts->family != LMB_ATTACH_FAMILY_TRACEPOINT) || opts->flags || opts->_reserved)
         return fail(op, LMB_GENERIC_DOMAIN_BRIDGE, -EINVAL, "invalid attach names, family or flags");
     if (lmb_generic_ranges_overlap(out, sizeof(*out), opts, sizeof(*opts)) ||
         lmb_generic_ranges_overlap(out, sizeof(*out), opts->program.ptr, opts->program.len) ||
@@ -37,23 +40,27 @@ int32_t lmb_object_attach_v1(struct lmb_object *object,
         lmb_generic_ranges_overlap(out, sizeof(*out), opts->target_b.ptr, opts->target_b.len))
         return fail(op, LMB_GENERIC_DOMAIN_BRIDGE, -EINVAL, "link output aliases attach input");
     if (!lmb_object_need_loaded(object, op)) return -EINVAL;
-    text_copy(name, opts->program); text_copy(category, opts->target_a); text_copy(event, opts->target_b);
+    text_copy(name, opts->program); text_copy(category, opts->target_a);
+    if (!probe) text_copy(event, opts->target_b);
     struct bpf_program *program = bpf_object__find_program_by_name(object->obj, name);
     if (!program) return fail(op, LMB_GENERIC_DOMAIN_BRIDGE, -ENOENT, "program not found");
-    if (bpf_program__type(program) != BPF_PROG_TYPE_TRACEPOINT)
-        return fail(op, LMB_GENERIC_DOMAIN_BRIDGE, -EOPNOTSUPP, "program is not a tracepoint");
+    if (probe ? !lmb_probe_program_ok(program, opts->family == LMB_ATTACH_FAMILY_KRETPROBE) :
+        bpf_program__type(program) != BPF_PROG_TYPE_TRACEPOINT)
+        return fail(op, LMB_GENERIC_DOMAIN_BRIDGE, -EOPNOTSUPP, probe ? "program is not the requested probe kind" : "program is not a tracepoint");
     if (bpf_program__fd(program) < 0)
-        return fail(op, LMB_GENERIC_DOMAIN_BRIDGE, -EINVAL, "tracepoint has no loaded FD");
+        return fail(op, LMB_GENERIC_DOMAIN_BRIDGE, -EINVAL, probe ? "probe has no loaded FD" : "tracepoint has no loaded FD");
     struct lmb_link *child = calloc(1, sizeof(*child));
     if (!child) return fail(op, LMB_GENERIC_DOMAIN_POSIX, -ENOMEM, "link allocation failed");
     int32_t code = lmb_object_ref_v1(object);
     if (code) { free(child); return fail(op, LMB_GENERIC_DOMAIN_BRIDGE, code, "link owner reference failed"); }
     child->parent = object;
-    child->link = bpf_program__attach_tracepoint(program, category, event);
+    child->link = probe ? bpf_program__attach_kprobe(program,
+        opts->family == LMB_ATTACH_FAMILY_KRETPROBE, category) :
+        bpf_program__attach_tracepoint(program, category, event);
     code = (int32_t)libbpf_get_error(child->link);
     if (code) {
         free(child); lmb_object_unref_v1(object);
-        return fail(op, LMB_GENERIC_DOMAIN_LIBBPF, code, "tracepoint attachment failed");
+        return fail(op, LMB_GENERIC_DOMAIN_LIBBPF, code, probe ? "probe attachment failed" : "tracepoint attachment failed");
     }
     *out = child; lmb_generic_clear(); return 0;
 }

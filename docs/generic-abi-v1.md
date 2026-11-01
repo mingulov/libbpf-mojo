@@ -392,6 +392,8 @@ result, zero-initializes the complete pinned native options with
 ```c
 enum lmb_attach_family_v1 {
     LMB_ATTACH_FAMILY_TRACEPOINT = 1,
+    LMB_ATTACH_FAMILY_KPROBE = 3,
+    LMB_ATTACH_FAMILY_KRETPROBE = 4,
 };
 
 struct lmb_attach_options_v1 {
@@ -406,20 +408,31 @@ struct lmb_attach_options_v1 {
 };                               /* size 72, align 8 */
 ```
 
-One call attaches one site and produces one link. Only family 1 (tracepoint)
-is valid. Unknown families, nonzero flags and nonzero reserved fields return
-BRIDGE/-EINVAL before native work. Category and event are required strict
-UTF-8 names; the bridge copies them before the upstream call. After ordinary
-argument validation, a loaded object and the named program are required. A
-missing program returns BRIDGE/-ENOENT. A program whose type is not
-BPF_PROG_TYPE_TRACEPOINT returns BRIDGE/-EOPNOTSUPP without attachment. A
-tracepoint program without a loaded program FD returns BRIDGE/-EINVAL. A
-valid request calls bpf_program__attach_tracepoint with the explicitly
-supplied category and event. The output link is cleared before validation
-and stays null on failure. Pre-load tracing-target configuration remains an
-object capability; this interface has no tracing, LSM or extension attach
-family. Their attachment and target qualification require separately
-specified interfaces and tests.
+One call attaches one site and produces one link. Family 1 is tracepoint;
+3 is kprobe and 4 is kretprobe. Family 2 remains reserved. Unknown families,
+nonzero flags and nonzero reserved fields return BRIDGE/-EINVAL before native
+work. Names are required strict UTF-8, bounded to 256 bytes and copied for the
+native call. Tracepoints use category/event in target_a/target_b. Probes use the
+symbol in target_a and require target_b.len=0 (its pointer is ignored).
+
+A loaded object and named program are required. Missing programs return
+BRIDGE/-ENOENT. Tracepoints require BPF_PROG_TYPE_TRACEPOINT. Probes require
+BPF_PROG_TYPE_KPROBE and a matching kprobe/kretprobe section (bare or a slash
+followed by a target); mismatches return BRIDGE/-EOPNOTSUPP. An absent loaded
+program FD returns BRIDGE/-EINVAL. Tracepoints retain their existing explicit
+category/event behavior. Probes call bpf_program__attach_kprobe with the explicit
+symbol and the requested return flag; the ELF target suffix is not used to
+replace the requested symbol. No offset, cookie or multi-probe options are exposed.
+
+The output is cleared before validation and stays null on failure. A link owns
+one parent reference, released on attach failure or close. Missing/blacklisted
+symbols and lockdown/permission failures retain the native signed LIBBPF code.
+Link close consumes ownership even on destruction failure. Null-cell and TLS
+rules remain unchanged. Independently owned links close in caller order; callers
+attach exit before entry and close entry before exit where their window protocol
+requires it. The session API provides an ordered transaction and reverse detach.
+Generic tracing, LSM, extension, uprobe and iterator attachment remain outside
+this interface. See [support](support.md) for declarative minimum requirements.
 
 ## Buffer options
 
@@ -902,3 +915,12 @@ The snapshot reuses the buffer's retained owner and calling thread. It adds
 no product event types and reinterprets no v1 session record: counter names
 match the poll conservation identity, and the absence of a `last_error` latch
 is deliberate, since generic diagnosis flows through the per-call record.
+
+Probe symbols use the bounded ASCII grammar `[module:]identifier`: the optional
+nonempty module contains letters, digits or underscores; the identifier begins
+with a letter or underscore and continues with letters, digits, underscores or
+dots (including compiler suffixes). The whole name is at most 256 bytes.
+Whitespace, controls, numeric addresses, offsets, wildcards and other syntax
+return BRIDGE/-EINVAL before attachment. This prevents symbol text from becoming
+tracefs command syntax when pinned libbpf selects its legacy adapter. Existing
+tracepoint/tracing name validation remains unchanged.

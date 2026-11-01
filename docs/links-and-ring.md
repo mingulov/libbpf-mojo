@@ -104,3 +104,23 @@ pinned reader over controlled mappings. The test library is absent from runtime
 packages. These host controls do not qualify successful kernel loading,
 attachment, event production, target cleanup, multithreaded/weak-memory behavior
 or performance. Live collection retains the library's Linux >=7.0 admission floor.
+
+## Typed kernel probes
+
+`attach_kprobe(program, symbol)` and `attach_kretprobe(program, symbol)` return the
+same move-only Link as `attach_tracepoint`. Each retains its native object and
+shared library across parent/view release. Explicit close reports destruction
+failure while consuming the native link; deterministic destruction retires it
+without raising. Existing tracepoint constructor calls remain compatible.
+
+For ordered sessions use `AttachSpec.kprobe(program, symbol)` and
+`AttachSpec.kretprobe(program, symbol)` in the desired attach order. Session
+attach rolls back all newly created links on failure; detach/close destroys them
+in reverse order and reports the first destruction error after retiring all links.
+Independent Link values close in caller order. Link removal proves resource
+cleanup only; applications must establish their own entry/exit window closure.
+
+`attachment_capability(kind)` returns a typed minimum-kernel/BTF/symbol requirement
+record and the candidate's unqualified status. It performs no host operation.
+The metadata uses session kind numbers, including tracing kind 2; generic family
+2 remains reserved. See [support](support.md) for full requirements and limits.

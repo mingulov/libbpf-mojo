@@ -8,6 +8,15 @@ pin the exact version plus tarball hash.
 Entries name user-visible changes only;
 commit history has the rest.
 
+## 0.3.0 development candidate
+
+- Add explicit entry/return kernel probes to the session and generic link APIs,
+  with move-only Mojo ownership and declarative capability requirements.
+- Detach session links in reverse attachment order, including implicit close;
+  retain all-or-none attachment rollback and signed error preservation.
+- Preserve ABI major 1 layouts, signatures, existing discriminants and soname.
+  New functionality is unqualified pending exact-artifact live tests.
+
 ## 0.2.3 candidate
 
 - Deterministic reviewed source-seal refresh

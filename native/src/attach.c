@@ -11,6 +11,26 @@
 
 #define LMB_MAX_SITES 64
 
+static int symbol_initial(uint8_t ch) {
+    return ch == '_' || (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z');
+}
+
+int lmb_probe_symbol_ok(const uint8_t *text, uint64_t length) {
+    if (!text || !length || length > LMB_MAX_NAME_BYTES) return 0;
+    uint64_t start = 0;
+    for (uint64_t i = 0; i < length; i++) {
+        if (text[i] != ':') continue;
+        if (start || !i || i + 1 == length) return 0;
+        start = i + 1;
+    }
+    for (uint64_t i = 0; start && i < start - 1; i++)
+        if (!symbol_initial(text[i]) && !(text[i] >= '0' && text[i] <= '9')) return 0;
+    if (!symbol_initial(text[start])) return 0;
+    for (uint64_t i = start + 1; i < length; i++)
+        if (!symbol_initial(text[i]) && !(text[i] >= '0' && text[i] <= '9') && text[i] != '.') return 0;
+    return 1;
+}
+
 static int check_site(const struct lmb_attach_v1 *s) {
     if (!lmb_check_header(s->abi_version, s->struct_size, sizeof(*s)) ||
         !lmb_check_bytes(&s->program, LMB_MAX_NAME_BYTES, 1) ||
@@ -20,10 +40,12 @@ static int check_site(const struct lmb_attach_v1 *s) {
         return lmb_check_bytes(&s->target_a, LMB_MAX_NAME_BYTES, 1) &&
                lmb_check_bytes(&s->target_b, LMB_MAX_NAME_BYTES, 1);
     }
-    if (s->kind == LMB_ATTACH_TRACING) {
+    if (s->kind == LMB_ATTACH_TRACING || s->kind == LMB_ATTACH_KPROBE ||
+        s->kind == LMB_ATTACH_KRETPROBE) {
         return lmb_check_bytes(&s->target_a, LMB_MAX_NAME_BYTES, 1) &&
                lmb_check_bytes(&s->target_b, LMB_MAX_NAME_BYTES, 0) &&
-               s->target_b.len == 0;
+               s->target_b.len == 0 &&
+               (s->kind == LMB_ATTACH_TRACING || lmb_probe_symbol_ok(s->target_a.ptr, s->target_a.len));
     }
     return 0;
 }
@@ -50,6 +72,14 @@ static int tracing_target_ok(const struct bpf_program *prog,
             return 1;
     }
     return 0;
+}
+
+int lmb_probe_program_ok(const struct bpf_program *program, int retprobe) {
+    const char *section = bpf_program__section_name(program);
+    const char *prefix = retprobe ? "kretprobe" : "kprobe";
+    size_t n = strlen(prefix);
+    return bpf_program__type(program) == BPF_PROG_TYPE_KPROBE && section &&
+        !strncmp(section, prefix, n) && (section[n] == 0 || section[n] == '/');
 }
 
 static void rollback(struct lmb_session *s, uint32_t from) {
@@ -112,6 +142,17 @@ int32_t lmb_attach(struct lmb_session *session,
             stash(&site->target_a, cat);
             stash(&site->target_b, evt);
             link = bpf_program__attach_tracepoint(bprog, cat, evt);
+        } else if (site->kind == LMB_ATTACH_KPROBE || site->kind == LMB_ATTACH_KRETPROBE) {
+            char symbol[LMB_MAX_NAME_BYTES + 1];
+            int retprobe = site->kind == LMB_ATTACH_KRETPROBE;
+            if (!lmb_probe_program_ok(bprog, retprobe)) {
+                rollback(session, base);
+                lmb_record(LMB_OP_ATTACH, LMB_DOMAIN_BRIDGE, -EOPNOTSUPP,
+                           "lmb_attach: program is not the requested probe kind");
+                return -EOPNOTSUPP;
+            }
+            stash(&site->target_a, symbol);
+            link = bpf_program__attach_kprobe(bprog, retprobe, symbol);
         } else {
             if (!tracing_target_ok(bprog, &site->target_a)) {
                 rollback(session, base);

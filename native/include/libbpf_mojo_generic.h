@@ -94,7 +94,9 @@ enum lmb_generic_domain_v1 {
 };
 
 enum lmb_attach_family_v1 {
-    LMB_ATTACH_FAMILY_TRACEPOINT = 1
+    LMB_ATTACH_FAMILY_TRACEPOINT = 1,
+    LMB_ATTACH_FAMILY_KPROBE = 3,
+    LMB_ATTACH_FAMILY_KRETPROBE = 4
 };
 
 /* Nested span layouts, versioned by their enclosing struct. Input

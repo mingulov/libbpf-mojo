@@ -191,7 +191,6 @@ int32_t lmb_stats(struct lmb_session *session, struct lmb_stats_v1 *out) {
 }
 
 int32_t lmb_detach(struct lmb_session *session) {
-    uint32_t i;
     int32_t first = 0;
     if (!session) {
         lmb_record(LMB_OP_DETACH, LMB_DOMAIN_BRIDGE, -EINVAL,
@@ -200,8 +199,8 @@ int32_t lmb_detach(struct lmb_session *session) {
     }
     /* Destroy every link exactly once, then report the first
      * teardown error, if any. Ownership state clears regardless. */
-    for (i = 0; i < session->nlinks; i++) {
-        int err = bpf_link__destroy(session->links[i]);
+    while (session->nlinks) {
+        int err = bpf_link__destroy(session->links[--session->nlinks]);
         if (err && !first)
             first = (int32_t)err;
     }

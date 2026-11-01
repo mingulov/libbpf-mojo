@@ -20,11 +20,11 @@ SNAPSHOT_PATH = 'tests/fixtures/api_inventory/libbpf-1.7.0.json'
 SCHEMA_PATH = 'schemas/api-coverage.schema.json'
 ARCHIVE_SHA256 = '7ab5feffbf78557f626f2e3e3204788528394494715a30fc2070fcddc2051b7b'
 # FROZEN_SEALS_BEGIN
-BRIDGE_SHA256 = '8c1c365f222a3dfae1a54464f88a564b008b016860484ed3050aa662ca4d310d'
+BRIDGE_SHA256 = '97201ae95e043f2d5a4960f03b5f58c0321bd87e1a168fcd38a5319d628d59b8'
 COMPATIBILITY_SHA256 = 'c21909c4dbcaafbc9802c439848ae5860461891b4e2bc2f5d163b401ddbec1d3'
 SCHEMA_SHA256 = 'e771dc4ba2d3a8f42776e1002c8786d978026446cefaaa84209f780fe10e8ee0'
 SNAPSHOT_SHA256 = '0b9a37cda49679d94bb9161393afa38bf14f9cd55b71415e849740fad00e1c88'
-SOURCE_MANIFEST_SHA256 = '5fe3c01b167ca7ce332a77842a6cbb87ed3036cc17a0c83d2c604c7bda56766c'
+SOURCE_MANIFEST_SHA256 = '5acacb8b37fd4845519fa3be3ab59a0e036a567d5e3d3fb8f5e07fdd49adb98b'
 ENTITY_SEALS = {'alias:DECLARE_LIBBPF_OPTS': 'c8bf2c81ac0af57058fad9bbe6af2b1bae35be12d2d897fe75d5fb098edc1950',
  'alias:bpf_map__for_each': '45b6b77a32445fb046e208c6d28c9e1af7a44fccca5a74bd6f147eb59d303fc2',
  'callback:btf_dump_printf_fn_t': '5a7685c15fba7f77d190f40cb1ee8d50c837db6f45726a4628e6ad71794d56e2',
@@ -1836,19 +1836,31 @@ IMPLEMENTATION_SOURCES = ['README.md',
  'src/libbpf_mojo/object.mojo',
  'src/libbpf_mojo/program.mojo',
  'src/libbpf_mojo/session.mojo',
+ 'tests/fixtures/bpf/probe_lifecycle.bpf.c',
+ 'tests/live/probe_lifecycle.c',
+ 'tests/live/probe_lifecycle.mojo',
+ 'tests/live/test_probes.py',
  'tests/mojo/test_generic_map_keys.mojo',
  'tests/mojo/test_generic_maps.mojo',
+ 'tests/mojo/test_probe_link.mojo',
  'tests/native/abi_v1_frozen.h',
  'tests/native/check_exports.sh',
  'tests/native/generic_map_keys.c',
  'tests/native/old_consumer_v1.c',
+ 'tests/native/probe_lifecycle.c',
+ 'tests/package/consumer_link.mojo',
  'tests/package/consumer_map_keys.mojo',
  'tests/package/test_consumer_lane.py',
  'tests/package/test_source_export.py',
  'tests/support/check_generic_testfake_exports.sh',
  'tests/support/fake_generic.c',
+ 'tests/support/generic_events_host.c',
  'tests/support/lmb_generic_testfake.map',
- 'toolchain.lock.json']
+ 'toolchain.lock.json',
+ 'tools/build',
+ 'tools/build_receipt.py',
+ 'tools/package',
+ 'tools/test']
 ROW_MAPPING_SEALS = {'alias:DECLARE_LIBBPF_OPTS': 'd25be71658015a1e729d1988bf3b4dad1037739378715ab5cfdff65e16fcab14',
  'alias:bpf_map__for_each': 'd25be71658015a1e729d1988bf3b4dad1037739378715ab5cfdff65e16fcab14',
  'callback:btf_dump_printf_fn_t': '3bc3a0c0623aa4e810ad32110d645220625159f6b41506d1d75af71aef3960b4',
@@ -2327,7 +2339,7 @@ ROW_MAPPING_SEALS = {'alias:DECLARE_LIBBPF_OPTS': 'd25be71658015a1e729d1988bf3b4
  'function:bpf_btf_load': 'b1fbac89a260ce27a0fd4f42502354cf03173c4e2cbf331e775e12d35de25f12',
  'function:bpf_enable_stats': '3bc3a0c0623aa4e810ad32110d645220625159f6b41506d1d75af71aef3960b4',
  'function:bpf_iter_create': '3bc3a0c0623aa4e810ad32110d645220625159f6b41506d1d75af71aef3960b4',
- 'function:bpf_link__destroy': '34c35b94dae2c7bbcc736c789cdf2886071f42471a84359fd62f32458642a4c3',
+ 'function:bpf_link__destroy': '12fbd26fbfc2932525d9b4e80150f8fddb0b92a6c588c90bb66e7499e7e36c2d',
  'function:bpf_link__detach': '3bc3a0c0623aa4e810ad32110d645220625159f6b41506d1d75af71aef3960b4',
  'function:bpf_link__disconnect': '3bc3a0c0623aa4e810ad32110d645220625159f6b41506d1d75af71aef3960b4',
  'function:bpf_link__fd': '3bc3a0c0623aa4e810ad32110d645220625159f6b41506d1d75af71aef3960b4',
@@ -2358,7 +2370,7 @@ ROW_MAPPING_SEALS = {'alias:DECLARE_LIBBPF_OPTS': 'd25be71658015a1e729d1988bf3b4
  'function:bpf_map__btf_value_type_id': '3bc3a0c0623aa4e810ad32110d645220625159f6b41506d1d75af71aef3960b4',
  'function:bpf_map__delete_elem': '3bc3a0c0623aa4e810ad32110d645220625159f6b41506d1d75af71aef3960b4',
  'function:bpf_map__exclusive_program': '3bc3a0c0623aa4e810ad32110d645220625159f6b41506d1d75af71aef3960b4',
- 'function:bpf_map__fd': '92e6c91bcebec559d0c0ddf15a27bddcb99784438b2e0495b05e371149ccba39',
+ 'function:bpf_map__fd': '734a9f8b31b88c98827ba6e150cb45d4ba256f9b2baae37988e53034597df5b8',
  'function:bpf_map__get_next_key': '3bc3a0c0623aa4e810ad32110d645220625159f6b41506d1d75af71aef3960b4',
  'function:bpf_map__get_pin_path': '3bc3a0c0623aa4e810ad32110d645220625159f6b41506d1d75af71aef3960b4',
  'function:bpf_map__ifindex': '3bc3a0c0623aa4e810ad32110d645220625159f6b41506d1d75af71aef3960b4',
@@ -2366,12 +2378,12 @@ ROW_MAPPING_SEALS = {'alias:DECLARE_LIBBPF_OPTS': 'd25be71658015a1e729d1988bf3b4
  'function:bpf_map__inner_map': '3bc3a0c0623aa4e810ad32110d645220625159f6b41506d1d75af71aef3960b4',
  'function:bpf_map__is_internal': '3bc3a0c0623aa4e810ad32110d645220625159f6b41506d1d75af71aef3960b4',
  'function:bpf_map__is_pinned': '3bc3a0c0623aa4e810ad32110d645220625159f6b41506d1d75af71aef3960b4',
- 'function:bpf_map__key_size': '0931b7981d0bd835b175b91175255530f2dff6462bfb3b91b366ce6870003ed6',
+ 'function:bpf_map__key_size': '077bce7e0bda9b165cc96b8fe166a7e0934b47eab75d7d7f7837fbe6c4974f53',
  'function:bpf_map__lookup_and_delete_elem': '3bc3a0c0623aa4e810ad32110d645220625159f6b41506d1d75af71aef3960b4',
  'function:bpf_map__lookup_elem': '3bc3a0c0623aa4e810ad32110d645220625159f6b41506d1d75af71aef3960b4',
  'function:bpf_map__map_extra': '3bc3a0c0623aa4e810ad32110d645220625159f6b41506d1d75af71aef3960b4',
- 'function:bpf_map__map_flags': 'ffcedf49c6357211007ae2599e2e00ece1c7ed00f771d4e1b0d53e2202e3ce7c',
- 'function:bpf_map__max_entries': 'eb0d2e1a5916fe1b81b3d9207573420c2e00f391951d4568792de8a891bb7dc4',
+ 'function:bpf_map__map_flags': 'c2919e57e8b617ecb64fae6ea86f3bcb4d73ed2e5331901f2648e412e092bd13',
+ 'function:bpf_map__max_entries': '9eddcaf013136462e610c4b998d303d351554e21c499a63b72cffdc2118c51fb',
  'function:bpf_map__name': '3bc3a0c0623aa4e810ad32110d645220625159f6b41506d1d75af71aef3960b4',
  'function:bpf_map__numa_node': '3bc3a0c0623aa4e810ad32110d645220625159f6b41506d1d75af71aef3960b4',
  'function:bpf_map__pin': '3bc3a0c0623aa4e810ad32110d645220625159f6b41506d1d75af71aef3960b4',
@@ -2388,13 +2400,13 @@ ROW_MAPPING_SEALS = {'alias:DECLARE_LIBBPF_OPTS': 'd25be71658015a1e729d1988bf3b4
  'function:bpf_map__set_map_flags': '3bc3a0c0623aa4e810ad32110d645220625159f6b41506d1d75af71aef3960b4',
  'function:bpf_map__set_max_entries': '3bc3a0c0623aa4e810ad32110d645220625159f6b41506d1d75af71aef3960b4',
  'function:bpf_map__set_numa_node': '3bc3a0c0623aa4e810ad32110d645220625159f6b41506d1d75af71aef3960b4',
- 'function:bpf_map__set_pin_path': 'd3982686d1fc644dc5f9c6a320bec423cf372b8d8322fba7fb26ccb1d11fe86e',
+ 'function:bpf_map__set_pin_path': '9e2039d433a88f4fd864476edfcba6b75995578059f8a3d2eb3c094de0b1ada5',
  'function:bpf_map__set_type': '3bc3a0c0623aa4e810ad32110d645220625159f6b41506d1d75af71aef3960b4',
  'function:bpf_map__set_value_size': '3bc3a0c0623aa4e810ad32110d645220625159f6b41506d1d75af71aef3960b4',
- 'function:bpf_map__type': '0f9abb450c321e425d1ad7a925a8ee90e77e6e0375a0d92b8142eed73e7e9d0a',
+ 'function:bpf_map__type': '0df55830883131a826fcec70ce480e9eb8ed135b323fb16d39a703adf7645499',
  'function:bpf_map__unpin': '3bc3a0c0623aa4e810ad32110d645220625159f6b41506d1d75af71aef3960b4',
  'function:bpf_map__update_elem': '3bc3a0c0623aa4e810ad32110d645220625159f6b41506d1d75af71aef3960b4',
- 'function:bpf_map__value_size': 'a55e4adc1473a3880fcad7d327ad7452b9f60353196bbbc42a4ba59b78495a1c',
+ 'function:bpf_map__value_size': '3c5ee93a8eb6d251c03e99877ff3bf90b3e9ecbb8a7cbdaa4f47949e8fe88ce6',
  'function:bpf_map_create': 'e2a3c4f863853bde5a766997d4423ea5c97ab2cce5a2c469a81cd25f6d9cf197',
  'function:bpf_map_delete_batch': '094e0a9e4a39c55e31b897da187a143750ff752f5ff93a473adc13f4ab82f615',
  'function:bpf_map_delete_elem': '3bc3a0c0623aa4e810ad32110d645220625159f6b41506d1d75af71aef3960b4',
@@ -2421,19 +2433,19 @@ ROW_MAPPING_SEALS = {'alias:DECLARE_LIBBPF_OPTS': 'd25be71658015a1e729d1988bf3b4
  'function:bpf_object__attach_skeleton': '3bc3a0c0623aa4e810ad32110d645220625159f6b41506d1d75af71aef3960b4',
  'function:bpf_object__btf': '3bc3a0c0623aa4e810ad32110d645220625159f6b41506d1d75af71aef3960b4',
  'function:bpf_object__btf_fd': '3bc3a0c0623aa4e810ad32110d645220625159f6b41506d1d75af71aef3960b4',
- 'function:bpf_object__close': '258247bd619a2b075f391ae3eede0a4b3a6b7bbe0cf8b8159419c0745847ddfc',
+ 'function:bpf_object__close': '59786b5242e30a9183d27b5e4e05f10d9ef1b53f2950164b7b8fdc2348efcd23',
  'function:bpf_object__destroy_skeleton': '3bc3a0c0623aa4e810ad32110d645220625159f6b41506d1d75af71aef3960b4',
  'function:bpf_object__destroy_subskeleton': '3bc3a0c0623aa4e810ad32110d645220625159f6b41506d1d75af71aef3960b4',
  'function:bpf_object__detach_skeleton': '3bc3a0c0623aa4e810ad32110d645220625159f6b41506d1d75af71aef3960b4',
- 'function:bpf_object__find_map_by_name': '8962cbfd7dc63a4ba2174249391f1ed4f76fcd9833d469640798586f546af531',
+ 'function:bpf_object__find_map_by_name': '5a490a79a8e6e2cfac4b7a3917aa0c31438c474df2073b60eeb5f2ee12ae1775',
  'function:bpf_object__find_map_fd_by_name': '3bc3a0c0623aa4e810ad32110d645220625159f6b41506d1d75af71aef3960b4',
- 'function:bpf_object__find_program_by_name': 'c3dabaa422f33e3dfc6bcca044e251e758c791a3acf23a267ebf8a5e957751c3',
+ 'function:bpf_object__find_program_by_name': '2e71bafdcef1dbfc282310fefa5978ab7579d9a2de5d2064b2f3f4ddc5bf49e9',
  'function:bpf_object__gen_loader': '40f1f376cf763f861f4b324b60b311c3bbcf51d69c669123f1fd3cf718558595',
  'function:bpf_object__kversion': '3bc3a0c0623aa4e810ad32110d645220625159f6b41506d1d75af71aef3960b4',
- 'function:bpf_object__load': 'c1c4c476dcf98fd01aa8a185764d7149515c01ffd7e334a05200096687429674',
+ 'function:bpf_object__load': 'e2382c0d6cfb8615c2d24b97817a1827278a891aee9cf0dde508714b3e3a8984',
  'function:bpf_object__load_skeleton': '3bc3a0c0623aa4e810ad32110d645220625159f6b41506d1d75af71aef3960b4',
  'function:bpf_object__name': '3bc3a0c0623aa4e810ad32110d645220625159f6b41506d1d75af71aef3960b4',
- 'function:bpf_object__next_map': 'fc1ffdac032f6ede7dcbadb31981aec8075fe21b45e0c154b5cd916bcc87135a',
+ 'function:bpf_object__next_map': 'b810d3ef5657d1cd3eadc6d6caad883b972aa2a7e2b33bbc7c467cfc0dc0ab9b',
  'function:bpf_object__next_program': 'd7d5a158adb97ffe604b3c50747211a65644775155211ba9e9fe597388f7d911',
  'function:bpf_object__open': '3bc3a0c0623aa4e810ad32110d645220625159f6b41506d1d75af71aef3960b4',
  'function:bpf_object__open_file': 'dac4d8ba7ea66818eefa523bcdec9993560829af32234b0050a10d6fd2a73654',
@@ -2472,12 +2484,12 @@ ROW_MAPPING_SEALS = {'alias:DECLARE_LIBBPF_OPTS': 'd25be71658015a1e729d1988bf3b4
  'function:bpf_prog_stream_read': 'e645d11a20bf747a622cac5603bd478631157acd1cc8bf7e640fc33556cf66ff',
  'function:bpf_prog_test_run_opts': 'c493f736135483784f6d26981f3ea64bd0ead3a63261b90f13abdf67f1dc30d7',
  'function:bpf_program__assoc_struct_ops': '3a73272d18543182be6c1b7283a94417eb98b8ccad5df2ed81d1af060c81b666',
- 'function:bpf_program__attach': '57178245bfac65180cfb2c4ff4c4e168a362c71945335f285f6613745a6bdd3e',
+ 'function:bpf_program__attach': '84baaa35a88c4e58b3887ad4c2cbceeabb27aef69afbe6095367cfd773fd03d5',
  'function:bpf_program__attach_cgroup': '3bc3a0c0623aa4e810ad32110d645220625159f6b41506d1d75af71aef3960b4',
  'function:bpf_program__attach_cgroup_opts': 'a535e7482cc70d49f520c43aa02c016244ea0f7af9c093b7008f77fcdd4e4c90',
  'function:bpf_program__attach_freplace': '3bc3a0c0623aa4e810ad32110d645220625159f6b41506d1d75af71aef3960b4',
  'function:bpf_program__attach_iter': 'd5231621e5636b0eef6111f8bfe31d1d0c420b69349fbe2bd969ec9cf13ed3aa',
- 'function:bpf_program__attach_kprobe': '3bc3a0c0623aa4e810ad32110d645220625159f6b41506d1d75af71aef3960b4',
+ 'function:bpf_program__attach_kprobe': 'f2ed45d9ced1a7f16b2d46a06117ed7754109d4df4489445ecfb6d9cd308fa63',
  'function:bpf_program__attach_kprobe_multi_opts': '0fdb8208038be5c687cc6139c8ec5975f9912dfc16157dd196c0c01c66a942f4',
  'function:bpf_program__attach_kprobe_opts': '49b0833b8139f1a699db5ac678d1052c814339f8cec48396afe25d0da4291e1f',
  'function:bpf_program__attach_ksyscall': '480b709409faa395d7009a882042e2eb7e559b465a2b8b1ae8bb0ab51f65b5de',
@@ -2493,7 +2505,7 @@ ROW_MAPPING_SEALS = {'alias:DECLARE_LIBBPF_OPTS': 'd25be71658015a1e729d1988bf3b4
  'function:bpf_program__attach_tcx': '7bb485275e716e94d96e4001c16b1c5606d5c804eef8fe20e55b38db09633761',
  'function:bpf_program__attach_trace': '3bc3a0c0623aa4e810ad32110d645220625159f6b41506d1d75af71aef3960b4',
  'function:bpf_program__attach_trace_opts': 'a6243bb2d10d329dac88840764284814a35b68ea0a50de196f706106619b2ce3',
- 'function:bpf_program__attach_tracepoint': '7b9d86a8d4c0920068309bbe94f49885222ad830884ab564b36218a7bf0dcb98',
+ 'function:bpf_program__attach_tracepoint': '2d3eb5c9eb068b5f1f2e6580f859bf52dadd61b6624483864bfb33ca71d8d938',
  'function:bpf_program__attach_tracepoint_opts': 'c96cc33f3c9cd4fb29b4e241966075e65afa1f0382ac90ea6e4e43b10ea6f8ab',
  'function:bpf_program__attach_uprobe': '3bc3a0c0623aa4e810ad32110d645220625159f6b41506d1d75af71aef3960b4',
  'function:bpf_program__attach_uprobe_multi': '18b601edd3ae1c0eaa9821a2ebd350cecdeb51f4fdbdbb4b3f45917cefe4c40c',
@@ -2503,7 +2515,7 @@ ROW_MAPPING_SEALS = {'alias:DECLARE_LIBBPF_OPTS': 'd25be71658015a1e729d1988bf3b4
  'function:bpf_program__autoattach': '3bc3a0c0623aa4e810ad32110d645220625159f6b41506d1d75af71aef3960b4',
  'function:bpf_program__autoload': '7de7a248a3e0c25dfe24d960e44f09f3b8c7dd76f168dc2959541d17558cd911',
  'function:bpf_program__expected_attach_type': '2929f31eb8a5b325f6031efc4584c3741759f60c524da9815a398fcdc8176bf9',
- 'function:bpf_program__fd': '36e7fdf8a76e5fceebf558b0fad216e9edcdf6e8b5ee9e28fe261ab1efd91db0',
+ 'function:bpf_program__fd': '7694be710825f6bfeed26521938ea1749eac8cfb5b633268e9767271b40220d2',
  'function:bpf_program__flags': '3bc3a0c0623aa4e810ad32110d645220625159f6b41506d1d75af71aef3960b4',
  'function:bpf_program__func_info': '3bc3a0c0623aa4e810ad32110d645220625159f6b41506d1d75af71aef3960b4',
  'function:bpf_program__func_info_cnt': '3bc3a0c0623aa4e810ad32110d645220625159f6b41506d1d75af71aef3960b4',
@@ -2517,7 +2529,7 @@ ROW_MAPPING_SEALS = {'alias:DECLARE_LIBBPF_OPTS': 'd25be71658015a1e729d1988bf3b4
  'function:bpf_program__log_level': '3bc3a0c0623aa4e810ad32110d645220625159f6b41506d1d75af71aef3960b4',
  'function:bpf_program__name': '3bc3a0c0623aa4e810ad32110d645220625159f6b41506d1d75af71aef3960b4',
  'function:bpf_program__pin': '3bc3a0c0623aa4e810ad32110d645220625159f6b41506d1d75af71aef3960b4',
- 'function:bpf_program__section_name': 'b770c68a459836a66ce589dc04325466daa60b141c36eaac8b341d3c3183489f',
+ 'function:bpf_program__section_name': '9425fc902f0653806354e24dcd2d93e30ba7a317d351448c9226fcc81ef59ee3',
  'function:bpf_program__set_attach_target': '4c1e3eafd2f53446542a427667dda2b27d613c1d154b5f88606613b2030949c2',
  'function:bpf_program__set_autoattach': '3bc3a0c0623aa4e810ad32110d645220625159f6b41506d1d75af71aef3960b4',
  'function:bpf_program__set_autoload': 'e1ac6251ac6f8dc32ec1a7b883ee5b375bb286a5cb4e08bfdc6f61f1d620ab5f',
@@ -2528,7 +2540,7 @@ ROW_MAPPING_SEALS = {'alias:DECLARE_LIBBPF_OPTS': 'd25be71658015a1e729d1988bf3b4
  'function:bpf_program__set_log_buf': 'f642c3c0860d6a6f237439e4007ac882cc4baab765e562b5fc4ffdcfa8821ba3',
  'function:bpf_program__set_log_level': '647ce6cd61d4dbeb1bcc0f54773d704729dbb6005281149602059a04e0c81483',
  'function:bpf_program__set_type': '3bc3a0c0623aa4e810ad32110d645220625159f6b41506d1d75af71aef3960b4',
- 'function:bpf_program__type': '6c3ca3fc304c5b1b9153855715f7384b455e7e3f744fdbbca2eff3447d289f59',
+ 'function:bpf_program__type': '7d7615ffa7eeb71708316ecc73cccdf89dd0031f733e4f628d1888663987d326',
  'function:bpf_program__unload': '3bc3a0c0623aa4e810ad32110d645220625159f6b41506d1d75af71aef3960b4',
  'function:bpf_program__unpin': '3bc3a0c0623aa4e810ad32110d645220625159f6b41506d1d75af71aef3960b4',
  'function:bpf_raw_tracepoint_open': '3bc3a0c0623aa4e810ad32110d645220625159f6b41506d1d75af71aef3960b4',
@@ -2630,17 +2642,17 @@ ROW_MAPPING_SEALS = {'alias:DECLARE_LIBBPF_OPTS': 'd25be71658015a1e729d1988bf3b4
  'function:libbpf_bpf_prog_type_str': '3bc3a0c0623aa4e810ad32110d645220625159f6b41506d1d75af71aef3960b4',
  'function:libbpf_find_kernel_btf': '3bc3a0c0623aa4e810ad32110d645220625159f6b41506d1d75af71aef3960b4',
  'function:libbpf_find_vmlinux_btf_id': '3bc3a0c0623aa4e810ad32110d645220625159f6b41506d1d75af71aef3960b4',
- 'function:libbpf_get_error': 'cd2476b2c9ebcad5d8b560003dcfdeca59a567dd74c63ab6673538acd562c8f2',
+ 'function:libbpf_get_error': 'b7dd2780917762dddc0f7eca55559c0ed3a9bb5e6fbb82c883113520c45b77f4',
  'function:libbpf_major_version': '3bc3a0c0623aa4e810ad32110d645220625159f6b41506d1d75af71aef3960b4',
  'function:libbpf_minor_version': '3bc3a0c0623aa4e810ad32110d645220625159f6b41506d1d75af71aef3960b4',
- 'function:libbpf_num_possible_cpus': 'a318e5bc0ee938a6ad301ec99dab7bef3d945a1722c01bf6b35f15fd05e7c7b8',
+ 'function:libbpf_num_possible_cpus': 'd2f8ab459f40faf2a808d5e3fa97ef2d8d6fac8609793a6438ee66a06bcff4b9',
  'function:libbpf_probe_bpf_helper': '3bc3a0c0623aa4e810ad32110d645220625159f6b41506d1d75af71aef3960b4',
  'function:libbpf_probe_bpf_map_type': '3bc3a0c0623aa4e810ad32110d645220625159f6b41506d1d75af71aef3960b4',
  'function:libbpf_probe_bpf_prog_type': '3bc3a0c0623aa4e810ad32110d645220625159f6b41506d1d75af71aef3960b4',
  'function:libbpf_prog_type_by_name': '3bc3a0c0623aa4e810ad32110d645220625159f6b41506d1d75af71aef3960b4',
  'function:libbpf_register_prog_handler': '8c94636a898962379f64bfba2724ecc20c86260519dfca1374f0943c794f9cf1',
  'function:libbpf_set_memlock_rlim': '3bc3a0c0623aa4e810ad32110d645220625159f6b41506d1d75af71aef3960b4',
- 'function:libbpf_set_print': '1f19d1a41514b7d0fbff27a4efdced9357617ae7746d4a0086e5287994b50408',
+ 'function:libbpf_set_print': '25f882714386cbffe5be1ab7c11b612fce885be5cc5bebaa1688b91a15abb6a3',
  'function:libbpf_set_strict_mode': '3bc3a0c0623aa4e810ad32110d645220625159f6b41506d1d75af71aef3960b4',
  'function:libbpf_strerror': '3bc3a0c0623aa4e810ad32110d645220625159f6b41506d1d75af71aef3960b4',
  'function:libbpf_unregister_prog_handler': '3bc3a0c0623aa4e810ad32110d645220625159f6b41506d1d75af71aef3960b4',
@@ -2664,10 +2676,10 @@ ROW_MAPPING_SEALS = {'alias:DECLARE_LIBBPF_OPTS': 'd25be71658015a1e729d1988bf3b4
  'function:ring__size': '3bc3a0c0623aa4e810ad32110d645220625159f6b41506d1d75af71aef3960b4',
  'function:ring_buffer__add': '3bc3a0c0623aa4e810ad32110d645220625159f6b41506d1d75af71aef3960b4',
  'function:ring_buffer__consume': '3bc3a0c0623aa4e810ad32110d645220625159f6b41506d1d75af71aef3960b4',
- 'function:ring_buffer__consume_n': '43d0d69698e2eb8b8653eafea2362f14797b2c5b3294bc0a1bfdf91b2f0a13cf',
- 'function:ring_buffer__epoll_fd': 'ce3bae288284d2aa458e9c0b498f9984d0978106d83d1e1ce77bc6e48049b995',
- 'function:ring_buffer__free': '0971aa35f7f14bd01dd6810746d5f0ff60f63ffd49afb1287ee531ce4046719b',
- 'function:ring_buffer__new': 'b3486f29b1dc7ccdb8cb66c7dfcc184b5a464cd98a974bab20fbda4d36852e72',
+ 'function:ring_buffer__consume_n': '5d116d8227f4125f30c91beb45c3cd5ddc991abfdded019c7693225a8275080e',
+ 'function:ring_buffer__epoll_fd': '6d6cc6dd9221d4558da2f8c6413530ed9810d943a679a349157c4727470a2827',
+ 'function:ring_buffer__free': '20ab2db7ada8b4f6068d635c84ea562a8660c3a468b3df1474a93f153531ff5d',
+ 'function:ring_buffer__new': '42c5981354e5c188bb34dfe418adbe00fa6e179dda1d8bc53500e01a1f10f3f8',
  'function:ring_buffer__poll': '3bc3a0c0623aa4e810ad32110d645220625159f6b41506d1d75af71aef3960b4',
  'function:ring_buffer__ring': '3bc3a0c0623aa4e810ad32110d645220625159f6b41506d1d75af71aef3960b4',
  'function:user_ring_buffer__discard': '3bc3a0c0623aa4e810ad32110d645220625159f6b41506d1d75af71aef3960b4',
@@ -4242,6 +4254,23 @@ class InventoryTests(unittest.TestCase):
                     target = self.row(c, eid)[column]
                     target.update(status='ABSENT', refs=[], restrictions=[], bridge_symbols=[])
                 self.reject(remove, 'source mapping/option disposition/restrictions changed')
+
+    def test_probe_contract_keeps_explicit_discriminants_and_partial_claim(self):
+        types = {t['id']: t for t in self.c['bridge_abi']['types']}
+        for enum, prefix in (('lmb_attach_kind_v1', 'LMB_ATTACH_'),
+                             ('lmb_attach_family_v1', 'LMB_ATTACH_FAMILY_')):
+            for suffix, value in (('KPROBE', '3'), ('KRETPROBE', '4')):
+                key = 'enumerator:enum:' + enum + '.' + prefix + suffix
+                declaration = types[key]['declaration']['alternatives'][0]
+                self.assertEqual([value], declaration['parsed']['expression_tokens'])
+                self.assertIn(key, types['enum:' + enum]['members'])
+        row = self.row(self.c, 'function:bpf_program__attach_kprobe')
+        self.assertEqual('ABSENT', row['raw_declaration']['status'])
+        for column in ('forwarding_adapter', 'typed_workflow'):
+            self.assertEqual('SOURCE_PRESENT_PARTIAL', row[column]['status'])
+        self.assertTrue(all(cell['outcome'] == 'NOT_RUN' for cell in row['evidence_cells']))
+        self.reject(lambda c:self.row(c, 'function:bpf_program__attach_kprobe')['typed_workflow'].__setitem__('status', 'SOURCE_PRESENT_COMPLETE'),
+                    'complete adaptation is not qualified')
 
     def test_outer_abi_seal_cannot_hide_old_signature_change(self):
         global BRIDGE_SHA256

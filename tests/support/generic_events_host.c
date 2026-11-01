@@ -201,6 +201,20 @@ struct bpf_link *__wrap_bpf_program__attach_tracepoint(const struct bpf_program 
     for (size_t i = 0; i < 32; i++) if (!tokens[i]) { tokens[i] = token; return token; }
     stop("test link token limit"); return NULL;
 }
+struct bpf_link *__wrap_bpf_program__attach_kprobe(const struct bpf_program *program,
+        bool retprobe, const char *symbol) {
+    calls[GE_ATTACH]++;
+    CHECK(program != NULL && !strcmp(bpf_program__name(program), retprobe ? "probe_return" : "probe_entry"));
+    CHECK(symbol && !strcmp(symbol, "lmb_test_target"));
+    if (attach_code) {
+        errno = attach_null ? -attach_code : ENOTTY;
+        return attach_null ? NULL : (void *)(intptr_t)attach_code;
+    }
+    void *token = __real_calloc(1, 16);
+    CHECK(token != NULL);
+    for (size_t i = 0; i < 32; i++) if (!tokens[i]) { tokens[i] = token; return token; }
+    stop("test link token limit"); return NULL;
+}
 int __wrap_bpf_link__destroy(struct bpf_link *link) {
     for (size_t i = 0; i < 32; i++) if (tokens[i] == link && link) {
         calls[GE_DESTROY]++; free(tokens[i]); tokens[i] = NULL;

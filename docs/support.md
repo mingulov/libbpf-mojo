@@ -1,5 +1,5 @@
 <!-- SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception -->
-# Support envelope (0.2.3 candidate, ABI v1)
+# Support envelope (0.3.0 development candidate, ABI v1)
 
 The candidate retains the historical evidence below; it has no new exact-artifact
 live qualification until its packaged bytes pass the corresponding gates.
@@ -257,3 +257,38 @@ meanings, correlation, accounting, formats, reporting) all
 belong elsewhere. Application correctness is outside these
 gates: library statistics never prove a consumer measured
 completely.
+
+## Attachment capability metadata
+
+The pure Mojo `attachment_capability(kind)` function declares library eligibility:
+minimum Linux 6.0, BTF required, and `qualification="unqualified"` for this
+candidate. This is static metadata, never a probe of the running system.
+Session kinds are tracepoint (1), tracing (2), kprobe (3), kretprobe (4).
+Generic families are tracepoint (1), kprobe (3), kretprobe (4); family 2 remains
+reserved and refused. Probe metadata requires a resolvable kernel symbol.
+
+All live kinds require CONFIG_BPF and CONFIG_BPF_SYSCALL, matching program/context
+semantics, collection privilege and actual load/attachment. Kernel probes also
+require CONFIG_KPROBES, CONFIG_KPROBE_EVENTS and CONFIG_PERF_EVENTS. Return probes
+require the target architecture's return-probe support. Tracing needs the
+kernel's BPF trampoline and target BTF support. Effective lockdown, permissions,
+blacklists, unavailable symbols or unsupported configurations may refuse a
+nominally eligible kernel. No version string admits an environment.
+
+The bounded probe surface uses pinned libbpf 1.7.0's single-symbol
+bpf_program__attach_kprobe adapter, with retprobe false/true, offset zero and
+no cookies or multi-probe options. Libbpf chooses its supported perf/link or
+legacy mechanism. The bridge never bypasses a refusal. The program must have
+BPF_PROG_TYPE_KPROBE and a matching kprobe or kretprobe ELF section (bare or
+slash-prefixed target). Uprobes, multi-probes and iterators are outside this
+interface. No entry/return pairing, settled-window or target-lifetime guarantee
+follows from link ownership or successful teardown.
+
+Probe symbols use the bounded ASCII grammar `[module:]identifier`: the optional
+nonempty module contains letters, digits or underscores; the identifier begins
+with a letter or underscore and continues with letters, digits, underscores or
+dots (including compiler suffixes). The whole name is at most 256 bytes.
+Whitespace, controls, numeric addresses, offsets, wildcards and other syntax
+return BRIDGE/-EINVAL before attachment. This prevents symbol text from becoming
+tracefs command syntax when pinned libbpf selects its legacy adapter. Existing
+tracepoint/tracing name validation remains unchanged.

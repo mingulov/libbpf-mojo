@@ -31,7 +31,9 @@ enum {
 
 enum lmb_attach_kind_v1 {
     LMB_ATTACH_TRACEPOINT = 1,
-    LMB_ATTACH_TRACING = 2
+    LMB_ATTACH_TRACING = 2,
+    LMB_ATTACH_KPROBE = 3,
+    LMB_ATTACH_KRETPROBE = 4
 };
 
 enum lmb_op_v1 {

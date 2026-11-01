@@ -10,6 +10,7 @@
 #include "libbpf_mojo.h"
 
 struct bpf_object;
+struct bpf_program;
 struct bpf_link;
 struct ring_buffer;
 
@@ -47,5 +48,8 @@ int lmb_ranges_overlap(const void *a, uint64_t a_len, const void *b,
 
 /* ring.c: single-record staging callback. */
 int lmb_ring_sample(void *ctx, void *data, size_t size);
+
+int lmb_probe_symbol_ok(const uint8_t *text, uint64_t length);
+int lmb_probe_program_ok(const struct bpf_program *program, int retprobe);
 
 #endif /* LMB_INTERNAL_H */

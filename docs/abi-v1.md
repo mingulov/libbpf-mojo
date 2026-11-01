@@ -101,6 +101,8 @@ session; one owned staging slot for a retained 4,096-byte record.
 enum lmb_attach_kind_v1 {
     LMB_ATTACH_TRACEPOINT = 1,
     LMB_ATTACH_TRACING = 2, /* fentry/fexit-style kernel tracing */
+    LMB_ATTACH_KPROBE = 3,
+    LMB_ATTACH_KRETPROBE = 4,
 };
 
 struct lmb_attach_v1 {
@@ -127,6 +129,18 @@ mismatch. Targets cannot be supplied at attach time because the pinned
 libbpf rejects target assignment on an already loaded object. Tracepoint
 attachments resolve `target_a`/`target_b` as category/event at attach
 time and need no pre-load target.
+
+Kinds 3 and 4 attach a single entry or return kernel probe. `target_a` is the
+explicit symbol; `target_b` is empty and flags remain zero. The symbol is copied
+for the native call; no pointer is retained. The program must be KPROBE with the
+matching kprobe/kretprobe section; a kind mismatch returns BRIDGE/-EOPNOTSUPP.
+Missing symbols, blacklists and permission/lockdown refusals retain their signed
+LIBBPF diagnostic. Successful sites are created in input order; a failure rolls
+back in reverse order and preserves the attachment error. Close uses the same
+reverse detach path. All resources retire even if a destroy fails; the first
+error in destruction order is reported. Old layouts and symbols are unchanged;
+older bridges reject the new kind values. See [support](support.md) for static
+eligibility requirements, which do not qualify a kernel.
 
 ## Map access
 
@@ -329,7 +343,7 @@ to fit.
 
 ## Lifecycle
 
-- `lmb_detach` destroys every attachment link and reports the first
+- `lmb_detach` destroys every attachment link in reverse attach order and reports the first
   teardown error, if any, after releasing all of them; success is
   resource evidence, not proof of application-level measurement
   quiescence. A detached session may attach again.
@@ -372,3 +386,12 @@ pinned source tarball recorded there and verifies the hash before use.
 `tools/test native` runs the compiled C contracts; privileged cases report
 their own availability and results. See `build.md` for source-archive
 builds and the separate runtime/development bundle.
+
+Probe symbols use the bounded ASCII grammar `[module:]identifier`: the optional
+nonempty module contains letters, digits or underscores; the identifier begins
+with a letter or underscore and continues with letters, digits, underscores or
+dots (including compiler suffixes). The whole name is at most 256 bytes.
+Whitespace, controls, numeric addresses, offsets, wildcards and other syntax
+return BRIDGE/-EINVAL before attachment. This prevents symbol text from becoming
+tracefs command syntax when pinned libbpf selects its legacy adapter. Existing
+tracepoint/tracing name validation remains unchanged.

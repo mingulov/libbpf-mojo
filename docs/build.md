@@ -91,7 +91,7 @@ refusal for missing Mojo runtimes and damaged bundled startup libraries.
 System libraries remain system prerequisites; this check does not execute
 collection or replace the privileged compiler-free clean-room gate.
 To check retained bytes directly, run
-`python3 tests/package/test_loader.py --archive /path/to/libbpf-mojo-0.2.3.tar.gz`.
+`python3 tests/package/test_loader.py --archive /path/to/libbpf-mojo-0.3.0.tar.gz`.
 
 | Path | Purpose |
 |---|---|
@@ -343,3 +343,28 @@ leave no recorded version anywhere.
   Mojo-generated accesses were checked.
 - No compiler internals, unfinished async, or unstable APIs are used.
   `mojo format` keeps sources canonical.
+
+## Probe lifecycle gates
+
+`tools/build` compiles the probe fixture and native/Mojo live consumers without
+loading them. `tools/test native --host-only` and `tools/test mojo --host-only`
+exercise bounded adapter seams, ownership and rollback under the permanent
+no-BPF guard. These tests do not qualify missing-symbol, blacklist or lockdown
+behavior on a real kernel.
+
+In an isolated x86-64 guest, set LMB_ISOLATED_TEST_GUEST=1 and run
+`tools/test live-probes`. The positive mode requires native generic probe pairs,
+session tracing/probe transactions and the Mojo pair to reconcile exactly 257
+explicit getpid syscalls. The fixture filters by the controller's initial-namespace thread ID and
+keeps only counts. Native descriptor counts must return to their original
+baseline after unload. The named tracing target is __x64_sys_getpid.
+
+Run the separate required negative modes with LMB_PROBE_MODE=blacklist plus
+LMB_PROBE_BLACKLIST_SYMBOL set to an exact symbol from the guest's readable
+kprobes blacklist, and LMB_PROBE_MODE=lockdown in a separately provisioned guest
+with confidentiality lockdown active. The runner verifies those prerequisites
+in memory and never logs blacklist addresses. These modes do not change policy
+or bypass lockdown. Missing prerequisites fail the selected gate. An unarmed
+runner exits 77 as NOT_RUN. Preserve exact source, build receipt, fixture and
+binary hashes, kernel/config/BTF identity, mode and exit code for each gate.
+A positive ordinary guest run does not establish confidential-platform support.

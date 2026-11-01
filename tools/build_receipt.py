@@ -49,6 +49,9 @@ ARTIFACTS = [
     "examples/probe.bpf.o",
     "examples/reference_consumer",
     "examples/fault_driver",
+    "examples/probe_lifecycle_mojo",
+    "live_probe_lifecycle",
+    "fixtures/probe_lifecycle.bpf.o",
 ]
 
 

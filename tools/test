@@ -11,7 +11,7 @@
 #
 # Implemented suites: native, mojo, live-tracepoint, cleanup, package,
 # package-consumer, source-export, contracts, runner, selftest, provenance,
-# docs.
+# docs, live-probes.
 # contracts requires explicit offline LMB_TEST_CONTRACT_BUNDLE data.
 # LMB_PACKAGE_CONSUMER_OUT optionally retains installed-consumer attempts.
 # The runner suite
@@ -170,6 +170,7 @@ run_mojo() {
     export LMB_GENERIC_MAPS_FIXTURE="$ROOT/$BUILD_DIR/fixtures/generic_maps.bpf.o"
     export LMB_GENERIC_TESTFAKE_LIB="$generic_fake"
     export LMB_GENERIC_OBJECTONLY_LIB="$generic_older"
+    export LMB_PROBE_FIXTURE="$ROOT/$BUILD_DIR/fixtures/probe_lifecycle.bpf.o"
     export LMB_GENERIC_EVENTS_FIXTURE="$ROOT/$BUILD_DIR/fixtures/generic_events.bpf.o"
     for variant in testfake no_events no_attach no_link_close no_buffer_open no_buffer_poll no_buffer_close no_buffer_stats; do
         path="$ROOT/$BUILD_DIR/liblmb_events_$variant.so"
@@ -283,6 +284,10 @@ case "$1" in
         ;;
     live-tracepoint)
         run_live test_tracepoint.py
+        ;;
+    live-probes)
+        (cd "$ROOT" && python3 tests/live/test_probes.py)
+        exit "$?"
         ;;
     cleanup)
         run_live test_cleanup.py

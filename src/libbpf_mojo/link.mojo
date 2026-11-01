@@ -1,11 +1,11 @@
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-"""Explicit tracepoint attachment with move-only native link ownership."""
+"""Explicit tracepoint and kernel probe attachment with move-only native link ownership."""
 from std.memory import ArcPointer
 from libbpf_mojo._ffi import (
-    ATTACH_FAMILY_TRACEPOINT, AttachOptionsV1, GenericLib, GenericSpanV1,
-    GENERIC_OP_ATTACH, GENERIC_OP_LINK_CLOSE, GENERIC_OP_VIEW_CHECK,
+    ATTACH_FAMILY_TRACEPOINT, ATTACH_FAMILY_KPROBE, ATTACH_FAMILY_KRETPROBE, AttachOptionsV1, GenericLib, GenericSpanV1,
+    GENERIC_OP_ATTACH, GENERIC_OP_LINK_CLOSE, GENERIC_OP_VIEW_CHECK, GENERIC_DOMAIN_BRIDGE,
 )
-from libbpf_mojo.error import LmbError
+from libbpf_mojo.error import LmbError, EINVAL
 from libbpf_mojo.object import ProgramView, capture_generic_error
 
 
@@ -16,7 +16,7 @@ struct Link(Movable):
 
     def __init__(
         out self, mut program: ProgramView, category: String, event: String,
-        flags: UInt32 = 0,
+        flags: UInt32 = 0, *, family: UInt32 = ATTACH_FAMILY_TRACEPOINT,
     ) raises LmbError:
         var rc = program._lib[].object_generation_check(program._handle, program._generation)
         if rc != 0:
@@ -27,7 +27,7 @@ struct Link(Movable):
         var event_bytes = event.as_bytes()
         var options = AttachOptionsV1(
             1, 72, GenericSpanV1(UInt64(name.unsafe_ptr()), UInt64(len(name))),
-            ATTACH_FAMILY_TRACEPOINT, flags,
+            family, flags,
             GenericSpanV1(UInt64(category_bytes.unsafe_ptr()), UInt64(len(category_bytes))),
             GenericSpanV1(UInt64(event_bytes.unsafe_ptr()), UInt64(len(event_bytes))), 0,
         )
@@ -75,3 +75,29 @@ def attach_tracepoint(
 ) raises LmbError -> Link:
     """Attach one explicit site; loading remains the caller's operation."""
     return Link(program, category, event, flags)
+
+
+def attach_kprobe(mut program: ProgramView, symbol: String) raises LmbError -> Link:
+    """Attach one entry probe; symbol resolution and permission remain native."""
+    return Link(program, symbol, "", family=ATTACH_FAMILY_KPROBE)
+
+
+def attach_kretprobe(mut program: ProgramView, symbol: String) raises LmbError -> Link:
+    """Attach one return probe; the link retains its object and library."""
+    return Link(program, symbol, "", family=ATTACH_FAMILY_KRETPROBE)
+
+
+@fieldwise_init
+struct AttachmentCapability(Copyable):
+    """Declarative library eligibility, never an observation of this kernel."""
+    var minimum_kernel: String
+    var requires_btf: Bool
+    var requires_symbol: Bool
+    var qualification: String
+
+
+def attachment_capability(kind: UInt32) raises LmbError -> AttachmentCapability:
+    """Session kinds 1..4; generic family 2 remains reserved."""
+    if kind < 1 or kind > 4:
+        raise LmbError(GENERIC_OP_ATTACH, GENERIC_DOMAIN_BRIDGE, EINVAL, "unknown attachment capability")
+    return AttachmentCapability("6.0", True, kind != 1, "unqualified")

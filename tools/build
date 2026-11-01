@@ -177,6 +177,11 @@ main() {
             else
                 echo "build: no Mojo targets registered yet" >&2
             fi
+            log pixi run --frozen mojo build -I src --target-cpu x86-64-v2 \
+                -o "$BUILD_DIR/examples/probe_lifecycle_mojo" tests/live/probe_lifecycle.mojo
+            pixi run --frozen mojo build -I src --target-cpu x86-64-v2 \
+                -o "$BUILD_DIR/examples/probe_lifecycle_mojo" tests/live/probe_lifecycle.mojo || return 1
+            patchelf --set-rpath '$ORIGIN/../lib' "$BUILD_DIR/examples/probe_lifecycle_mojo" || return 1
             log python3 tests/package/test_development_loader.py
             LMB_BUILD_DIR="$BUILD_DIR" python3 \
                 tests/package/test_development_loader.py || return 1
