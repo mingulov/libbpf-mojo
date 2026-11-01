@@ -611,7 +611,8 @@ target_include_directories(test_probe_gate_mock PRIVATE include
   ${LIBBPF_ROOT}/include ${LMB_ROOT}/tests/native)
 target_link_libraries(test_probe_gate_mock PRIVATE lmb_static)
 foreach(seam lmb_object_open_v1 lmb_object_load_v1 lmb_object_close_v1 lmb_object_attach_v1
-    lmb_link_close_v1 lmb_generic_last_error_v1 syscall)
+    lmb_link_close_v1 lmb_generic_last_error_v1 lmb_object_map_update_v1
+    lmb_object_map_lookup_v1 lmb_open syscall)
   target_link_options(test_probe_gate_mock PRIVATE "LINKER:--wrap=${seam}")
 endforeach()
 add_dependencies(test_probe_gate_mock probe_lifecycle_fixture)

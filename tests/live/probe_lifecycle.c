@@ -9,12 +9,15 @@ static struct lmb_name_v1 name(void) {
     struct lmb_name_v1 n = {.abi_version=1, .struct_size=sizeof(n)};
     n.name.ptr=(const uint8_t *)"counts"; n.name.len=6; return n;
 }
-static int native_attach_failure(int code) {
+static int native_failure(int code, uint32_t operation) {
     struct lmb_generic_error_v1 error={.abi_version=1,.struct_size=sizeof(error)};
     if (code >= 0 || lmb_generic_last_error_v1(&error)) return 0;
-    printf("attach-negative code=%d domain=%u operation=%u\n", code, error.domain, error.operation);
-    return error.code==code && error.operation==LMB_GENERIC_OP_ATTACH &&
+    printf("native-negative code=%d domain=%u operation=%u\n", code, error.domain, error.operation);
+    return error.code==code && error.operation==operation &&
         error.domain==LMB_GENERIC_DOMAIN_LIBBPF;
+}
+static int native_attach_failure(int code) {
+    return native_failure(code,LMB_GENERIC_OP_ATTACH);
 }
 int main(int argc, char **argv) {
     if (argc < 3) return 2;
@@ -28,8 +31,27 @@ int main(int argc, char **argv) {
     if (lmb_object_open_v1(elf,size,&opts,&object)) { free(elf); return 1; }
     int rc=lmb_object_load_v1(object);
     if (!strcmp(argv[2], "--lockdown")) {
-        LMB_CHECK(rc == -EPERM || rc == -EACCES, "lockdown-load", "explicit denied load required");
-        LMB_CHECK(lmb_object_close_v1(&object)==0 && lmb_count_fds()==baseline,
+        if (rc) {
+            LMB_CHECK(native_failure(rc,LMB_GENERIC_OP_OBJECT_LOAD) &&
+                (rc==-EPERM || rc==-EACCES), "lockdown-load", "native permission refusal at load");
+        } else {
+            long loaded=lmb_count_fds();
+            for (unsigned kind=3;kind<=4;kind++) {
+                struct lmb_attach_options_v1 probe={.abi_version=1,.struct_size=sizeof(probe),
+                    .program=span(kind==3 ? "probe_entry" : "probe_return"), .family=kind,
+                    .target_a=span("__x64_sys_getpid")};
+                struct lmb_link *link=NULL;
+                rc=lmb_object_attach_v1(object,&probe,&link);
+                printf("lockdown-probe kind=%u\n",kind);
+                LMB_CHECK(native_attach_failure(rc) && (rc==-EPERM || rc==-EACCES) &&
+                    !link && lmb_count_fds()==loaded,"lockdown-attach","native permission refusal at attach");
+                if (link) LMB_CHECK(lmb_link_close_v1(&link)==0,
+                    "lockdown-unexpected-clean","retire unexpectedly attached link");
+                LMB_CHECK(!link && lmb_count_fds()==loaded,
+                    "lockdown-probe-clean","probe resources return to loaded baseline");
+            }
+        }
+        LMB_CHECK(lmb_object_close_v1(&object)==0 && !object && lmb_count_fds()==baseline,
             "lockdown-clean", "denial releases all resources");
         free(elf); return lmb_failures ? 1 : 0;
     }
@@ -71,7 +93,9 @@ int main(int argc, char **argv) {
         uint64_t disabled=0;
         LMB_CHECK(lmb_object_map_update_v1(object,&n,(void *)&key,4,(void *)&disabled,8,0)==0,
             "close-window", "disable fixture admission before teardown");
-        LMB_CHECK(lmb_link_close_v1(&entry)==0 && lmb_link_close_v1(&exit)==0, "close-pair", "explicit reverse teardown");
+        int entry_close=lmb_link_close_v1(&entry);
+        int exit_close=lmb_link_close_v1(&exit);
+        LMB_CHECK(entry_close==0 && exit_close==0, "close-pair", "explicit reverse teardown");
         for (key=0;key<2;key++) {
             uint64_t value=0,needed=0;
             LMB_CHECK(lmb_object_map_lookup_v1(object,&n,(void *)&key,4,(void *)&value,8,&needed)==0 && value==257,
