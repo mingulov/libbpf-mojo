@@ -1631,40 +1631,72 @@ static void part_b4(struct gen_api *g, struct v1_api *v1,
     CHECK(g->close(&obj) == 0, "b4-close", "close must succeed");
 }
 
-/* B5: pre-load ownership: null handling, double close, and the
- * success-clears side of trivial closes. */
+static int seed_close_error(struct gen_api *g,
+                            struct lmb_generic_error_v1 *out) {
+    memset(out, 0, sizeof(*out));
+    out->abi_version = LMB_GENERIC_ABI_VERSION;
+    out->struct_size = sizeof(*out);
+    return g->load(NULL) == -EINVAL && g->lasterr(out) == 0 &&
+           out->operation == LMB_GENERIC_OP_OBJECT_LOAD &&
+           out->domain == LMB_GENERIC_DOMAIN_BRIDGE &&
+           out->code == -EINVAL && out->msg_len > 0;
+}
+
+static int close_error_matches(struct gen_api *g,
+                               const struct lmb_generic_error_v1 *expected) {
+    struct lmb_generic_error_v1 actual;
+    memset(&actual, 0xAA, sizeof(actual));
+    actual.abi_version = LMB_GENERIC_ABI_VERSION;
+    actual.struct_size = sizeof(actual);
+    return g->lasterr(&actual) == 0 &&
+           memcmp(&actual, expected, sizeof(actual)) == 0;
+}
+
+/* B5: null cells preserve diagnostics; null pointees clear them. */
 static void part_b5(struct gen_api *g) {
     struct lmb_object_options_v1 o;
     struct lmb_object *obj = NULL;
     struct lmb_link *link = NULL;
     struct lmb_buffer *buf = NULL;
+    struct lmb_generic_error_v1 seeded;
+    const struct lmb_generic_error_v1 cleared = {0};
 
-    CHECK(g->close(NULL) == -EINVAL, "b5-close-null-arg",
-          "null close argument must fail");
-    CHECK(gen_is(g, LMB_GENERIC_OP_OBJECT_CLOSE,
-                 LMB_GENERIC_DOMAIN_BRIDGE, NULL),
-          "b5-close-null-record", "close failure must report close op");
-    CHECK(g->close(&obj) == 0, "b5-close-null-pointee",
+    CHECK(seed_close_error(g, &seeded), "b5-close-seed",
+          "load failure must seed a nonempty diagnostic");
+    CHECK(g->close(NULL) == 0, "b5-close-null-arg",
+          "null close argument must succeed");
+    CHECK(close_error_matches(g, &seeded), "b5-close-null-record",
+          "null close argument must preserve the entire diagnostic");
+    CHECK(g->close(&obj) == 0 && obj == NULL, "b5-close-null-pointee",
           "null-pointee close must succeed");
-    CHECK(gen_is(g, LMB_GENERIC_OP_NONE, LMB_GENERIC_DOMAIN_NONE,
-                 NULL),
-          "b5-close-null-clears",
+    CHECK(close_error_matches(g, &cleared), "b5-close-null-clears",
           "trivial close success clears the record");
     g->release(NULL);
     OK("b5-release-null-arg");
     g->release(&obj);
     OK("b5-release-null-pointee");
-    CHECK(g->linkclose(NULL) == -EINVAL, "b5-linkclose-null-arg",
-          "null link close argument must fail");
-    CHECK(g->linkclose(&link) == 0, "b5-linkclose-null-pointee",
+    CHECK(seed_close_error(g, &seeded), "b5-linkclose-seed",
+          "load failure must seed a nonempty diagnostic");
+    CHECK(g->linkclose(NULL) == 0, "b5-linkclose-null-arg",
+          "null link close argument must succeed");
+    CHECK(close_error_matches(g, &seeded), "b5-linkclose-null-record",
+          "null link close argument must preserve the entire diagnostic");
+    CHECK(g->linkclose(&link) == 0 && link == NULL, "b5-linkclose-null-pointee",
           "null-pointee link close must succeed");
-    CHECK(g->bufclose(NULL) == -EINVAL, "b5-bufclose-null-arg",
-          "null buffer close argument must fail");
-    CHECK(g->bufclose(&buf) == 0, "b5-bufclose-null-pointee",
+    CHECK(close_error_matches(g, &cleared), "b5-linkclose-null-clears",
+          "trivial link close success clears the record");
+    CHECK(seed_close_error(g, &seeded), "b5-bufclose-seed",
+          "load failure must seed a nonempty diagnostic");
+    CHECK(g->bufclose(NULL) == 0, "b5-bufclose-null-arg",
+          "null buffer close argument must succeed");
+    CHECK(close_error_matches(g, &seeded), "b5-bufclose-null-record",
+          "null buffer close argument must preserve the entire diagnostic");
+    CHECK(g->bufclose(&buf) == 0 && buf == NULL, "b5-bufclose-null-pointee",
           "null-pointee buffer close must succeed");
+    CHECK(close_error_matches(g, &cleared), "b5-bufclose-null-clears",
+          "trivial buffer close success clears the record");
 
-    /* A failing call followed by a trivial close leaves a clear
-     * record: successes always clear, even trivial ones. */
+    /* An already-null handle clears a preceding failing-call record. */
     make_oopts(&o);
     o.abi_version = 99;
     CHECK(g->open(garbage_elf, sizeof(garbage_elf), &o, &obj) ==
