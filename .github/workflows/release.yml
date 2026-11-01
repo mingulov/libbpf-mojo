@@ -1,39 +1,38 @@
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-# Release: tag-triggered tarball build and GitHub Release
-# publication. A tag `vX.Y.Z` (or a manual dispatch dry run)
-# provisions the locked toolchain exactly like the tier
-# workflows, runs the offline gate suites plus the
-# clean-room package lane, builds
-# dist/libbpf-mojo-<version>.tar.gz from the clean tag
-# tree, attests build provenance for it, and uploads the
-# tarball plus a sha256 file to the tag's GitHub Release.
-# Dispatch runs build everything, keep the set as a
-# workflow artifact and publish nothing. MemVeil consumes
-# releases by exact version plus tarball hash in its
-# toolchain lock, so a libbpf-mojo release never changes
-# MemVeil until MemVeil's pin is deliberately updated.
-# Rollback is a new tag; a rerun of the same tag fails
-# instead of replacing uploaded files. v0.* and hyphenated
-# tags publish as prereleases.
+# Tags do not build or publish; hosted builds always create new candidates.
 name: release
 
 on:
-  push:
-    tags:
-      - "v*"
   workflow_dispatch:
+    inputs:
+      mode:
+        description: Hosted build creates a new candidate; promotion only copies stored bytes
+        type: choice
+        options: [build-candidate, dry-run, promote]
+        required: true
+      arm:
+        description: Enter ARM-BUILD-CANDIDATE, ARM-DRY-RUN, or ARM-PROMOTE
+        type: string
+        required: true
+      request:
+        description: Promotion JSON with repository, source_commit, run_id, artifact_id, artifact_sha256 and tag
+        type: string
+        default: '{}'
 
 permissions:
   contents: write
   id-token: write
   attestations: write
+  actions: read
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
-  release:
+  build-candidate:
+    if: inputs.mode == 'build-candidate' && inputs.arm == 'ARM-BUILD-CANDIDATE'
+    environment: release-custody
     runs-on: ubuntu-26.04
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4.4.0
@@ -46,72 +45,62 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
             clang bpftool cmake ninja-build make pkg-config patchelf \
-            libelf-dev zlib1g-dev
+            libelf-dev zlib1g-dev python3-pytest
       - name: Build
         run: ./tools/build
-      - name: Tag matches package version
-        if: startsWith(github.ref, 'refs/tags/')
-        run: |
-          TAG="${GITHUB_REF#refs/tags/}"
-          VER="$(python3 -c "import tomllib; print(tomllib.load(open('pixi.toml','rb'))['workspace']['version'])")"
-          if [ "$TAG" != "v$VER" ]; then
-            echo "tag $TAG does not match pixi.toml $VER" >&2
-            exit 1
-          fi
       - name: Gate suites
         run: |
           ./tools/test native --host-only || exit 1
           ./tools/test mojo --host-only || exit 1
-          for suite in runner selftest provenance \
+          for suite in runner selftest provenance release-custody \
               package-consumer package source-export; do
             ./tools/test "$suite" || exit 1
           done
       - name: Build tarball
         run: ./tools/package
-      - name: Checksums
+      - name: Verify the exact retained archive without rebuilding
         run: |
-          cd dist
-          sha256sum libbpf-mojo-*.tar.gz > SHA256SUMS.txt
-          cat SHA256SUMS.txt
-      - name: Attest build provenance
+          python3 - <<'PYTEST'
+          import sys
+          from pathlib import Path
+          sys.path.insert(0, 'tests/package')
+          import test_package as package
+          import test_consumer_lane as consumer
+          version = package.package_version()
+          archive = str(Path('dist') / ('libbpf-mojo-' + version + '.tar.gz'))
+          package.verify_manifest(archive, version)
+          package.clean_room(archive, version)
+          consumer.object_consumer_check(archive, version)
+          PYTEST
+      - name: Retain corresponding source and seal hosted identity
+        run: |
+          git archive --format=tar.gz --prefix=libbpf-mojo-source/ --output=dist/source.tar.gz HEAD
+          ./tools/release-custody seal --directory dist
+      - name: Attest actual hosted build provenance
         uses: actions/attest-build-provenance@96278af6caaf10aea03fd8d33a09a777ca52d62f  # v3.2.0
         with:
-          subject-path: |
-            dist/libbpf-mojo-*.tar.gz
-            dist/SHA256SUMS.txt
-      - name: Upload dry-run artifacts
-        if: github.event_name == 'workflow_dispatch'
+          subject-path: dist/*
+      - name: Retain immutable candidate
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4.6.2
         with:
-          name: release-dry-run
-          path: |
-            dist/libbpf-mojo-*.tar.gz
-            dist/SHA256SUMS.txt
+          name: candidate-${{ github.sha }}
+          path: dist/*
+          retention-days: 90
           if-no-files-found: error
-      - name: Publish GitHub Release
-        if: startsWith(github.ref, 'refs/tags/')
+          overwrite: false
+  promote:
+    if: inputs.mode != 'build-candidate'
+    runs-on: ubuntu-26.04
+    environment: release-custody
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4.4.0
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Verify stored bytes and promote only when explicitly armed
         env:
           GH_TOKEN: ${{ github.token }}
-        run: |
-          TAG="${GITHUB_REF#refs/tags/}"
-          PRE=""
-          case "$TAG" in
-            v0.*|*-*) PRE="--prerelease";;
-          esac
-          if gh release view "$TAG" >/dev/null 2>&1; then
-            HAVE="$(gh release view "$TAG" --json assets \
-              --jq '.assets | length')"
-            if [ "$HAVE" != "0" ]; then
-              echo "refusing to overwrite $HAVE published assets" >&2
-              exit 1
-            fi
-          else
-            # No committed notes file in this repository;
-            # generated notes from the tag diff stay honest
-            # for a dependency-only release.
-            # shellcheck disable=SC2086
-            gh release create "$TAG" --title "$TAG" $PRE \
-              --generate-notes
-          fi
-          gh release upload "$TAG" \
-            dist/libbpf-mojo-*.tar.gz dist/SHA256SUMS.txt
+          RELEASE_REQUEST: ${{ inputs.request }}
+          RELEASE_ARM: ${{ inputs.arm }}
+          RELEASE_MODE: ${{ inputs.mode }}
+        run: ./tools/release-custody "$RELEASE_MODE" --directory release-stored
