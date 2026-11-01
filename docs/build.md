@@ -363,8 +363,10 @@ Run the separate required negative modes with LMB_PROBE_MODE=blacklist plus
 LMB_PROBE_BLACKLIST_SYMBOL set to an exact symbol from the guest's readable
 kprobes blacklist, and LMB_PROBE_MODE=lockdown in a separately provisioned guest
 with confidentiality lockdown active. The runner verifies those prerequisites
-in memory and never logs blacklist addresses. These modes do not change policy
-or bypass lockdown. Missing prerequisites fail the selected gate. An unarmed
+in memory and never logs blacklist addresses. Blacklist mode first requires a known-good attachment and clean close for each
+probe kind, then requires a LIBBPF-domain refusal for the selected blacklisted
+symbol. Negative receipts include the signed code, domain and operation. These
+modes do not change policy or bypass lockdown. Missing prerequisites fail the selected gate. An unarmed
 runner exits 77 as NOT_RUN. Preserve exact source, build receipt, fixture and
 binary hashes, kernel/config/BTF identity, mode and exit code for each gate.
 A positive ordinary guest run does not establish confidential-platform support.

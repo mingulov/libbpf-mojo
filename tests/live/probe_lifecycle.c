@@ -9,6 +9,13 @@ static struct lmb_name_v1 name(void) {
     struct lmb_name_v1 n = {.abi_version=1, .struct_size=sizeof(n)};
     n.name.ptr=(const uint8_t *)"counts"; n.name.len=6; return n;
 }
+static int native_attach_failure(int code) {
+    struct lmb_generic_error_v1 error={.abi_version=1,.struct_size=sizeof(error)};
+    if (code >= 0 || lmb_generic_last_error_v1(&error)) return 0;
+    printf("attach-negative code=%d domain=%u operation=%u\n", code, error.domain, error.operation);
+    return error.code==code && error.operation==LMB_GENERIC_OP_ATTACH &&
+        error.domain==LMB_GENERIC_DOMAIN_LIBBPF;
+}
 int main(int argc, char **argv) {
     if (argc < 3) return 2;
     if (strcmp(argv[2], "--positive") && strcmp(argv[2], "--lockdown") &&
@@ -35,14 +42,21 @@ int main(int argc, char **argv) {
     for (unsigned kind=3; kind<=4; kind++) {
         a.family=kind; a.program=span(kind==3 ? "probe_entry" : "probe_return");
         rc=lmb_object_attach_v1(object,&a,&entry);
-        LMB_CHECK(rc<0 && !entry && lmb_count_fds()==loaded, "missing-symbol", "native missing symbol refuses and cleans up");
+        LMB_CHECK(native_attach_failure(rc) && !entry && lmb_count_fds()==loaded, "missing-symbol", "native missing symbol refuses and cleans up");
+        if (entry) LMB_CHECK(lmb_link_close_v1(&entry)==0,"unexpected-missing-clean","retire unexpected successful attachment");
     }
     if (!strcmp(argv[2], "--blacklist")) {
         a.target_a=span(argv[3]);
         for (unsigned kind=3; kind<=4; kind++) {
             a.family=kind; a.program=span(kind==3 ? "probe_entry" : "probe_return");
+            struct lmb_attach_options_v1 control=a;
+            control.target_a=span("__x64_sys_getpid");
+            rc=lmb_object_attach_v1(object,&control,&entry);
+            LMB_CHECK(rc==0 && entry,"blacklist-control","known-good control attach rc=%d",rc);
+            if (entry) LMB_CHECK(lmb_link_close_v1(&entry)==0,"blacklist-control-close","retire known-good control");
+            LMB_CHECK(lmb_count_fds()==loaded,"blacklist-control-fds","control returns to loaded baseline");
             rc=lmb_object_attach_v1(object,&a,&entry);
-            LMB_CHECK(rc<0 && !entry && lmb_count_fds()==loaded, "blacklisted-symbol", "selected blacklist symbol refuses and cleans up");
+            LMB_CHECK(native_attach_failure(rc) && !entry && lmb_count_fds()==loaded, "blacklisted-symbol", "selected blacklist symbol refuses and cleans up");
             if (entry) lmb_link_close_v1(&entry);
         }
     } else {

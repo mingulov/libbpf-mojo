@@ -14148,7 +14148,7 @@
       },
       {
         "path": "docs/build.md",
-        "sha256": "497b4d335c4190e1036760c2087c0ca82a354949e79287029a8c64faa7827fa9"
+        "sha256": "c26f2b6e8f38fb1b97dcad89a42cc3e120b870cf8042ac821104517014b880a9"
       },
       {
         "path": "docs/generic-abi-v1.md",
@@ -14172,7 +14172,7 @@
       },
       {
         "path": "native/CMakeLists.txt",
-        "sha256": "dcaf6a1e8474610bbc46e30d61ebdfbdfa4b47cd0d1027e09f20146bc9a97eba"
+        "sha256": "e9ff6548f990aaf257979bfed0e2fecd78a877139afec845c72b0b008f87eca1"
       },
       {
         "path": "native/include/libbpf_mojo.h",
@@ -14280,7 +14280,7 @@
       },
       {
         "path": "tests/live/probe_lifecycle.c",
-        "sha256": "dd06bed3593c2b2bacdbb3efd2241c77bd3f30fafa9315597b05751af8ef0901"
+        "sha256": "f11edcc98abbc4b949f9ee0c7ff21f53b83d28a8a4585641409af429422fdabd"
       },
       {
         "path": "tests/live/probe_lifecycle.mojo",
@@ -14319,6 +14319,10 @@
         "sha256": "3197fa0ca8f4ef4166ffbabf8b891b2b993f5e7aa9b8eb919cfb66566a4757b2"
       },
       {
+        "path": "tests/native/probe_gate.py",
+        "sha256": "3038996a87c87e0bd84979e91ce324ca3e4da30a9c14e0881ac3eae9e329a772"
+      },
+      {
         "path": "tests/native/probe_lifecycle.c",
         "sha256": "1219cdcc4041218222053ed8533f1dca6b57ec3ea46bd2c0f9de125ddfe3b2d7"
       },
@@ -14353,6 +14357,10 @@
       {
         "path": "tests/support/lmb_generic_testfake.map",
         "sha256": "e19b598b6bba7f7765f2a174c9f5949af686421a5bfdcb00504ca9415c305317"
+      },
+      {
+        "path": "tests/support/probe_gate_host.c",
+        "sha256": "4bb4daa04b13860e89b3c775248dfd6e0034815879238673c0603e13ee90b2a8"
       },
       {
         "path": "toolchain.lock.json",
@@ -69397,10 +69405,10 @@
       "tests": {
         "interaction_refs": [
           {
-            "end_line": 91,
+            "end_line": 105,
             "path": "tests/live/probe_lifecycle.c",
-            "sha256": "dd06bed3593c2b2bacdbb3efd2241c77bd3f30fafa9315597b05751af8ef0901",
-            "span_sha256": "54f1301a5c6751aec6b11274f33267259226366ee68ed83f209b499deaa9b37d",
+            "sha256": "f11edcc98abbc4b949f9ee0c7ff21f53b83d28a8a4585641409af429422fdabd",
+            "span_sha256": "57ac32f12d58771e36f8f1ea95ba16d0b01ccd703e63d0998956b7350b570e86",
             "start_line": 1,
             "symbol": "probe lifecycle"
           },
@@ -69421,6 +69429,22 @@
             "span_sha256": "6fccc31fdea6484f6438b09e1182f946223f736c1e19f8057f7139a47ea406f2",
             "start_line": 1,
             "symbol": "probe lifecycle"
+          },
+          {
+            "end_line": 27,
+            "path": "tests/native/probe_gate.py",
+            "sha256": "3038996a87c87e0bd84979e91ce324ca3e4da30a9c14e0881ac3eae9e329a772",
+            "span_sha256": "3038996a87c87e0bd84979e91ce324ca3e4da30a9c14e0881ac3eae9e329a772",
+            "start_line": 1,
+            "symbol": "live gate negative controls"
+          },
+          {
+            "end_line": 64,
+            "path": "tests/support/probe_gate_host.c",
+            "sha256": "4bb4daa04b13860e89b3c775248dfd6e0034815879238673c0603e13ee90b2a8",
+            "span_sha256": "4bb4daa04b13860e89b3c775248dfd6e0034815879238673c0603e13ee90b2a8",
+            "start_line": 1,
+            "symbol": "live gate negative controls"
           }
         ],
         "positive_refs": [

@@ -24,7 +24,7 @@ BRIDGE_SHA256 = '97201ae95e043f2d5a4960f03b5f58c0321bd87e1a168fcd38a5319d628d59b
 COMPATIBILITY_SHA256 = 'c21909c4dbcaafbc9802c439848ae5860461891b4e2bc2f5d163b401ddbec1d3'
 SCHEMA_SHA256 = 'e771dc4ba2d3a8f42776e1002c8786d978026446cefaaa84209f780fe10e8ee0'
 SNAPSHOT_SHA256 = '0b9a37cda49679d94bb9161393afa38bf14f9cd55b71415e849740fad00e1c88'
-SOURCE_MANIFEST_SHA256 = '5acacb8b37fd4845519fa3be3ab59a0e036a567d5e3d3fb8f5e07fdd49adb98b'
+SOURCE_MANIFEST_SHA256 = '0482e4406f1190615930453df3a12f03029e9b818d4dfa8ac3701e7bb0552511'
 ENTITY_SEALS = {'alias:DECLARE_LIBBPF_OPTS': 'c8bf2c81ac0af57058fad9bbe6af2b1bae35be12d2d897fe75d5fb098edc1950',
  'alias:bpf_map__for_each': '45b6b77a32445fb046e208c6d28c9e1af7a44fccca5a74bd6f147eb59d303fc2',
  'callback:btf_dump_printf_fn_t': '5a7685c15fba7f77d190f40cb1ee8d50c837db6f45726a4628e6ad71794d56e2',
@@ -1847,6 +1847,7 @@ IMPLEMENTATION_SOURCES = ['README.md',
  'tests/native/check_exports.sh',
  'tests/native/generic_map_keys.c',
  'tests/native/old_consumer_v1.c',
+ 'tests/native/probe_gate.py',
  'tests/native/probe_lifecycle.c',
  'tests/package/consumer_link.mojo',
  'tests/package/consumer_map_keys.mojo',
@@ -1856,6 +1857,7 @@ IMPLEMENTATION_SOURCES = ['README.md',
  'tests/support/fake_generic.c',
  'tests/support/generic_events_host.c',
  'tests/support/lmb_generic_testfake.map',
+ 'tests/support/probe_gate_host.c',
  'toolchain.lock.json',
  'tools/build',
  'tools/build_receipt.py',

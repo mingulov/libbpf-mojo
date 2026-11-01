@@ -604,3 +604,19 @@ target_include_directories(live_probe_lifecycle PRIVATE include
   ${LIBBPF_ROOT}/include ${LMB_ROOT}/tests/native)
 target_link_libraries(live_probe_lifecycle PRIVATE lmb_static)
 add_dependencies(live_probe_lifecycle probe_lifecycle_fixture)
+
+add_executable(test_probe_gate_mock ${LMB_ROOT}/tests/live/probe_lifecycle.c
+  ${LMB_ROOT}/tests/support/probe_gate_host.c ${LMB_ROOT}/tests/support/generic_host_guard.c)
+target_include_directories(test_probe_gate_mock PRIVATE include
+  ${LIBBPF_ROOT}/include ${LMB_ROOT}/tests/native)
+target_link_libraries(test_probe_gate_mock PRIVATE lmb_static)
+foreach(seam lmb_object_open_v1 lmb_object_load_v1 lmb_object_close_v1 lmb_object_attach_v1
+    lmb_link_close_v1 lmb_generic_last_error_v1 syscall)
+  target_link_options(test_probe_gate_mock PRIVATE "LINKER:--wrap=${seam}")
+endforeach()
+add_dependencies(test_probe_gate_mock probe_lifecycle_fixture)
+foreach(test_name probe_gate native_host_probe_gate)
+  add_test(NAME ${test_name} COMMAND python3 ${LMB_ROOT}/tests/native/probe_gate.py
+    $<TARGET_FILE:test_probe_gate_mock> ${CMAKE_BINARY_DIR}/fixtures/probe_lifecycle.bpf.o
+    $<TARGET_FILE:lmb_host_guard>)
+endforeach()
