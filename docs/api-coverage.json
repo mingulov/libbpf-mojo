@@ -13932,7 +13932,7 @@
       },
       {
         "path": "docs/build.md",
-        "sha256": "3bbb368c5e2cbf0d367aa02f516f2f225eb9d39391c08ba9b0a9868d4dcdb51a"
+        "sha256": "11d2a5f2354c145c3a8db42ee6a1acfd0fcfdc210cf7bf8ffc6606cd962eec2d"
       },
       {
         "path": "docs/generic-abi-v1.md",
@@ -14108,7 +14108,7 @@
       },
       {
         "path": "toolchain.lock.json",
-        "sha256": "840e0bffd032115b46c63bffa8d7ec1cc92686fdc306dd941ca6303ae8b7e298"
+        "sha256": "248af7df437442ba5e9ec2b0cda3a143d901ce7acbf8ba27fa465b13e0b14663"
       }
     ]
   },

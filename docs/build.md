@@ -70,6 +70,18 @@ executable. Packaging copies those sealed bytes unchanged. Relative lookup
 resolves bundled startup libraries after relocation without a development
 environment or `LD_LIBRARY_PATH` override.
 
+For development, the same executable finds the SDK through a relative
+`build/lib` symlink created by `tools/build` (or `build-san/lib` for a
+sanitized build). This layout lets the documented live suites launch it
+without a loader environment override. The builder reuses a matching link
+and refuses an existing file, directory, conflicting link or dangling link;
+it never replaces that entry. This development link is not packaged: the
+runtime archive has its own populated `lib/` directory. Before sealing the
+receipt, the builder checks development startup resolution using the dynamic
+loader without entering the collector. Recheck an existing build with
+`python3 tests/package/test_development_loader.py` (set `LMB_BUILD_DIR=build-san`
+for a sanitized build). Successful live collection still needs its own gate.
+
 `tools/test package-consumer` also checks the exact shipped collector with
 the system dynamic loader's `--list --inhibit-cache` mode, without entering
 the program or issuing BPF calls. It verifies all packaged ELF search paths

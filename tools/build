@@ -134,6 +134,10 @@ main() {
             log python3 tools/provenance.py seal "$ROOT"
             python3 tools/provenance.py seal "$ROOT" \
                 >"$BUILD_DIR/sources-pre.json" || return 1
+            log python3 tools/build_runtime.py "$BUILD_DIR" \
+                "$ROOT/.pixi/envs/default/lib"
+            python3 tools/build_runtime.py "$BUILD_DIR" \
+                "$ROOT/.pixi/envs/default/lib" || return 1
             if [ -f "$ROOT/native/CMakeLists.txt" ]; then
                 log cmake -S native -B "$BUILD_DIR" -G Ninja \
                     -DCMAKE_C_COMPILER="$CC_NAME" "$SANITIZE_FLAG"
@@ -173,6 +177,9 @@ main() {
             else
                 echo "build: no Mojo targets registered yet" >&2
             fi
+            log python3 tests/package/test_development_loader.py
+            LMB_BUILD_DIR="$BUILD_DIR" python3 \
+                tests/package/test_development_loader.py || return 1
             log python3 tools/build_receipt.py "$BUILD_DIR" \
                 "$CC_NAME" "$SANITIZE_FLAG"
             python3 tools/build_receipt.py "$BUILD_DIR" \
