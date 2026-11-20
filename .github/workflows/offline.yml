@@ -30,6 +30,10 @@ jobs:
     runs-on: ubuntu-26.04
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4.4.0
+        with:
+          # The provenance suite requires policy tags to resolve;
+          # a shallow checkout carries no tags.
+          fetch-depth: 0
       - name: Install pixi
         run: |
           python3 tools/install-pixi --prefix "$HOME/.pixi"
